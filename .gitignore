@@ -1,2 +1,15 @@
 /.quarto/
 **/*.quarto_ipynb
+
+*.md
+*.html
+*.pdf
+*.docx
+*.doc
+*.txt
+*.csv
+*.xlsx
+*.xls
+*.xlsm
+*.xlsb
+*.xlsb
