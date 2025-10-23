@@ -1,0 +1,15 @@
+project:
+  title: "Quarto preprint"
+
+format:
+  html:
+    toc: true
+    toc-location: left
+    theme: cosmo
+    code-fold: false
+    html-math-method: katex
+  pdf:
+    documentclass: article
+    toc: false
+    number-sections: true
+    colorlinks: true
