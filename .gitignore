@@ -13,3 +13,4 @@
 *.xlsm
 *.xlsb
 *.xlsb
+/.luarc.json

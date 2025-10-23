@@ -1,5 +1,5 @@
 ---
-title: Your Title Here
+title: Late-Night Gaming, Sleep and Wellbeing
 subtitle: Optional Subtitle
 running-head: Short Title
 author:
@@ -52,6 +52,25 @@ format:
 
 # Introduction
 
+Concerns have been raised about the potential negative impacts of video gaming on sleep and overall wellbeing, particularly for adolescents and young adults and especially when gaming occurs late at night (Altintas et al., 2019; Exelmans & Van Den Bulck, 2015; Higuchi et al., 2005; King et al., 2013; Peracchia & Curcio, 2018). Late-night gaming has been shown to disrupt sleep patterns, reduce sleep duration, lower sleep quality, and increase daytime sleepiness (Exelmans & Van Den Bulck, 2015; Han et al., 2024; Kim, 2024; Kristensen et al., 2021).This is especially concerning given the far-reaching effects of sleep disturbances on cognitive and emotional functioning (Cain & Gradisar, 2010; LeBourgeois et al., 2017; McCoy & Strecker, 2011; Simon et al., 2020; Vriend et al., 2013). For instance, habitual gaming between 10 p.m. and 6 a.m. has been associated with an increased risk of depressive symptoms, partially mediated by daytime sleepiness (Lemola et al., 2011). Understanding the consequences of late-night gaming is thus vital for both gamers and health professionals.
+Two key mechanisms have been proposed to explain the impact of late-night digital engagement—including gaming—on sleep. The first is the displacement hypothesis, which argues that late-night gaming is more harmful than daytime gaming because it cuts into sleep time (Twenge, 2019; Williams et al., 2008). Gamers often feel compelled to continue playing and struggle with self-regulation, which can lead to insufficient sleep (King & Delfabbro, 2009; Pirrone et al., 2024; Spada & Caselli, 2017). For example, adolescents experiencing a heightened sense of "flow" during challenging games delayed bedtime by up to 90 minutes  (Smith et al., 2017). 
+The second mechanism involves arousal-related disturbances in sleep architecture caused by late-night gaming. Empirical studies have shown that extended gaming, especially when involving violent content, significantly decreases REM sleep and total sleep time (King et al., 2013). Weaver et al. (2010) highlighted that increased arousal levels due to pre-sleep gaming extend sleep latency and alter the natural progression into sleep stages. This delay in sleep onset could be exacerbated by lower melatonin levels following an evening of gaming, compared to neutral activities like board games, which are crucial for regulating the sleep-wake cycle (Hartmann et al., 2019).  
+Negative effects of late-night gaming are often compounded among individuals with an eveningness chronotype—a group naturally predisposed to staying up late. Problematic gamers, who frequently possess this chronotype, are especially vulnerable to the detrimental effects of late-night gaming on sleep (Kristensen et al., 2021). Pre-sleep technology use may exacerbate the misalignment between their biological clock and societal demands by delaying sleep onset and reducing sleep duration, leading to poorer sleep quality and increased daytime sleepiness. Research has linked evening chronotype in adolescents to greater technology use at bedtime, in turn associated with delayed sleep onset, shorter sleep duration, and poorer sleep quality (Bruni et al., 2015; Gumport et al., 2021; Kortesoja et al., 2023; Reardon et al., 2023). Additionally, while Reardon et al. (2023) found that shorter sleep on weekdays was associated with greater psychological distress, technology medium and chronotype were not direct predictors of distress. Gumport et al. (2021) found that technology use improved emotional, social, cognitive, and physical health but worsened behavioral health, measured by the consumption of junk food, caffeine, alcohol, tobacco, and other substances, in evening-type adolescents. It remains unclear how strongly these findings apply to young adults and adults, as most research has focused on adolescent populations. This leaves an open question about the extent to which evening chronotypes in older age groups are similarly affected by pre-sleep technology use.
+In sum, the literature indicates that video gaming, particularly when it occurs late at night, has significant implications for sleep quality, sleep duration, and overall wellbeing. This disruption can be attributed to both the displacement hypothesis (Twenge, 2019; Williams et al., 2008) and arousal-related disturbances in sleep architecture (King et al., 2013). Individual differences, such as chronotype, may moderate these effects, with eveningness chronotypes particularly vulnerable to the negative consequences of late-night gaming (Kristensen et al., 2021). The present study aims to empirically test the following hypotheses regarding the relationship between late-night gaming and sleep outcomes:
+
+**H1**: Late-night gaming is associated with:
+
+- **H1a**: Poorer sleep quality
+- **H1b**: Shorter sleep duration
+- **H1c**: Higher daytime sleepiness
+- **H1d**: Lower wellbeing
+
+In addition to testing direct relationships between late-night gaming and various sleep-related outcomes are critical to understand, we further assess the potential moderating role of chronotype, which refers to a person's natural preference for activities during certain times of the day—morningness or eveningness. Individuals with an evening chronotype tend to stay up later and may be more inclined to engage in late-night gaming, potentially exacerbating the negative impacts on sleep and wellbeing. The combination of an evening chronotype and late-night gaming may even have a compounded effect on overall wellbeing, as both factors are independently associated with poorer mental health outcomes. Given this, we propose the following:
+
+**H2**: Chronotype moderates the relationships between late-night gaming and all outcomes in H1 (sleep quality, sleep duration, daytime sleepiness, and wellbeing), such that these negative associations are stronger for individuals with more of an eveningness chronotype.
+
+By examining chronotype on a continuous scale as a moderating factor, this study seeks to provide a more nuanced understanding of the potential risks associated with late-night gaming and to identify individuals who may be most vulnerable to its negative effects.
+
 # Methods
 
 # Results
@@ -88,8 +107,8 @@ data.panel <- fread("data/synthetic/data-synthetic-clean/synPanelClean.csv.gz") 
 data.nin <- read_csv("data/synthetic/data-synthetic-clean/synNintendoClean.csv.gz")
 data.xbox <- read_csv("data/synthetic/data-synthetic-clean/synXboxClean.csv.gz")
 data.steam <- read_csv("data/synthetic/data-synthetic-clean/synSteamClean.csv.gz")
-data.android <- read_csv("data/synthetic/data-synthetic-raw/synAndroid.csv.gz")
-data.ios <- read_csv("data/synthetic/data-synthetic-raw/syniOS.csv.gz")
+#data.android <- read_csv("data/synthetic/data-synthetic-raw/synAndroid.csv.gz")
+#data.ios <- read_csv("data/synthetic/data-synthetic-raw/syniOS.csv.gz")
 
 ```
 
