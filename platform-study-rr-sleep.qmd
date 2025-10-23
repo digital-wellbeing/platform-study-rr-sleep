@@ -83,59 +83,87 @@ By examining chronotype on a continuous scale as a moderating factor, this study
 if (!require("pacman")) install.packages("pacman")
 library(pacman)
 
-p_load(tidyverse, lme4, marginaleffects, glmmTMB, mice, ordinal, modelsummary, lubridate, data.table)
+p_load(tidyverse, lme4, marginaleffects, glmmTMB, mice, ordinal, modelsummary, lubridate, data.table, mctq)
 
 studyStartDate <- as_datetime("2024-05-01 00:00:00")
+
+# Source preprocessing functions
+source("preprocess_data.R")
+
+# TOGGLE HYPOTHESES EVALUATION
+eval_h1 <- TRUE  # Set to FALSE to skip H1 hypotheses
+eval_h2 <- FALSE  # Set to FALSE to skip H2 hypotheses
 
 ```
 
 ```{r}
 #| label: load-data
 
-# don't use read_csv for the synPanelClean! no idea why but it guesses column
-# type wrong, leading to a lot of NA imports
+# Load raw data
+data.panel.raw <- read_csv("data/panel.csv.gz", show_col_types = FALSE)
+data.intake.raw <- read_csv("data/intake.csv.gz", show_col_types = FALSE)
 
-data.panel <- fread("data/synthetic/data-synthetic-clean/synPanelClean.csv.gz") |> # requires that the preprocessing script has been run
-  left_join(read_csv("data/synthetic/data-synthetic-clean/synIntakeClean.csv.gz"), by = "pid") |> 
-  dplyr::select(pid, wave, region, psqi_6, starts_with(c("mctq", "eps", "psqi")), total_hours_sleep, wemwbs, 
-         age_scaled, bmi_scaled, SES_index_scaled, msf_sc_numeric, gender) |> 
+# Process intake data (demographics, scaled variables)
+data.intake <- process_intake("data/intake.csv.gz")
+
+# Process panel data (compute derived sleep/wellbeing variables, merge with intake)
+data.panel <- process_panel("data/panel.csv.gz", data.intake) |>
+  dplyr::select(pid, wave, region, psqi_6, starts_with(c("mctq", "eps", "psqi")),
+                total_hours_sleep, wemwbs, epsTotal,
+                age_scaled, bmi_scaled, SES_index_scaled, msf_sc_numeric, gender) |>
   mutate(
     psqi_6_ord = factor(psqi_6, ordered = TRUE),
     pid = as.character(pid)
   )
 
-data.nin <- read_csv("data/synthetic/data-synthetic-clean/synNintendoClean.csv.gz")
-data.xbox <- read_csv("data/synthetic/data-synthetic-clean/synXboxClean.csv.gz")
-data.steam <- read_csv("data/synthetic/data-synthetic-clean/synSteamClean.csv.gz")
-#data.android <- read_csv("data/synthetic/data-synthetic-raw/synAndroid.csv.gz")
-#data.ios <- read_csv("data/synthetic/data-synthetic-raw/syniOS.csv.gz")
+# Load gaming data
+data.nin <- read_csv("data/nintendo.csv.gz", show_col_types = FALSE)
+data.xbox <- read_csv("data/xbox.csv.gz", show_col_types = FALSE)
+data.steam <- read_csv("data/steam.csv.gz", show_col_types = FALSE)
 
 ```
 
 ```{r}
 #| label: merge data
 
-# merge xbox_balanced and steam_balanced and nin_balanced 
-data.gaming <- bind_rows(data.xbox, data.steam, data.nin) |> 
-  
+# Standardize column names across gaming platforms
+# Nintendo: session_start, session_end, duration
+# Xbox: session_start, session_end, duration
+# Steam: session_start, session_end (need to compute duration)
+
+data.nin.std <- data.nin |>
+  rename(sessionStart = session_start, sessionEnd = session_end) |>
+  mutate(date = as_date(sessionStart))
+
+data.xbox.std <- data.xbox |>
+  rename(sessionStart = session_start, sessionEnd = session_end) |>
+  mutate(date = as_date(sessionStart))
+
+data.steam.std <- data.steam |>
+  rename(sessionStart = session_start, sessionEnd = session_end) |>
+  mutate(date = as_date(sessionStart))
+
+# merge xbox, steam and nintendo
+data.gaming <- bind_rows(data.xbox.std, data.steam.std, data.nin.std) |>
+
   mutate(
-    
+
     # redefine day to begin and end at 4am, rather than midnight, so we can properly
     # assign late-night sessions to the previous calendar day
     dateRecoded = if_else(hour(sessionStart) < 6, date - 1, date),
-    
+
     # calculate minutes_played for data.gaming using sessionEnd and sessionStart
     # create a binary variable for data.gaming called latenight if the sessionStart is between 23:00 and 06:00
     # create an isWeekend variable for data.gaming if the sessionStart is on a Saturday, Sunday or Friday
     minutes_played = as.numeric(difftime(sessionEnd, sessionStart, units = "mins")),
     latenight = ifelse(hour(sessionStart) >= 23 | hour(sessionStart) < 6, 1, 0),
     isWeekend = ifelse(weekdays(sessionStart) %in% c("Friday", "Saturday"), 1, 0),
-    
+
     # calculate late night using lubridate::interval objects
     interval_gaming = interval(sessionStart, sessionEnd),
     interval_latenight = interval(dateRecoded + hours(23), dateRecoded + hours(30)), # gets the 11pm to 6am following day interval from date
     latenightMinutes = as.numeric(intersect(interval_gaming, interval_latenight))/60 # calculate overlap in minutes
-  ) |> 
+  ) |>
 
   # assign each session to a wave based on the date, if the date is within 4
   # weeks of the start of the study, it is wave 2, if it is between 4 weeks and
@@ -143,19 +171,19 @@ data.gaming <- bind_rows(data.xbox, data.steam, data.nin) |>
   mutate(
     days_since_start = as.numeric(difftime(sessionStart, studyStartDate, units = "days")),
     month = case_when(
-      day >= 0 & day <= 28 ~ 2,
-      day >= 29 & day <= 56 ~ 4,
-      day >= 57 & day <= 84 ~ 6,
+      days_since_start >= 0 & days_since_start <= 28 ~ 2,
+      days_since_start >= 29 & days_since_start <= 56 ~ 4,
+      days_since_start >= 57 & days_since_start <= 84 ~ 6,
       TRUE ~ NA_real_
     ),
     # Define biweekly waves (14-day intervals) that end at day 84
     wave = case_when(
-      day >= 0 & day <= 14 ~ 1,
-      day >= 15 & day <= 28 ~ 2,
-      day >= 29 & day <= 42 ~ 3,
-      day >= 43 & day <= 56 ~ 4,
-      day >= 57 & day <= 70 ~ 5,
-      day >= 71 & day <= 84 ~ 6,
+      days_since_start >= 0 & days_since_start <= 14 ~ 1,
+      days_since_start >= 15 & days_since_start <= 28 ~ 2,
+      days_since_start >= 29 & days_since_start <= 42 ~ 3,
+      days_since_start >= 43 & days_since_start <= 56 ~ 4,
+      days_since_start >= 57 & days_since_start <= 70 ~ 5,
+      days_since_start >= 71 & days_since_start <= 84 ~ 6,
       TRUE ~ NA_real_  # Assign NA for days beyond 84
     ),
     pid = as.character(pid)
@@ -166,12 +194,16 @@ gamingMonthly <- data.gaming |>
   group_by(pid, month, isWeekend) %>%
   summarise(
     monthly_avg_minutes_played = sum(latenightMinutes)/28,
+    monthly_total_minutes_played = sum(latenightMinutes),
   ) |> 
   left_join(data.panel |> dplyr::select(-msf_sc_numeric) |> filter(wave %in% c(2, 4, 6)), 
             by = c("pid","month" = "wave")) |> 
   left_join(data.panel |> dplyr::select(pid, msf_sc_numeric) |> filter(!is.na(msf_sc_numeric)), 
             by = c("pid")) |> # hacky way to make sure chronotype (measured in wave 1 only) doesn't get lost 
-  mutate(monthly_avg_minutes_played = replace_na(monthly_avg_minutes_played, 0)) |> 
+  mutate(
+    monthly_avg_minutes_played = replace_na(monthly_avg_minutes_played, 0),
+    monthly_total_minutes_played = replace_na(monthly_total_minutes_played, 0)
+  ) |> 
   ungroup() |>
   arrange(as.integer(pid), month)
 
@@ -191,6 +223,135 @@ gamingBiweekly <- data.gaming |>
 
 ```
 
+## Descriptive Raincloud Plots
+
+Note: The dataset contains 7 WEMWBS items (SWEMWBS short form, range 7-35) rather than the full 14-item WEMWBS (range 14-70).
+
+```{r}
+#| label: raincloud-descriptives
+#| code-summary: "Raincloud plots for key variables"
+#| fig-width: 14
+#| fig-height: 12
+
+# Load additional packages for raincloud plots
+if (!require("ggdist")) install.packages("ggdist")
+library(ggdist)
+
+# Prepare data for raincloud plots - select key variables
+descriptive_data <- gamingMonthly |>
+  dplyr::select(
+    pid,
+    month,
+    monthly_avg_minutes_played,
+    sleep_quality = psqi_6,
+    sleep_duration = total_hours_sleep,
+    daytime_sleepiness = epsTotal,
+    wellbeing = wemwbs
+  ) |>
+  mutate(
+    # Convert sleep_quality to numeric (1=Very good, 2=Fairly good, 3=Fairly bad, 4=Very bad)
+    sleep_quality = as.numeric(factor(sleep_quality, 
+                                      levels = c("Very good", "Fairly good", "Fairly bad", "Very bad"),
+                                      ordered = TRUE)),
+    # Label months for display
+    month_label = factor(month, 
+                        levels = c(2, 4, 6),
+                        labels = c("Month 1", "Month 2", "Month 3"))
+  ) |>
+  pivot_longer(
+    cols = c(monthly_avg_minutes_played, sleep_quality, sleep_duration, daytime_sleepiness, wellbeing),
+    names_to = "variable",
+    values_to = "value"
+  ) |>
+  filter(!is.na(value)) |>
+  mutate(
+    variable = factor(variable, 
+                     levels = c("monthly_avg_minutes_played", "sleep_quality", 
+                               "sleep_duration", "daytime_sleepiness", "wellbeing"),
+                     labels = c("Late-Night Gaming\n(avg min/day)", 
+                               "Sleep Quality\n(PSQI: 1-4)", 
+                               "Sleep Duration\n(hours)",
+                               "Daytime Sleepiness\n(EPS: 0-24)",
+                               "Wellbeing\n(WEMWBS: 7-35)"))
+  )
+
+# Create a function for raincloud plot
+create_raincloud <- function(data, var_name) {
+  ggplot(data, aes(x = month_label, y = value, fill = month_label)) +
+    # Half violin (density distribution)
+    stat_halfeye(
+      adjust = 0.5,
+      width = 0.6,
+      .width = 0,
+      justification = -0.2,
+      point_colour = NA,
+      alpha = 0.7
+    ) +
+    # Boxplot
+    geom_boxplot(
+      width = 0.15,
+      outlier.shape = NA,
+      alpha = 0.5
+    ) +
+    # Styling
+    scale_fill_brewer(palette = "Set2", name = "Month") +
+    labs(
+      title = var_name,
+      y = "Value",
+      x = "Monthly Wave"
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(
+      legend.position = "bottom",
+      panel.grid.minor = element_blank(),
+      plot.title = element_text(face = "bold", size = 13),
+      axis.text.x = element_text(size = 10)
+    )
+}
+
+# Create individual plots for each variable
+plot_gaming <- descriptive_data |> 
+  filter(variable == "Late-Night Gaming\n(avg min/day)") |>
+  create_raincloud("Late-Night Gaming (avg min/day)")
+
+plot_sleep_quality <- descriptive_data |> 
+  filter(variable == "Sleep Quality\n(PSQI: 1-4)") |>
+  create_raincloud("Sleep Quality (PSQI: 1-4)")
+
+plot_sleep_duration <- descriptive_data |> 
+  filter(variable == "Sleep Duration\n(hours)") |>
+  create_raincloud("Sleep Duration (hours)")
+
+plot_sleepiness <- descriptive_data |> 
+  filter(variable == "Daytime Sleepiness\n(EPS: 0-24)") |>
+  create_raincloud("Daytime Sleepiness (EPS: 0-24)")
+
+plot_wellbeing <- descriptive_data |> 
+  filter(variable == "Wellbeing\n(WEMWBS: 7-35)") |>
+  create_raincloud("Wellbeing (WEMWBS: 7-35)")
+
+# Display plots
+plot_gaming
+plot_sleep_quality
+plot_sleep_duration
+plot_sleepiness
+plot_wellbeing
+
+# Print summary statistics by month
+descriptive_data |>
+  group_by(variable, month_label) |>
+  summarise(
+    N = n(),
+    Mean = mean(value, na.rm = TRUE),
+    SD = sd(value, na.rm = TRUE),
+    Median = median(value, na.rm = TRUE),
+    Min = min(value, na.rm = TRUE),
+    Max = max(value, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  knitr::kable(digits = 2, caption = "Descriptive Statistics for Key Variables by Monthly Wave")
+```
+
 
 ## H1a: Late-night gaming is associated with poorer sleep quality.
 
@@ -199,6 +360,7 @@ Multilevel ordinal regression whereby monthly average minutes played predicts sl
 ```{r}
 #| label: h1a
 #| code-summary: "Fit H1a model"
+#| eval: !expr eval_h1
 
 # For psqi_6 1 means Very good, 2 means Fairly good, 3 means Fairly bad, 4 means Very bad
 
@@ -246,6 +408,7 @@ Multilevel linear regression whereby monthly average minutes played predicts day
 ```{r}
 #| label: h1c
 #| code-summary: "Fit H1c model"
+#| eval: !expr eval_h1
 
 model.h1c <- lmer(wemwbs ~ biweekly_avg_minutes_played + (1 + biweekly_avg_minutes_played | pid) +
                     age_scaled + bmi_scaled + SES_index_scaled + (1 | gender) + region + isWeekend, 
@@ -267,6 +430,7 @@ Multilevel linear regression whereby biweekly average minutes played predicts we
 ```{r}
 #| label: h1d
 #| code-summary: "Fit H1d model"
+#| eval: !expr eval_h1
 
 # Fit the model
 model.h1d <- lmer(epsTotal ~ monthly_avg_minutes_played + (1 + monthly_avg_minutes_played | pid) +
@@ -293,6 +457,7 @@ On the simulation data, there are convergence problems, so here we center late n
 ```{r}
 #| label: h2a
 #| code-summary: "Fit H2a model"
+#| eval: !expr eval_h2
 
 # Fit the model with rescaled covariates
 model.h2a <- clmm(psqi_6_ord ~ scale(monthly_avg_minutes_played) * scale(msf_sc_numeric) + (1 + monthly_avg_minutes_played | pid) +
@@ -312,6 +477,7 @@ modelsummary(
 ```{r}
 #| label: h2b
 #| code-summary: "Fit H2b model"
+#| eval: !expr eval_h2
 
 # Fit the model
 model.h2b <- lmer(total_hours_sleep ~ monthly_avg_minutes_played * msf_sc_numeric + (1 + monthly_avg_minutes_played | pid) +
@@ -335,6 +501,7 @@ Multilevel linear regression whereby the interaction between monthly average min
 ```{r}
 #| label: h2c
 #| code-summary: "Fit H2c model"
+#| eval: !expr eval_h2
 
 # Fit the model
 model.h2c <- lmer(wemwbs ~ biweekly_avg_minutes_played * msf_sc_numeric + (1 | pid) +
@@ -356,6 +523,7 @@ Multilevel linear regression whereby the interaction between biweekly average mi
 ```{r}
 #| label: h2d
 #| code-summary: "Fit H2d model"
+#| eval: !expr eval_h2
 
 model.h2d <- lmer(epsTotal ~ monthly_avg_minutes_played * msf_sc_numeric + (1 + monthly_avg_minutes_played | pid) +
                     age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend + (1 | gender), 

@@ -1,0 +1,554 @@
+---
+title: "Supplementary Materials"
+subtitle: "Late-Night Gaming, Sleep and Wellbeing"
+format:
+  html:
+    toc: true
+    toc-location: left
+    theme: cosmo
+    code-fold: true
+    html-math-method: katex
+    embed-resources: true
+  pdf:
+    documentclass: article
+    toc: true
+    number-sections: true
+    colorlinks: true
+---
+
+# Supplementary Tables
+
+This document provides detailed summary statistics for all Pittsburgh Sleep Quality Index (PSQI) and Munich ChronoType Questionnaire (MCTQ) components used in the main analyses.
+
+```{r}
+#| label: setup
+#| message: false
+#| warning: false
+
+# Load required packages
+if (!require("pacman")) install.packages("pacman")
+library(pacman)
+
+p_load(tidyverse, tinytable, lubridate, mctq)
+
+# Source preprocessing functions
+source("preprocess_data.R")
+
+# Load and process data
+data.intake <- process_intake("data/intake.csv.gz")
+data.panel <- process_panel("data/panel.csv.gz", data.intake)
+```
+
+## Table S1: Pittsburgh Sleep Quality Index (PSQI) Components
+
+The PSQI consists of 7 components, each scored from 0-3, yielding a global score ranging from 0-21. Higher scores indicate worse sleep quality. A global PSQI score >5 is considered indicative of poor sleep quality.
+
+```{r}
+#| label: tbl-psqi-components
+#| tbl-cap: "Descriptive statistics for PSQI components across all waves"
+
+# Extract PSQI component data from computed columns
+# Note: PSQI was collected in waves 2, 4, and 6
+psqi_component_data <- data.panel |>
+  filter(wave %in% c(2, 4, 6), !is.na(psqi_global)) |>
+  dplyr::select(
+    pid, wave,
+    psqi_comp1_quality,
+    psqi_comp2_latency,
+    psqi_comp3_duration,
+    psqi_comp4_efficiency,
+    psqi_comp5_problems,
+    psqi_comp6_medication,
+    psqi_comp7_tired,
+    psqi_global
+  )
+
+# Create summary table for all components
+psqi_summary <- tibble(
+  Component = c(
+    "Component 1: Subjective Sleep Quality",
+    "Component 2: Sleep Latency",
+    "Component 3: Sleep Duration",
+    "Component 4: Sleep Efficiency",
+    "Component 5: Sleep Disturbances",
+    "Component 6: Sleep Medication Use",
+    "Component 7: Daytime Dysfunction",
+    "Global PSQI Score"
+  ),
+  N = c(
+    sum(!is.na(psqi_component_data$psqi_comp1_quality)),
+    sum(!is.na(psqi_component_data$psqi_comp2_latency)),
+    sum(!is.na(psqi_component_data$psqi_comp3_duration)),
+    sum(!is.na(psqi_component_data$psqi_comp4_efficiency)),
+    sum(!is.na(psqi_component_data$psqi_comp5_problems)),
+    sum(!is.na(psqi_component_data$psqi_comp6_medication)),
+    sum(!is.na(psqi_component_data$psqi_comp7_tired)),
+    sum(!is.na(psqi_component_data$psqi_global))
+  ),
+  Mean = c(
+    mean(psqi_component_data$psqi_comp1_quality, na.rm = TRUE),
+    mean(psqi_component_data$psqi_comp2_latency, na.rm = TRUE),
+    mean(psqi_component_data$psqi_comp3_duration, na.rm = TRUE),
+    mean(psqi_component_data$psqi_comp4_efficiency, na.rm = TRUE),
+    mean(psqi_component_data$psqi_comp5_problems, na.rm = TRUE),
+    mean(psqi_component_data$psqi_comp6_medication, na.rm = TRUE),
+    mean(psqi_component_data$psqi_comp7_tired, na.rm = TRUE),
+    mean(psqi_component_data$psqi_global, na.rm = TRUE)
+  ),
+  SD = c(
+    sd(psqi_component_data$psqi_comp1_quality, na.rm = TRUE),
+    sd(psqi_component_data$psqi_comp2_latency, na.rm = TRUE),
+    sd(psqi_component_data$psqi_comp3_duration, na.rm = TRUE),
+    sd(psqi_component_data$psqi_comp4_efficiency, na.rm = TRUE),
+    sd(psqi_component_data$psqi_comp5_problems, na.rm = TRUE),
+    sd(psqi_component_data$psqi_comp6_medication, na.rm = TRUE),
+    sd(psqi_component_data$psqi_comp7_tired, na.rm = TRUE),
+    sd(psqi_component_data$psqi_global, na.rm = TRUE)
+  ),
+  Median = c(
+    median(psqi_component_data$psqi_comp1_quality, na.rm = TRUE),
+    median(psqi_component_data$psqi_comp2_latency, na.rm = TRUE),
+    median(psqi_component_data$psqi_comp3_duration, na.rm = TRUE),
+    median(psqi_component_data$psqi_comp4_efficiency, na.rm = TRUE),
+    median(psqi_component_data$psqi_comp5_problems, na.rm = TRUE),
+    median(psqi_component_data$psqi_comp6_medication, na.rm = TRUE),
+    median(psqi_component_data$psqi_comp7_tired, na.rm = TRUE),
+    median(psqi_component_data$psqi_global, na.rm = TRUE)
+  ),
+  Min = c(
+    min(psqi_component_data$psqi_comp1_quality, na.rm = TRUE),
+    min(psqi_component_data$psqi_comp2_latency, na.rm = TRUE),
+    min(psqi_component_data$psqi_comp3_duration, na.rm = TRUE),
+    min(psqi_component_data$psqi_comp4_efficiency, na.rm = TRUE),
+    min(psqi_component_data$psqi_comp5_problems, na.rm = TRUE),
+    min(psqi_component_data$psqi_comp6_medication, na.rm = TRUE),
+    min(psqi_component_data$psqi_comp7_tired, na.rm = TRUE),
+    min(psqi_component_data$psqi_global, na.rm = TRUE)
+  ),
+  Max = c(
+    max(psqi_component_data$psqi_comp1_quality, na.rm = TRUE),
+    max(psqi_component_data$psqi_comp2_latency, na.rm = TRUE),
+    max(psqi_component_data$psqi_comp3_duration, na.rm = TRUE),
+    max(psqi_component_data$psqi_comp4_efficiency, na.rm = TRUE),
+    max(psqi_component_data$psqi_comp5_problems, na.rm = TRUE),
+    max(psqi_component_data$psqi_comp6_medication, na.rm = TRUE),
+    max(psqi_component_data$psqi_comp7_tired, na.rm = TRUE),
+    max(psqi_component_data$psqi_global, na.rm = TRUE)
+  )
+)
+
+# Create table using tinytable
+tt(psqi_summary, 
+   digits = 2,
+   caption = "PSQI Component Descriptive Statistics (Waves 2, 4, 6)") |>
+  style_tt(i = 8, bold = TRUE) |>  # Bold the global score row
+  format_tt(digits = 2, num_fmt = "decimal")
+```
+
+**Note:** Component scores range from 0-3 (except Global Score: 0-21). Higher scores indicate poorer sleep quality.
+
+### PSQI Component Definitions
+
+- **Component 1 (Subjective Sleep Quality):** Self-rated sleep quality
+- **Component 2 (Sleep Latency):** Time to fall asleep and frequency of difficulty falling asleep
+- **Component 3 (Sleep Duration):** Total hours of actual sleep
+- **Component 4 (Sleep Efficiency):** Ratio of total sleep time to time in bed
+- **Component 5 (Sleep Disturbances):** Frequency of various sleep disturbances (e.g., waking up at night, bad dreams)
+- **Component 6 (Sleep Medication Use):** Frequency of sleep medication use
+- **Component 7 (Daytime Dysfunction):** Difficulty staying awake during the day and maintaining enthusiasm
+
+## Table S2: PSQI Components by Wave
+
+```{r}
+#| label: tbl-psqi-by-wave
+#| tbl-cap: "PSQI component means (SD) by study wave"
+
+# Extract PSQI component data by wave
+psqi_by_wave_data <- data.panel |>
+  filter(wave %in% c(2, 4, 6), !is.na(psqi_global)) |>
+  dplyr::select(
+    wave,
+    psqi_comp1_quality,
+    psqi_comp2_latency,
+    psqi_comp3_duration,
+    psqi_comp4_efficiency,
+    psqi_comp5_problems,
+    psqi_comp6_medication,
+    psqi_comp7_tired,
+    psqi_global
+  )
+
+# Calculate summaries for each component by wave
+psqi_wave_summary <- psqi_by_wave_data |>
+  pivot_longer(
+    cols = c(psqi_comp1_quality, psqi_comp2_latency, psqi_comp3_duration,
+             psqi_comp4_efficiency, psqi_comp5_problems, psqi_comp6_medication,
+             psqi_comp7_tired, psqi_global),
+    names_to = "Component",
+    values_to = "Score"
+  ) |>
+  filter(!is.na(Score)) |>
+  group_by(Component, wave) |>
+  summarise(
+    Mean = mean(Score, na.rm = TRUE),
+    SD = sd(Score, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  mutate(
+    Component = case_when(
+      Component == "psqi_comp1_quality" ~ "Component 1: Subjective Sleep Quality",
+      Component == "psqi_comp2_latency" ~ "Component 2: Sleep Latency",
+      Component == "psqi_comp3_duration" ~ "Component 3: Sleep Duration",
+      Component == "psqi_comp4_efficiency" ~ "Component 4: Sleep Efficiency",
+      Component == "psqi_comp5_problems" ~ "Component 5: Sleep Disturbances",
+      Component == "psqi_comp6_medication" ~ "Component 6: Sleep Medication Use",
+      Component == "psqi_comp7_tired" ~ "Component 7: Daytime Dysfunction",
+      Component == "psqi_global" ~ "Global PSQI Score",
+      TRUE ~ Component
+    ),
+    `Mean (SD)` = sprintf("%.2f (%.2f)", Mean, SD)
+  ) |>
+  dplyr::select(Component, wave, `Mean (SD)`) |>
+  pivot_wider(
+    names_from = wave,
+    values_from = `Mean (SD)`,
+    names_prefix = "Wave "
+  )
+
+# Create table
+tt(psqi_wave_summary,
+   caption = "PSQI Components Across Study Waves (Waves 2, 4, 6)") |>
+  style_tt(i = 8, bold = TRUE)  # Bold the global score row
+```
+
+## Table S3: Munich ChronoType Questionnaire (MCTQ) Sleep Timing Variables
+
+The MCTQ assesses sleep-wake patterns on work days and free days. MSF~sc~ (mid-sleep on free days corrected for sleep debt) is used as a proxy for circadian phase, with higher values indicating a later chronotype (eveningness).
+
+```{r}
+#| label: tbl-mctq-components
+#| tbl-cap: "Descriptive statistics for MCTQ sleep timing variables"
+
+# Extract MCTQ data
+mctq_data <- data.panel |>
+  filter(wave == 1) |>  # MCTQ typically measured at baseline
+  dplyr::select(
+    pid,
+    # Work day variables
+    mctq_3_1,  # bedtime work
+    mctq_3_2,  # sleep latency work (minutes)
+    mctq_3_3,  # wake time work
+    mctq_3_4,  # sleep inertia work (minutes)
+    mctq_4_1,  # alarm work days
+    # Free day variables
+    mctq_6_1,  # bedtime free
+    mctq_6_2,  # sleep latency free (minutes)
+    mctq_6_3,  # wake time free
+    mctq_6_4,  # sleep inertia free (minutes)
+    mctq_7_1,  # alarm free days
+    # Derived chronotype measure
+    msf_sc_numeric
+  )
+
+# Function to convert time to decimal hours for summary
+time_to_hours <- function(x) {
+  if (is.character(x) || inherits(x, "hms")) {
+    times <- hms::as_hms(x)
+    return(as.numeric(times) / 3600)
+  }
+  return(x)
+}
+
+# Calculate bedtime averages (convert to decimal hours)
+work_bedtime <- time_to_hours(mctq_data$mctq_3_1)
+work_waketime <- time_to_hours(mctq_data$mctq_3_3)
+free_bedtime <- time_to_hours(mctq_data$mctq_6_1)
+free_waketime <- time_to_hours(mctq_data$mctq_6_3)
+
+# Create summary table
+mctq_summary <- tibble(
+  Variable = c(
+    "Work Days: Bedtime (hours after midnight)",
+    "Work Days: Sleep Latency (minutes)",
+    "Work Days: Wake Time (hours after midnight)",
+    "Work Days: Sleep Inertia (minutes)",
+    "Work Days: Uses Alarm (%)",
+    "Free Days: Bedtime (hours after midnight)",
+    "Free Days: Sleep Latency (minutes)",
+    "Free Days: Wake Time (hours after midnight)",
+    "Free Days: Sleep Inertia (minutes)",
+    "Free Days: Uses Alarm (%)",
+    "MSFsc: Chronotype (hours after midnight)"
+  ),
+  N = c(
+    sum(!is.na(work_bedtime)),
+    sum(!is.na(mctq_data$mctq_3_2)),
+    sum(!is.na(work_waketime)),
+    sum(!is.na(mctq_data$mctq_3_4)),
+    sum(!is.na(mctq_data$mctq_4_1)),
+    sum(!is.na(free_bedtime)),
+    sum(!is.na(mctq_data$mctq_6_2)),
+    sum(!is.na(free_waketime)),
+    sum(!is.na(mctq_data$mctq_6_4)),
+    sum(!is.na(mctq_data$mctq_7_1)),
+    sum(!is.na(mctq_data$msf_sc_numeric))
+  ),
+  Mean = c(
+    mean(work_bedtime, na.rm = TRUE),
+    mean(mctq_data$mctq_3_2, na.rm = TRUE),
+    mean(work_waketime, na.rm = TRUE),
+    mean(mctq_data$mctq_3_4, na.rm = TRUE),
+    mean(mctq_data$mctq_4_1 == "Yes", na.rm = TRUE) * 100,
+    mean(free_bedtime, na.rm = TRUE),
+    mean(mctq_data$mctq_6_2, na.rm = TRUE),
+    mean(free_waketime, na.rm = TRUE),
+    mean(mctq_data$mctq_6_4, na.rm = TRUE),
+    mean(mctq_data$mctq_7_1 == "Yes", na.rm = TRUE) * 100,
+    mean(mctq_data$msf_sc_numeric, na.rm = TRUE)
+  ),
+  SD = c(
+    sd(work_bedtime, na.rm = TRUE),
+    sd(mctq_data$mctq_3_2, na.rm = TRUE),
+    sd(work_waketime, na.rm = TRUE),
+    sd(mctq_data$mctq_3_4, na.rm = TRUE),
+    NA,
+    sd(free_bedtime, na.rm = TRUE),
+    sd(mctq_data$mctq_6_2, na.rm = TRUE),
+    sd(free_waketime, na.rm = TRUE),
+    sd(mctq_data$mctq_6_4, na.rm = TRUE),
+    NA,
+    sd(mctq_data$msf_sc_numeric, na.rm = TRUE)
+  ),
+  Median = c(
+    median(work_bedtime, na.rm = TRUE),
+    median(mctq_data$mctq_3_2, na.rm = TRUE),
+    median(work_waketime, na.rm = TRUE),
+    median(mctq_data$mctq_3_4, na.rm = TRUE),
+    NA,
+    median(free_bedtime, na.rm = TRUE),
+    median(mctq_data$mctq_6_2, na.rm = TRUE),
+    median(free_waketime, na.rm = TRUE),
+    median(mctq_data$mctq_6_4, na.rm = TRUE),
+    NA,
+    median(mctq_data$msf_sc_numeric, na.rm = TRUE)
+  ),
+  Min = c(
+    min(work_bedtime, na.rm = TRUE),
+    min(mctq_data$mctq_3_2, na.rm = TRUE),
+    min(work_waketime, na.rm = TRUE),
+    min(mctq_data$mctq_3_4, na.rm = TRUE),
+    NA,
+    min(free_bedtime, na.rm = TRUE),
+    min(mctq_data$mctq_6_2, na.rm = TRUE),
+    min(free_waketime, na.rm = TRUE),
+    min(mctq_data$mctq_6_4, na.rm = TRUE),
+    NA,
+    min(mctq_data$msf_sc_numeric, na.rm = TRUE)
+  ),
+  Max = c(
+    max(work_bedtime, na.rm = TRUE),
+    max(mctq_data$mctq_3_2, na.rm = TRUE),
+    max(work_waketime, na.rm = TRUE),
+    max(mctq_data$mctq_3_4, na.rm = TRUE),
+    NA,
+    max(free_bedtime, na.rm = TRUE),
+    max(mctq_data$mctq_6_2, na.rm = TRUE),
+    max(free_waketime, na.rm = TRUE),
+    max(mctq_data$mctq_6_4, na.rm = TRUE),
+    NA,
+    max(mctq_data$msf_sc_numeric, na.rm = TRUE)
+  )
+)
+
+# Create table
+tt(mctq_summary,
+   digits = 2,
+   caption = "MCTQ Sleep Timing Variables (Measured at Baseline)") |>
+  style_tt(i = c(1, 6), bold = TRUE) |>  # Bold section headers
+  style_tt(i = 11, bold = TRUE) |>  # Bold MSFsc row
+  format_tt(digits = 2, num_fmt = "decimal")
+```
+
+**Note:** Bedtime and wake time are reported as decimal hours after midnight (e.g., 23.5 = 11:30 PM, 7.5 = 7:30 AM). For times before midnight, values >12 indicate evening times (e.g., 23 = 11 PM). MSF~sc~ represents the mid-point of sleep on free days, corrected for sleep debt accumulated during the week. Higher values indicate later chronotype (eveningness).
+
+## Table S4: MCTQ Sleep Duration Variables
+
+```{r}
+#| label: tbl-mctq-duration
+#| tbl-cap: "Calculated sleep duration variables from MCTQ"
+
+# Calculate sleep durations
+mctq_duration_data <- data.panel |>
+  filter(wave == 1) |>
+  mutate(
+    # Convert to hms for proper duration calculation
+    bt_w = hms::as_hms(mctq_3_1),
+    se_w = hms::as_hms(mctq_3_3),
+    bt_f = hms::as_hms(mctq_6_1),
+    se_f = hms::as_hms(mctq_6_3),
+    
+    # Calculate sleep onset
+    slat_w = lubridate::dminutes(as.numeric(mctq_3_2)),
+    slat_f = lubridate::dminutes(as.numeric(mctq_6_2)),
+    so_w = mctq::so(bt_w, slat_w),
+    so_f = mctq::so(bt_f, slat_f),
+    
+    # Calculate sleep duration in hours
+    sd_w_hours = as.numeric(mctq::sdu(so_w, se_w)) / 3600,
+    sd_f_hours = as.numeric(mctq::sdu(so_f, se_f)) / 3600,
+    
+    # Calculate time in bed (from bedtime to wake time)
+    tib_w_hours = as.numeric(difftime(se_w, bt_w, units = "hours")),
+    tib_f_hours = as.numeric(difftime(se_f, bt_f, units = "hours")),
+    
+    # Adjust for overnight (if negative, add 24 hours)
+    tib_w_hours = if_else(tib_w_hours < 0, tib_w_hours + 24, tib_w_hours),
+    tib_f_hours = if_else(tib_f_hours < 0, tib_f_hours + 24, tib_f_hours)
+  )
+
+# Create summary
+duration_summary <- tibble(
+  Variable = c(
+    "Work Days: Sleep Duration (hours)",
+    "Work Days: Time in Bed (hours)",
+    "Work Days: Sleep Efficiency (%)",
+    "Free Days: Sleep Duration (hours)",
+    "Free Days: Time in Bed (hours)",
+    "Free Days: Sleep Efficiency (%)",
+    "Sleep Debt (Free - Work Days, hours)"
+  ),
+  N = c(
+    sum(!is.na(mctq_duration_data$sd_w_hours)),
+    sum(!is.na(mctq_duration_data$tib_w_hours)),
+    sum(!is.na(mctq_duration_data$sd_w_hours) & !is.na(mctq_duration_data$tib_w_hours)),
+    sum(!is.na(mctq_duration_data$sd_f_hours)),
+    sum(!is.na(mctq_duration_data$tib_f_hours)),
+    sum(!is.na(mctq_duration_data$sd_f_hours) & !is.na(mctq_duration_data$tib_f_hours)),
+    sum(!is.na(mctq_duration_data$sd_f_hours) & !is.na(mctq_duration_data$sd_w_hours))
+  ),
+  Mean = c(
+    mean(mctq_duration_data$sd_w_hours, na.rm = TRUE),
+    mean(mctq_duration_data$tib_w_hours, na.rm = TRUE),
+    mean(mctq_duration_data$sd_w_hours / mctq_duration_data$tib_w_hours * 100, na.rm = TRUE),
+    mean(mctq_duration_data$sd_f_hours, na.rm = TRUE),
+    mean(mctq_duration_data$tib_f_hours, na.rm = TRUE),
+    mean(mctq_duration_data$sd_f_hours / mctq_duration_data$tib_f_hours * 100, na.rm = TRUE),
+    mean(mctq_duration_data$sd_f_hours - mctq_duration_data$sd_w_hours, na.rm = TRUE)
+  ),
+  SD = c(
+    sd(mctq_duration_data$sd_w_hours, na.rm = TRUE),
+    sd(mctq_duration_data$tib_w_hours, na.rm = TRUE),
+    sd(mctq_duration_data$sd_w_hours / mctq_duration_data$tib_w_hours * 100, na.rm = TRUE),
+    sd(mctq_duration_data$sd_f_hours, na.rm = TRUE),
+    sd(mctq_duration_data$tib_f_hours, na.rm = TRUE),
+    sd(mctq_duration_data$sd_f_hours / mctq_duration_data$tib_f_hours * 100, na.rm = TRUE),
+    sd(mctq_duration_data$sd_f_hours - mctq_duration_data$sd_w_hours, na.rm = TRUE)
+  ),
+  Median = c(
+    median(mctq_duration_data$sd_w_hours, na.rm = TRUE),
+    median(mctq_duration_data$tib_w_hours, na.rm = TRUE),
+    median(mctq_duration_data$sd_w_hours / mctq_duration_data$tib_w_hours * 100, na.rm = TRUE),
+    median(mctq_duration_data$sd_f_hours, na.rm = TRUE),
+    median(mctq_duration_data$tib_f_hours, na.rm = TRUE),
+    median(mctq_duration_data$sd_f_hours / mctq_duration_data$tib_f_hours * 100, na.rm = TRUE),
+    median(mctq_duration_data$sd_f_hours - mctq_duration_data$sd_w_hours, na.rm = TRUE)
+  )
+)
+
+# Create table
+tt(duration_summary,
+   digits = 2,
+   caption = "MCTQ Sleep Duration and Efficiency Measures") |>
+  style_tt(i = c(1, 4, 7), bold = TRUE) |>  # Bold section headers
+  format_tt(digits = 2, num_fmt = "decimal")
+```
+
+**Note:** Sleep duration is calculated as the time from sleep onset (bedtime + sleep latency) to wake time. Time in bed is calculated from bedtime to wake time. Sleep efficiency is the ratio of sleep duration to time in bed, expressed as a percentage. Sleep debt represents the difference in sleep duration between free days and work days, with positive values indicating more sleep on free days.
+
+## Table S5: Additional Sleep and Well-being Measures
+
+```{r}
+#| label: tbl-other-measures
+#| tbl-cap: "Descriptive statistics for Epworth Sleepiness Scale and WEMWBS"
+
+# Calculate summary statistics for EPS and WEMWBS
+other_measures <- data.panel |>
+  dplyr::select(epsTotal, wemwbs) |>
+  pivot_longer(
+    cols = everything(),
+    names_to = "Measure",
+    values_to = "Score"
+  ) |>
+  filter(!is.na(Score)) |>
+  group_by(Measure) |>
+  summarise(
+    N = n(),
+    Mean = mean(Score, na.rm = TRUE),
+    SD = sd(Score, na.rm = TRUE),
+    Median = median(Score, na.rm = TRUE),
+    Min = min(Score, na.rm = TRUE),
+    Max = max(Score, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  mutate(
+    Measure = case_when(
+      Measure == "epsTotal" ~ "Epworth Sleepiness Scale (0-24)",
+      Measure == "wemwbs" ~ "WEMWBS Well-being (7-35)",
+      TRUE ~ Measure
+    )
+  )
+
+# Create table
+tt(other_measures,
+   digits = 2,
+   caption = "Additional Sleep and Well-being Measures") |>
+  format_tt(digits = 2, num_fmt = "decimal")
+```
+
+**Note:** The Epworth Sleepiness Scale (EPS) ranges from 0-24, with scores >10 indicating excessive daytime sleepiness. The short Warwick-Edinburgh Mental Well-Being Scale (SWEMWBS) used here ranges from 7-35, with higher scores indicating better mental well-being.
+
+# Questionnaire Details
+
+## PSQI Item Description
+
+The Pittsburgh Sleep Quality Index assesses sleep quality over the past month through 19 self-rated questions across 7 components:
+
+1. **Subjective sleep quality** (psqi_06): Overall self-rating of sleep quality
+2. **Sleep latency** (psqi_02, psqi_05a): Time to fall asleep and frequency of trouble falling asleep
+3. **Sleep duration** (psqi_04): Hours of actual sleep per night  
+4. **Sleep efficiency** (psqi_01, psqi_03, psqi_04): Percentage of time in bed actually spent sleeping
+5. **Sleep disturbances** (psqi_05b-j): Frequency of various sleep problems (e.g., waking up, bad dreams, pain, breathing problems)
+6. **Use of sleep medication** (psqi_07): Frequency of medication use to aid sleep
+7. **Daytime dysfunction** (psqi_08, psqi_09): Trouble staying awake and maintaining enthusiasm during the day
+
+## MCTQ Variable Description
+
+The Munich ChronoType Questionnaire collects information about typical sleep-wake behavior separately for work days and free (non-work) days:
+
+**Work Days:**
+- Bedtime (mctq_3_1): Usual time going to bed
+- Sleep latency (mctq_3_2): Time needed to fall asleep (minutes)
+- Wake time (mctq_3_3): Usual time waking up
+- Sleep inertia (mctq_3_4): Time needed to fully wake up (minutes)
+- Alarm use (mctq_4_1): Whether an alarm clock is used
+
+**Free Days:**
+- Bedtime (mctq_6_1): Usual time going to bed
+- Sleep latency (mctq_6_2): Time needed to fall asleep (minutes)
+- Wake time (mctq_6_3): Usual time waking up
+- Sleep inertia (mctq_6_4): Time needed to fully wake up (minutes)
+- Alarm use (mctq_7_1): Whether an alarm clock is used
+
+**Derived Measure:**
+- MSF~sc~ (msf_sc_numeric): Mid-sleep on free days corrected for sleep debt on work days, representing an individual's circadian phase/chronotype
+
+# References
+
+Buysse, D. J., Reynolds, C. F., Monk, T. H., Berman, S. R., & Kupfer, D. J. (1989). The Pittsburgh Sleep Quality Index: A new instrument for psychiatric practice and research. *Psychiatry Research*, 28(2), 193-213.
+
+Johns, M. W. (1991). A new method for measuring daytime sleepiness: The Epworth sleepiness scale. *Sleep*, 14(6), 540-545.
+
+Roenneberg, T., Wirz-Justice, A., & Merrow, M. (2003). Life between clocks: Daily temporal patterns of human chronotypes. *Journal of Biological Rhythms*, 18(1), 80-90.
+
+Tennant, R., Hiller, L., Fishwick, R., Platt, S., Joseph, S., Weich, S., ... & Stewart-Brown, S. (2007). The Warwick-Edinburgh mental well-being scale (WEMWBS): Development and UK validation. *Health and Quality of Life Outcomes*, 5(1), 63.
+
