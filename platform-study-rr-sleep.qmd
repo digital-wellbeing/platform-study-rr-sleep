@@ -1063,7 +1063,7 @@ Model syntax: `total_hours_sleep ~ ln_monthly_avg_minutes_played * msf_sc_numeri
 #| eval: !expr eval_h2
 
 # Fit the model
-model.h2b <- lmer(total_hours_sleep ~ ln_monthly_avg_minutes_played * msf_sc_numeric + (1 + ln_monthly_avg_minutes_played | pid) +
+model.h2b <- lmer(total_hours_sleep ~ ln_monthly_avg_minutes_played * msf_sc_numeric + (1  | pid) +
                     age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend + (1 | gender),
                   data = gamingMonthly)
 
@@ -1112,7 +1112,7 @@ Model syntax: `epsTotal ~ ln_monthly_avg_minutes_played * msf_sc_numeric + age_s
 #| code-summary: "Fit H2d model"
 #| eval: !expr eval_h2
 
-model.h2d <- lmer(epsTotal ~ ln_monthly_avg_minutes_played * msf_sc_numeric + (1 + ln_monthly_avg_minutes_played | pid) +
+model.h2d <- lmer(epsTotal ~ ln_monthly_avg_minutes_played * msf_sc_numeric + (1  | pid) +
                     age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend + (1 | gender),
                   data = gamingMonthly)
                   
