@@ -125,7 +125,17 @@ prepare_psqi_columns <- function(data) {
         psqi_5_9 == "Three or more times a week" ~ 3,
         TRUE ~ NA_real_
       ),
+      # Q5j: Other reasons (frequency scale 0-3)
+      # Note: The frequency can be in either psqi_5_c or psqi_5_cr_1 depending on
+      # whether a text description was provided. When text is provided, it goes in
+      # psqi_5_c and frequency goes in psqi_5_cr_1. Otherwise frequency is in psqi_5_c.
       psqi_05j = case_when(
+        # First check psqi_5_cr_1 (used when there's a text description)
+        psqi_5_cr_1 == "Not during the past month" ~ 0,
+        psqi_5_cr_1 == "Less than once a week" ~ 1,
+        psqi_5_cr_1 == "Once or twice a week" ~ 2,
+        psqi_5_cr_1 == "Three or more times a week" ~ 3,
+        # Fall back to psqi_5_c (used when no text description provided)
         psqi_5_c == "Not during the past month" ~ 0,
         psqi_5_c == "Less than once a week" ~ 1,
         psqi_5_c == "Once or twice a week" ~ 2,
@@ -200,14 +210,43 @@ compute_psqi <- function(data) {
       keep_enthused = psqi_09,
       sleep_troubles = matches("^psqi_05[b-j]$"),
       components = 1:7,
-      max_missing = 1,  # Allow 1 missing component (typically comp4 may have issues)
+      max_missing = 1,  # All components available (comp4 calculated manually due to bug in questionnaires v0.0.3)
       prefix = "psqi_",
       keep_all = TRUE
     ) %>%
     mutate(
+      # Manual calculation of Component 4 (Sleep Efficiency)
+      # Bug in questionnaires package v0.0.3 returns NA for comp4
+      # Following PSQI Scoring Manual with correction for overnight sleep:
+      bedtime_hms = suppressWarnings(hms::parse_hms(psqi_01)),
+      waketime_hms = suppressWarnings(hms::parse_hms(psqi_03)),
+      # Calculate difference in hours (wake_time - bed_time)
+      diffhour = as.numeric(difftime(waketime_hms, bedtime_hms, units = "hours")),
+      # If negative (overnight sleep), add 24 hours
+      # If > 24 (unusual case), wrap around by subtracting 24
+      newtib = case_when(
+        diffhour < 0 ~ diffhour + 24,
+        diffhour > 24 ~ diffhour - 24,
+        TRUE ~ diffhour
+      ),
+      # Calculate sleep efficiency percentage (hours asleep / hours in bed * 100)
+      tmphse = (psqi_04 / newtib) * 100,
+      # Score according to PSQI manual: >85=0, ≤85 and >75=1, ≤75 and >65=2, ≤65=3
+      psqi_comp4_efficiency = case_when(
+        is.na(tmphse) ~ NA_real_,
+        tmphse > 85 ~ 0,
+        tmphse > 75 ~ 1,
+        tmphse > 65 ~ 2,
+        TRUE ~ 3
+      ),
+      # Recalculate global score with corrected component 4
+      psqi_global = rowSums(pick(psqi_comp1_quality, psqi_comp2_latency, psqi_comp3_duration,
+                                  psqi_comp4_efficiency, psqi_comp5_problems, psqi_comp6_medication,
+                                  psqi_comp7_tired), na.rm = FALSE),
       # Extract sleep duration in hours for compatibility
       total_hours_sleep = psqi_04
-    )
+    ) %>%
+    select(-bedtime_hms, -waketime_hms, -diffhour, -newtib, -tmphse)
 }
 
 # Function to compute Epworth Sleepiness Scale total
@@ -259,16 +298,20 @@ compute_mctq_msf_sc <- function(data) {
   data %>%
     mutate(
       # Create a temporary dataset in mctq expected format
-      # Our mapping (based on inspection):
+      # Our mapping (based on MCTQ codebook):
       # mctq_1: work (Yes/No -> TRUE/FALSE)
-      # mctq_3_1: bt_w (bedtime work)
-      # mctq_3_2: slat_w (sleep latency work, minutes)
-      # mctq_3_3: se_w (sleep end/wake time work)
-      # mctq_3_4: si_w (sleep inertia work, minutes)
-      # mctq_3_5: likely get-up time work (not needed for MSFsc)
+      # mctq_3_1: bt_w (bedtime work - Image 1: going to bed)
+      # mctq_3_2: time awake in bed before sleep prep (minutes) - Image 2
+      # mctq_3_3: sprep_w (sleep prep time work - Image 3: ready to fall asleep)
+      # mctq_3_4: slat_w (sleep latency work, minutes - Image 4: time to fall asleep)
+      # mctq_3_5: se_w (wake time work - Image 5: wake up at)
+      # mctq_3_6: si_w (sleep inertia work - Image 6: time to get up after waking)
       # mctq_4_1: alarm_w (alarm on work days)
       # mctq_6_1-6: same pattern for free days
       # mctq_7_1: alarm_f (alarm on free days)
+      #
+      # Note: For MSFsc calculation, we use sleep prep time (mctq_3_3/mctq_6_3)
+      # as the bedtime equivalent and add sleep latency (mctq_3_4/mctq_6_4).
 
       # Map to mctq format
       work = case_when(
@@ -283,20 +326,53 @@ compute_mctq_msf_sc <- function(data) {
         TRUE ~ 5
       ),
 
-      # Work days - convert to hms
+      # Data quality check: validate bedtime -> sleep prep interval
+      # Calculate interval between bedtime (3_1/6_1) and sleep prep (3_3/6_3)
+      bt_raw_w = hms::as_hms(mctq_3_1),
+      sp_raw_w = hms::as_hms(mctq_3_3),
+      bt_raw_f = hms::as_hms(mctq_6_1),
+      sp_raw_f = hms::as_hms(mctq_6_3),
+
+      # Calculate intervals (handling overnight transitions)
+      # Interval 1: Bedtime -> Sleep prep
+      int_bt_sp_w = as.numeric(difftime(sp_raw_w, bt_raw_w, units = "hours")),
+      int_bt_sp_w = ifelse(int_bt_sp_w < 0, int_bt_sp_w + 24, int_bt_sp_w),
+
+      int_bt_sp_f = as.numeric(difftime(sp_raw_f, bt_raw_f, units = "hours")),
+      int_bt_sp_f = ifelse(int_bt_sp_f < 0, int_bt_sp_f + 24, int_bt_sp_f),
+
+      # Interval 2: Sleep prep -> Wake time (for sleep duration validation)
+      wake_raw_w = hms::as_hms(mctq_3_5),
+      wake_raw_f = hms::as_hms(mctq_6_5),
+
+      int_sp_wake_w = as.numeric(difftime(wake_raw_w, sp_raw_w, units = "hours")),
+      int_sp_wake_w = ifelse(int_sp_wake_w < 0, int_sp_wake_w + 24, int_sp_wake_w),
+
+      int_sp_wake_f = as.numeric(difftime(wake_raw_f, sp_raw_f, units = "hours")),
+      int_sp_wake_f = ifelse(int_sp_wake_f < 0, int_sp_wake_f + 24, int_sp_wake_f),
+
+      # Work days - convert to hms and apply validation (survey requested 24-hour format)
+      # Validation rule: Set wake time to NA if sleep prep->wake interval < 2 hours (very short sleep only)
       bt_w = hms::as_hms(mctq_3_1),
-      sprep_w = bt_w,  # We don't have separate sleep prep time, use bedtime
-      slat_w = lubridate::dminutes(as.numeric(mctq_3_2)),  # Duration object
-      se_w = hms::as_hms(mctq_3_3),
-      si_w = lubridate::dminutes(as.numeric(mctq_3_4)),  # Duration object
+      sprep_w = hms::as_hms(mctq_3_3),
+      slat_w = lubridate::dminutes(as.numeric(mctq_3_4)),  # Sleep latency
+      se_w = case_when(
+        int_sp_wake_w < 2 ~ NA,  # Very short sleep duration
+        TRUE ~ hms::as_hms(mctq_3_5)
+      ),
+      si_w = lubridate::dminutes(as.numeric(mctq_3_6)),  # Sleep inertia
       alarm_w = mctq_4_1 == "Yes",
 
-      # Free days - convert to hms
+      # Free days - convert to hms and apply validation (survey requested 24-hour format)
+      # Validation rule: Set wake time to NA if sleep prep->wake interval < 2 hours (very short sleep only)
       bt_f = hms::as_hms(mctq_6_1),
-      sprep_f = bt_f,  # We don't have separate sleep prep time, use bedtime
-      slat_f = lubridate::dminutes(as.numeric(mctq_6_2)),  # Duration object
-      se_f = hms::as_hms(mctq_6_3),
-      si_f = lubridate::dminutes(as.numeric(mctq_6_4)),  # Duration object
+      sprep_f = hms::as_hms(mctq_6_3),
+      slat_f = lubridate::dminutes(as.numeric(mctq_6_4)),  # Sleep latency
+      se_f = case_when(
+        int_sp_wake_f < 2 ~ NA,  # Very short sleep duration
+        TRUE ~ hms::as_hms(mctq_6_5)
+      ),
+      si_f = lubridate::dminutes(as.numeric(mctq_6_6)),  # Sleep inertia
       alarm_f = mctq_7_1 == "Yes"
     ) %>%
     mutate(
@@ -323,7 +399,10 @@ compute_mctq_msf_sc <- function(data) {
     ) %>%
     select(-work, -wd, -bt_w, -sprep_w, -slat_w, -se_w, -si_w, -alarm_w,
            -bt_f, -sprep_f, -slat_f, -se_f, -si_f, -alarm_f,
-           -so_w, -so_f, -sd_w, -sd_f, -msf, -sd_week, -msf_sc)
+           -so_w, -so_f, -sd_w, -sd_f, -msf, -sd_week, -msf_sc,
+           -bt_raw_w, -sp_raw_w, -bt_raw_f, -sp_raw_f,
+           -wake_raw_w, -wake_raw_f,
+           -int_bt_sp_w, -int_bt_sp_f, -int_sp_wake_w, -int_sp_wake_f)
 }
 
 # Process intake data
@@ -333,10 +412,10 @@ process_intake <- function(intake_path) {
       # Calculate age (age is already in the data)
       age_scaled = scale(age)[,1],
 
-      # Calculate BMI from height (inches) and weight (lbs)
+      # Calculate BMI from height (inches) and weight (kg)
+      # Note: height is in inches, weight is already in kg
       height_m = height * 0.0254,  # inches to meters
-      weight_kg = weight * 0.453592,  # lbs to kg
-      bmi = weight_kg / (height_m^2),
+      bmi = weight / (height_m^2),  # weight is already in kg
       bmi_scaled = scale(bmi)[,1],
 
       # SES index - composite of education and employment
@@ -357,8 +436,8 @@ process_intake <- function(intake_path) {
       SES_index = (edu_numeric + employment_numeric) / 2,
       SES_index_scaled = scale(SES_index)[,1],
 
-      # Create region variable from geo_area
-      region = geo_area
+      # Create region variable from country (UK or US)
+      region = country
     )
 
   return(intake)
@@ -379,7 +458,9 @@ process_panel <- function(panel_path, intake_processed) {
       by = "pid"
     ) %>%
     mutate(
-      psqi_6_ord = factor(psqi_06, ordered = TRUE),
+      psqi_6_ord = factor(psqi_06,
+                         levels = c("Very good", "Fairly good", "Fairly bad", "Very bad"),
+                         ordered = TRUE),
       pid = as.character(pid)
     )
 

@@ -235,126 +235,131 @@ mctq_data <- data.panel |>
   dplyr::select(
     pid,
     # Work day variables
-    mctq_3_1,  # bedtime work
-    mctq_3_2,  # sleep latency work (minutes)
-    mctq_3_3,  # wake time work
-    mctq_3_4,  # sleep inertia work (minutes)
+    mctq_3_1,  # bedtime work (go to bed) - Image 1
+    mctq_3_3,  # sleep prep time work (when ready to fall asleep) - Image 3
+    mctq_3_4,  # sleep latency work (minutes to fall asleep) - Image 4
+    mctq_3_5,  # wake time work - Image 5
     mctq_4_1,  # alarm work days
     # Free day variables
-    mctq_6_1,  # bedtime free
-    mctq_6_2,  # sleep latency free (minutes)
-    mctq_6_3,  # wake time free
-    mctq_6_4,  # sleep inertia free (minutes)
+    mctq_6_1,  # bedtime free (go to bed) - Image 1
+    mctq_6_3,  # sleep prep time free (when ready to fall asleep) - Image 3
+    mctq_6_4,  # sleep latency free (minutes to fall asleep) - Image 4
+    mctq_6_5,  # wake time free - Image 5
     mctq_7_1,  # alarm free days
     # Derived chronotype measure
     msf_sc_numeric
   )
 
 # Function to convert time to decimal hours for summary
+# Note: Survey explicitly requested 24-hour format, so no AM/PM conversion needed
 time_to_hours <- function(x) {
   if (is.character(x) || inherits(x, "hms")) {
     times <- hms::as_hms(x)
-    return(as.numeric(times) / 3600)
+    hours <- as.numeric(times) / 3600
+    return(hours)
   }
   return(x)
 }
 
-# Calculate bedtime averages (convert to decimal hours)
+# Calculate sleep timing variables (convert to decimal hours)
+# Survey requested 24-hour format, so times are used as-is
 work_bedtime <- time_to_hours(mctq_data$mctq_3_1)
-work_waketime <- time_to_hours(mctq_data$mctq_3_3)
+work_sleepprep <- time_to_hours(mctq_data$mctq_3_3)
+work_waketime <- time_to_hours(mctq_data$mctq_3_5)
 free_bedtime <- time_to_hours(mctq_data$mctq_6_1)
-free_waketime <- time_to_hours(mctq_data$mctq_6_3)
+free_sleepprep <- time_to_hours(mctq_data$mctq_6_3)
+free_waketime <- time_to_hours(mctq_data$mctq_6_5)
 
 # Create summary table
 mctq_summary <- tibble(
   Variable = c(
     "Work Days: Bedtime (hours after midnight)",
-    "Work Days: Sleep Latency (minutes)",
+    "Work Days: Sleep Prep Time (hours after midnight)",
+    "Work Days: Sleep Latency (minutes to fall asleep)",
     "Work Days: Wake Time (hours after midnight)",
-    "Work Days: Sleep Inertia (minutes)",
     "Work Days: Uses Alarm (%)",
     "Free Days: Bedtime (hours after midnight)",
-    "Free Days: Sleep Latency (minutes)",
+    "Free Days: Sleep Prep Time (hours after midnight)",
+    "Free Days: Sleep Latency (minutes to fall asleep)",
     "Free Days: Wake Time (hours after midnight)",
-    "Free Days: Sleep Inertia (minutes)",
     "Free Days: Uses Alarm (%)",
     "MSFsc: Chronotype (hours after midnight)"
   ),
   N = c(
     sum(!is.na(work_bedtime)),
-    sum(!is.na(mctq_data$mctq_3_2)),
-    sum(!is.na(work_waketime)),
+    sum(!is.na(work_sleepprep)),
     sum(!is.na(mctq_data$mctq_3_4)),
+    sum(!is.na(work_waketime)),
     sum(!is.na(mctq_data$mctq_4_1)),
     sum(!is.na(free_bedtime)),
-    sum(!is.na(mctq_data$mctq_6_2)),
-    sum(!is.na(free_waketime)),
+    sum(!is.na(free_sleepprep)),
     sum(!is.na(mctq_data$mctq_6_4)),
+    sum(!is.na(free_waketime)),
     sum(!is.na(mctq_data$mctq_7_1)),
     sum(!is.na(mctq_data$msf_sc_numeric))
   ),
   Mean = c(
     mean(work_bedtime, na.rm = TRUE),
-    mean(mctq_data$mctq_3_2, na.rm = TRUE),
-    mean(work_waketime, na.rm = TRUE),
+    mean(work_sleepprep, na.rm = TRUE),
     mean(mctq_data$mctq_3_4, na.rm = TRUE),
+    mean(work_waketime, na.rm = TRUE),
     mean(mctq_data$mctq_4_1 == "Yes", na.rm = TRUE) * 100,
     mean(free_bedtime, na.rm = TRUE),
-    mean(mctq_data$mctq_6_2, na.rm = TRUE),
-    mean(free_waketime, na.rm = TRUE),
+    mean(free_sleepprep, na.rm = TRUE),
     mean(mctq_data$mctq_6_4, na.rm = TRUE),
+    mean(free_waketime, na.rm = TRUE),
     mean(mctq_data$mctq_7_1 == "Yes", na.rm = TRUE) * 100,
     mean(mctq_data$msf_sc_numeric, na.rm = TRUE)
   ),
   SD = c(
     sd(work_bedtime, na.rm = TRUE),
-    sd(mctq_data$mctq_3_2, na.rm = TRUE),
-    sd(work_waketime, na.rm = TRUE),
+    sd(work_sleepprep, na.rm = TRUE),
     sd(mctq_data$mctq_3_4, na.rm = TRUE),
+    sd(work_waketime, na.rm = TRUE),
     NA,
     sd(free_bedtime, na.rm = TRUE),
-    sd(mctq_data$mctq_6_2, na.rm = TRUE),
-    sd(free_waketime, na.rm = TRUE),
+    sd(free_sleepprep, na.rm = TRUE),
     sd(mctq_data$mctq_6_4, na.rm = TRUE),
+    sd(free_waketime, na.rm = TRUE),
     NA,
     sd(mctq_data$msf_sc_numeric, na.rm = TRUE)
   ),
   Median = c(
     median(work_bedtime, na.rm = TRUE),
-    median(mctq_data$mctq_3_2, na.rm = TRUE),
-    median(work_waketime, na.rm = TRUE),
+    median(work_sleepprep, na.rm = TRUE),
     median(mctq_data$mctq_3_4, na.rm = TRUE),
+    median(work_waketime, na.rm = TRUE),
     NA,
     median(free_bedtime, na.rm = TRUE),
-    median(mctq_data$mctq_6_2, na.rm = TRUE),
-    median(free_waketime, na.rm = TRUE),
+    median(free_sleepprep, na.rm = TRUE),
     median(mctq_data$mctq_6_4, na.rm = TRUE),
+    median(free_waketime, na.rm = TRUE),
     NA,
     median(mctq_data$msf_sc_numeric, na.rm = TRUE)
   ),
   Min = c(
     min(work_bedtime, na.rm = TRUE),
-    min(mctq_data$mctq_3_2, na.rm = TRUE),
-    min(work_waketime, na.rm = TRUE),
+    min(work_sleepprep, na.rm = TRUE),
     min(mctq_data$mctq_3_4, na.rm = TRUE),
+    min(work_waketime, na.rm = TRUE),
     NA,
     min(free_bedtime, na.rm = TRUE),
-    min(mctq_data$mctq_6_2, na.rm = TRUE),
-    min(free_waketime, na.rm = TRUE),
+    min(free_sleepprep, na.rm = TRUE),
     min(mctq_data$mctq_6_4, na.rm = TRUE),
+    min(free_waketime, na.rm = TRUE),
     NA,
     min(mctq_data$msf_sc_numeric, na.rm = TRUE)
   ),
   Max = c(
     max(work_bedtime, na.rm = TRUE),
-    max(mctq_data$mctq_3_2, na.rm = TRUE),
-    max(work_waketime, na.rm = TRUE),
+    max(work_sleepprep, na.rm = TRUE),
     max(mctq_data$mctq_3_4, na.rm = TRUE),
+    max(work_waketime, na.rm = TRUE),
     NA,
     max(free_bedtime, na.rm = TRUE),
-    max(mctq_data$mctq_6_2, na.rm = TRUE),
-    max(free_waketime, na.rm = TRUE),
+    max(free_sleepprep, na.rm = TRUE),
     max(mctq_data$mctq_6_4, na.rm = TRUE),
+    max(free_waketime, na.rm = TRUE),
     NA,
     max(mctq_data$msf_sc_numeric, na.rm = TRUE)
   )
@@ -371,39 +376,354 @@ tt(mctq_summary,
 
 **Note:** Bedtime and wake time are reported as decimal hours after midnight (e.g., 23.5 = 11:30 PM, 7.5 = 7:30 AM). For times before midnight, values >12 indicate evening times (e.g., 23 = 11 PM). MSF~sc~ represents the mid-point of sleep on free days, corrected for sleep debt accumulated during the week. Higher values indicate later chronotype (eveningness).
 
-## Table S4: MCTQ Sleep Duration Variables
+## Table S4: MCTQ Data Presentation Using pretty_mctq()
+
+The `pretty_mctq()` function from the mctq package provides a standardized way to present MCTQ data with proper variable names and formatting. This function makes MCTQ datasets more presentable for publication and analysis.
+
+```{r}
+#| label: tbl-pretty-mctq
+#| tbl-cap: "MCTQ data formatted using pretty_mctq() function"
+
+# Prepare MCTQ data for pretty_mctq() function
+# The function expects specific column names that match MCTQ standards
+mctq_for_pretty <- data.panel |>
+  filter(wave == 1) |>
+  dplyr::select(
+    pid,
+    # Work day variables (using MCTQ standard naming)
+    bt_w = mctq_3_1,      # bedtime work
+    sprep_w = mctq_3_3,   # sleep preparation work  
+    slat_w = mctq_3_4,    # sleep latency work (minutes)
+    se_w = mctq_3_5,      # sleep end work (wake time)
+    alarm_w = mctq_4_1,   # alarm work days
+    # Free day variables
+    bt_f = mctq_6_1,      # bedtime free
+    sprep_f = mctq_6_3,    # sleep preparation free
+    slat_f = mctq_6_4,    # sleep latency free (minutes)
+    se_f = mctq_6_5,       # sleep end free (wake time)
+    alarm_f = mctq_7_1,   # alarm free days
+    # Derived chronotype measure
+    msf_sc = msf_sc_numeric
+  ) |>
+  # Convert alarm variables to logical if needed
+  mutate(
+    alarm_w = ifelse(alarm_w == "Yes", TRUE, FALSE),
+    alarm_f = ifelse(alarm_f == "Yes", TRUE, FALSE)
+  )
+
+# Apply pretty_mctq() to make the data more presentable
+mctq_pretty <- mctq::pretty_mctq(mctq_for_pretty)
+
+# Show the first few rows of the prettified data
+head(mctq_pretty, 10)
+```
+
+```{r}
+#| label: tbl-pretty-summary
+#| tbl-cap: "Summary statistics for prettified MCTQ data"
+
+# Create summary statistics for the prettified MCTQ data
+# Convert time variables to numeric (decimal hours) for consistent analysis
+mctq_pretty_numeric <- mctq_pretty |>
+  mutate(
+    # Convert time variables to decimal hours
+    bt_w_hours = as.numeric(bt_w) / 3600,
+    sprep_w_hours = as.numeric(sprep_w) / 3600,
+    se_w_hours = as.numeric(se_w) / 3600,
+    bt_f_hours = as.numeric(bt_f) / 3600,
+    sprep_f_hours = as.numeric(sprep_f) / 3600,
+    se_f_hours = as.numeric(se_f) / 3600,
+    # Convert alarm to numeric (0/1)
+    alarm_w_num = as.numeric(alarm_w),
+    alarm_f_num = as.numeric(alarm_f)
+  )
+
+mctq_pretty_summary <- mctq_pretty_numeric |>
+  dplyr::select(
+    `Work Days: Bedtime (hours)` = bt_w_hours,
+    `Work Days: Sleep Preparation (hours)` = sprep_w_hours,
+    `Work Days: Sleep Latency (min)` = slat_w,
+    `Work Days: Sleep End (hours)` = se_w_hours,
+    `Work Days: Alarm (0/1)` = alarm_w_num,
+    `Free Days: Bedtime (hours)` = bt_f_hours,
+    `Free Days: Sleep Preparation (hours)` = sprep_f_hours,
+    `Free Days: Sleep Latency (min)` = slat_f,
+    `Free Days: Sleep End (hours)` = se_f_hours,
+    `Free Days: Alarm (0/1)` = alarm_f_num,
+    `Chronotype (MSFsc)` = msf_sc
+  ) |>
+  pivot_longer(
+    cols = everything(),
+    names_to = "Variable",
+    values_to = "Value"
+  ) |>
+  filter(!is.na(Value)) |>
+  group_by(Variable) |>
+  summarise(
+    N = n(),
+    Mean = mean(Value, na.rm = TRUE),
+    SD = sd(Value, na.rm = TRUE),
+    Median = median(Value, na.rm = TRUE),
+    Min = min(Value, na.rm = TRUE),
+    Max = max(Value, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Create table
+tt(mctq_pretty_summary,
+   digits = 2,
+   caption = "Summary Statistics for Prettified MCTQ Data") |>
+  format_tt(digits = 2, num_fmt = "decimal")
+```
+
+**Note:** The `pretty_mctq()` function standardizes MCTQ variable names and formats, making the data more readable and consistent with MCTQ conventions. This is particularly useful for data sharing, publication, and ensuring compatibility with other MCTQ analysis tools.
+
+## Table S5: MCTQ Time Interval Validation
+
+To check data quality, we examine the time intervals between MCTQ time points. These should follow logical temporal ordering:
+- Bedtime (Image 1) → Sleep Prep Time (Image 3) → Wake Time (Image 5)
+
+```{r}
+#| label: fig-mctq-intervals
+#| fig-cap: "Distribution of time intervals between MCTQ time points"
+#| fig-width: 10
+#| fig-height: 8
+
+library(patchwork)
+
+# Load RAW panel data (before validation rules are applied)
+# This ensures we see the true distribution of intervals before cleaning
+data.panel_raw <- read_csv("data/panel.csv.gz", show_col_types = FALSE)
+
+# Calculate intervals between time points from RAW data
+mctq_intervals <- data.panel_raw |>
+  filter(wave == 1) |>
+  mutate(
+    # Convert to hms
+    bt_w = hms::as_hms(mctq_3_1),     # Bedtime work
+    sp_w = hms::as_hms(mctq_3_3),     # Sleep prep work
+    wake_w = hms::as_hms(mctq_3_5),   # Wake time work
+    bt_f = hms::as_hms(mctq_6_1),     # Bedtime free
+    sp_f = hms::as_hms(mctq_6_3),     # Sleep prep free
+    wake_f = hms::as_hms(mctq_6_5),   # Wake time free
+
+    # Calculate intervals in minutes (handling overnight transitions)
+    # Interval from bedtime to sleep prep
+    int_bt_sp_w = as.numeric(difftime(sp_w, bt_w, units = "mins")),
+    int_bt_sp_w = ifelse(int_bt_sp_w < 0, int_bt_sp_w + 24*60, int_bt_sp_w),
+
+    int_bt_sp_f = as.numeric(difftime(sp_f, bt_f, units = "mins")),
+    int_bt_sp_f = ifelse(int_bt_sp_f < 0, int_bt_sp_f + 24*60, int_bt_sp_f),
+
+    # Interval from sleep prep to wake
+    int_sp_wake_w = as.numeric(difftime(wake_w, sp_w, units = "mins")),
+    int_sp_wake_w = ifelse(int_sp_wake_w < 0, int_sp_wake_w + 24*60, int_sp_wake_w),
+
+    int_sp_wake_f = as.numeric(difftime(wake_f, sp_f, units = "mins")),
+    int_sp_wake_f = ifelse(int_sp_wake_f < 0, int_sp_wake_f + 24*60, int_sp_wake_f),
+
+    # Total time in bed (bedtime to wake)
+    int_bt_wake_w = as.numeric(difftime(wake_w, bt_w, units = "mins")),
+    int_bt_wake_w = ifelse(int_bt_wake_w < 0, int_bt_wake_w + 24*60, int_bt_wake_w),
+
+    int_bt_wake_f = as.numeric(difftime(wake_f, bt_f, units = "mins")),
+    int_bt_wake_f = ifelse(int_bt_wake_f < 0, int_bt_wake_f + 24*60, int_bt_wake_f)
+  )
+
+# Create histograms
+p1 <- ggplot(mctq_intervals, aes(x = int_bt_sp_w)) +
+  geom_histogram(binwidth = 15, fill = "steelblue", alpha = 0.7) +
+  geom_vline(xintercept = 360, linetype = "dashed", color = "red") +
+  labs(title = "Work Days: Bedtime → Sleep Prep",
+       subtitle = "Red line at 6 hours (validation threshold)",
+       x = "Interval (minutes)", y = "Count") +
+  xlim(0, 600) +
+  theme_minimal()
+
+p2 <- ggplot(mctq_intervals, aes(x = int_bt_sp_f)) +
+  geom_histogram(binwidth = 15, fill = "steelblue", alpha = 0.7) +
+  geom_vline(xintercept = 360, linetype = "dashed", color = "red") +
+  labs(title = "Free Days: Bedtime → Sleep Prep",
+       subtitle = "Red line at 6 hours (validation threshold)",
+       x = "Interval (minutes)", y = "Count") +
+  xlim(0, 600) +
+  theme_minimal()
+
+p3 <- ggplot(mctq_intervals, aes(x = int_sp_wake_w / 60)) +
+  geom_histogram(binwidth = 0.5, fill = "darkgreen", alpha = 0.7) +
+  geom_vline(xintercept = 2, linetype = "dashed", color = "red") +
+  labs(title = "Work Days: Sleep Prep → Wake",
+       subtitle = "Red line at 2 hours (validation threshold)",
+       x = "Interval (hours)", y = "Count") +
+  xlim(0, 18) +
+  theme_minimal()
+
+p4 <- ggplot(mctq_intervals, aes(x = int_sp_wake_f / 60)) +
+  geom_histogram(binwidth = 0.5, fill = "darkgreen", alpha = 0.7) +
+  geom_vline(xintercept = 2, linetype = "dashed", color = "red") +
+  labs(title = "Free Days: Sleep Prep → Wake",
+       subtitle = "Red line at 2 hours (validation threshold)",
+       x = "Interval (hours)", y = "Count") +
+  xlim(0, 18) +
+  theme_minimal()
+
+p5 <- ggplot(mctq_intervals, aes(x = int_bt_wake_w / 60)) +
+  geom_histogram(binwidth = 0.5, fill = "purple", alpha = 0.7) +
+  geom_vline(xintercept = c(4, 12), linetype = "dashed", color = "red") +
+  labs(title = "Work Days: Total Time in Bed",
+       x = "Interval (hours)", y = "Count") +
+  xlim(0, 18) +
+  theme_minimal()
+
+p6 <- ggplot(mctq_intervals, aes(x = int_bt_wake_f / 60)) +
+  geom_histogram(binwidth = 0.5, fill = "purple", alpha = 0.7) +
+  geom_vline(xintercept = c(4, 12), linetype = "dashed", color = "red") +
+  labs(title = "Free Days: Total Time in Bed",
+       x = "Interval (hours)", y = "Count") +
+  xlim(0, 18) +
+  theme_minimal()
+
+# Combine plots
+(p1 | p2) / (p3 | p4) / (p5 | p6)
+```
+
+**Interpretation:** Red dashed lines indicate plausible boundaries. For bedtime→sleep prep, values >120 minutes (2 hours) may indicate data entry errors or unusual behavior. For sleep intervals, values <4 hours or >12 hours may warrant closer inspection.
+
+```{r}
+#| label: tbl-interval-summary
+#| tbl-cap: "Summary statistics for MCTQ time intervals"
+
+# Create summary table
+interval_summary <- tibble(
+  Interval = c(
+    "Work: Bedtime → Sleep Prep (min)",
+    "Work: Sleep Prep → Wake (hours)",
+    "Work: Total Time in Bed (hours)",
+    "Free: Bedtime → Sleep Prep (min)",
+    "Free: Sleep Prep → Wake (hours)",
+    "Free: Total Time in Bed (hours)"
+  ),
+  N = c(
+    sum(!is.na(mctq_intervals$int_bt_sp_w)),
+    sum(!is.na(mctq_intervals$int_sp_wake_w)),
+    sum(!is.na(mctq_intervals$int_bt_wake_w)),
+    sum(!is.na(mctq_intervals$int_bt_sp_f)),
+    sum(!is.na(mctq_intervals$int_sp_wake_f)),
+    sum(!is.na(mctq_intervals$int_bt_wake_f))
+  ),
+  Mean = c(
+    mean(mctq_intervals$int_bt_sp_w, na.rm = TRUE),
+    mean(mctq_intervals$int_sp_wake_w / 60, na.rm = TRUE),
+    mean(mctq_intervals$int_bt_wake_w / 60, na.rm = TRUE),
+    mean(mctq_intervals$int_bt_sp_f, na.rm = TRUE),
+    mean(mctq_intervals$int_sp_wake_f / 60, na.rm = TRUE),
+    mean(mctq_intervals$int_bt_wake_f / 60, na.rm = TRUE)
+  ),
+  SD = c(
+    sd(mctq_intervals$int_bt_sp_w, na.rm = TRUE),
+    sd(mctq_intervals$int_sp_wake_w / 60, na.rm = TRUE),
+    sd(mctq_intervals$int_bt_wake_w / 60, na.rm = TRUE),
+    sd(mctq_intervals$int_bt_sp_f, na.rm = TRUE),
+    sd(mctq_intervals$int_sp_wake_f / 60, na.rm = TRUE),
+    sd(mctq_intervals$int_bt_wake_f / 60, na.rm = TRUE)
+  ),
+  Median = c(
+    median(mctq_intervals$int_bt_sp_w, na.rm = TRUE),
+    median(mctq_intervals$int_sp_wake_w / 60, na.rm = TRUE),
+    median(mctq_intervals$int_bt_wake_w / 60, na.rm = TRUE),
+    median(mctq_intervals$int_bt_sp_f, na.rm = TRUE),
+    median(mctq_intervals$int_sp_wake_f / 60, na.rm = TRUE),
+    median(mctq_intervals$int_bt_wake_f / 60, na.rm = TRUE)
+  ),
+  `N > Threshold` = c(
+    sum(mctq_intervals$int_bt_sp_w > 120, na.rm = TRUE),
+    sum(mctq_intervals$int_sp_wake_w / 60 > 12 |
+        mctq_intervals$int_sp_wake_w / 60 < 4, na.rm = TRUE),
+    sum(mctq_intervals$int_bt_wake_w / 60 > 12 |
+        mctq_intervals$int_bt_wake_w / 60 < 4, na.rm = TRUE),
+    sum(mctq_intervals$int_bt_sp_f > 120, na.rm = TRUE),
+    sum(mctq_intervals$int_sp_wake_f / 60 > 12 |
+        mctq_intervals$int_sp_wake_f / 60 < 4, na.rm = TRUE),
+    sum(mctq_intervals$int_bt_wake_f / 60 > 12 |
+        mctq_intervals$int_bt_wake_f / 60 < 4, na.rm = TRUE)
+  )
+)
+
+tt(interval_summary,
+   digits = 2,
+   caption = "MCTQ Time Interval Summary and Potential Data Quality Issues") |>
+  format_tt(digits = 2, num_fmt = "decimal")
+```
+
+**Note:** The "N > Threshold" column shows counts of potentially implausible values: bedtime→sleep prep intervals >120 minutes (2 hours), and sleep durations <4 or >12 hours.
+
+### Data Quality Rules
+
+In the preprocessing pipeline (preprocess_data.R:354-376), one validation rule is automatically applied to MCTQ time variables to exclude only extreme/implausible cases:
+
+**Validation Rule: Sleep Prep → Wake Interval < 2 hours**
+- Wake times (mctq_3_5 and mctq_6_5) are set to NA if the interval from sleep prep time (Image 3) to wake time (Image 5) is less than **2 hours**
+- Rationale: Excludes only very short sleep durations that are physiologically implausible, while retaining cases of restricted sleep
+
+**Note:** This threshold is intentionally lenient to preserve sample size while excluding only the most extreme implausible values.
+
+```{r}
+#| label: cleaning-summary
+#| echo: false
+
+# Count how many values were excluded by the validation rule
+# Sleep prep -> Wake < 2 hours (120 minutes)
+n_excluded_wake_work <- sum(mctq_intervals$int_sp_wake_w < 120, na.rm = TRUE)
+n_excluded_wake_free <- sum(mctq_intervals$int_sp_wake_f < 120, na.rm = TRUE)
+n_total_wake_work <- sum(!is.na(mctq_intervals$int_sp_wake_w))
+n_total_wake_free <- sum(!is.na(mctq_intervals$int_sp_wake_f))
+
+cat("Validation Rule: Sleep Prep → Wake < 2 hours\n")
+cat(sprintf("  Work days: %d/%d (%.1f%%) wake time values excluded\n",
+            n_excluded_wake_work, n_total_wake_work, 100*n_excluded_wake_work/n_total_wake_work))
+cat(sprintf("  Free days: %d/%d (%.1f%%) wake time values excluded\n",
+            n_excluded_wake_free, n_total_wake_free, 100*n_excluded_wake_free/n_total_wake_free))
+```
+
+## Table S6: MCTQ Sleep Duration Variables
 
 ```{r}
 #| label: tbl-mctq-duration
 #| tbl-cap: "Calculated sleep duration variables from MCTQ"
 
-# Calculate sleep durations
+# Calculate sleep durations using mctq package functions
+# Note: mctq_3_5/mctq_6_5 are the actual get-up times (not mctq_3_3/mctq_6_3)
 mctq_duration_data <- data.panel |>
   filter(wave == 1) |>
   mutate(
-    # Convert to hms for proper duration calculation
+    # Convert to proper types for mctq functions
+    # hms objects for times
     bt_w = hms::as_hms(mctq_3_1),
-    se_w = hms::as_hms(mctq_3_3),
+    gu_w = hms::as_hms(mctq_3_5),  # Get-up time (actual wake time)
     bt_f = hms::as_hms(mctq_6_1),
-    se_f = hms::as_hms(mctq_6_3),
+    gu_f = hms::as_hms(mctq_6_5),  # Get-up time (actual wake time)
     
-    # Calculate sleep onset
-    slat_w = lubridate::dminutes(as.numeric(mctq_3_2)),
-    slat_f = lubridate::dminutes(as.numeric(mctq_6_2)),
+    # Duration objects for sleep latency (in minutes)
+    slat_w = lubridate::dminutes(as.numeric(mctq_3_4)),
+    slat_f = lubridate::dminutes(as.numeric(mctq_6_4)),
+    
+    # Calculate sleep onset using mctq::so() function
+    # so() adds sleep latency to bedtime (we use bedtime as sleep prep time)
     so_w = mctq::so(bt_w, slat_w),
     so_f = mctq::so(bt_f, slat_f),
     
-    # Calculate sleep duration in hours
-    sd_w_hours = as.numeric(mctq::sdu(so_w, se_w)) / 3600,
-    sd_f_hours = as.numeric(mctq::sdu(so_f, se_f)) / 3600,
+    # Calculate sleep duration using mctq::sdu() function
+    # sdu() calculates from sleep onset to get-up time (actual wake)
+    sd_w_duration = mctq::sdu(so_w, gu_w),
+    sd_f_duration = mctq::sdu(so_f, gu_f),
+    sd_w_hours = as.numeric(sd_w_duration) / 3600,
+    sd_f_hours = as.numeric(sd_f_duration) / 3600,
     
-    # Calculate time in bed (from bedtime to wake time)
-    tib_w_hours = as.numeric(difftime(se_w, bt_w, units = "hours")),
-    tib_f_hours = as.numeric(difftime(se_f, bt_f, units = "hours")),
-    
-    # Adjust for overnight (if negative, add 24 hours)
-    tib_w_hours = if_else(tib_w_hours < 0, tib_w_hours + 24, tib_w_hours),
-    tib_f_hours = if_else(tib_f_hours < 0, tib_f_hours + 24, tib_f_hours)
+    # Calculate time in bed (from bedtime to get-up time)
+    tib_w_duration = mctq::tbt(bt_w, gu_w),
+    tib_f_duration = mctq::tbt(bt_f, gu_f),
+    tib_w_hours = as.numeric(tib_w_duration) / 3600,
+    tib_f_hours = as.numeric(tib_f_duration) / 3600
   )
 
 # Create summary
@@ -463,9 +783,140 @@ tt(duration_summary,
   format_tt(digits = 2, num_fmt = "decimal")
 ```
 
-**Note:** Sleep duration is calculated as the time from sleep onset (bedtime + sleep latency) to wake time. Time in bed is calculated from bedtime to wake time. Sleep efficiency is the ratio of sleep duration to time in bed, expressed as a percentage. Sleep debt represents the difference in sleep duration between free days and work days, with positive values indicating more sleep on free days.
+**Note:** Sleep duration is calculated as the time from sleep onset (bedtime + sleep latency) to get-up time (mctq_3_5/mctq_6_5). Time in bed is calculated from bedtime to get-up time. Sleep efficiency is the ratio of sleep duration to time in bed, expressed as a percentage. Sleep debt represents the difference in sleep duration between free days and work days, with positive values indicating more sleep on free days.
 
-## Table S5: Additional Sleep and Well-being Measures
+## Chronotype (MSFsc) Distribution and Data Completeness
+
+The primary chronotype measure is MSF~sc~ (mid-sleep on free days corrected for sleep debt), calculated using the mctq R package. This section examines the distribution of chronotype values and assesses data completeness after applying validation rules.
+
+```{r}
+#| label: fig-chronotype-dist
+#| fig-cap: "Distribution of chronotype (MSFsc) values"
+#| fig-width: 10
+#| fig-height: 5
+
+library(patchwork)
+
+# Extract chronotype data from processed panel
+chronotype_data <- data.panel |>
+  filter(wave == 1) |>
+  select(pid, msf_sc_numeric)
+
+# Also check raw data to see how many had complete MCTQ responses
+raw_completeness <- data.panel_raw |>
+  filter(wave == 1) |>
+  mutate(
+    has_all_mctq = !is.na(mctq_3_3) & !is.na(mctq_3_4) & !is.na(mctq_3_5) &
+                   !is.na(mctq_6_3) & !is.na(mctq_6_4) & !is.na(mctq_6_5)
+  )
+
+# Create histogram
+p1 <- ggplot(chronotype_data, aes(x = msf_sc_numeric)) +
+  geom_histogram(binwidth = 0.25, fill = "steelblue", alpha = 0.7, color = "white") +
+  geom_vline(xintercept = median(chronotype_data$msf_sc_numeric, na.rm = TRUE),
+             linetype = "dashed", color = "red", linewidth = 1) +
+  geom_vline(xintercept = mean(chronotype_data$msf_sc_numeric, na.rm = TRUE),
+             linetype = "dotted", color = "darkred", linewidth = 1) +
+  labs(title = "Distribution of Chronotype (MSFsc)",
+       subtitle = "Red dashed = median, Red dotted = mean",
+       x = "MSFsc (hours after midnight)",
+       y = "Count") +
+  scale_x_continuous(breaks = seq(0, 12, 1)) +
+  theme_minimal() +
+  theme(panel.grid.minor = element_blank())
+
+# Create density plot
+p2 <- ggplot(chronotype_data, aes(x = msf_sc_numeric)) +
+  geom_density(fill = "steelblue", alpha = 0.5, linewidth = 1) +
+  geom_vline(xintercept = median(chronotype_data$msf_sc_numeric, na.rm = TRUE),
+             linetype = "dashed", color = "red", linewidth = 1) +
+  labs(title = "Density Plot of Chronotype",
+       x = "MSFsc (hours after midnight)",
+       y = "Density") +
+  scale_x_continuous(breaks = seq(0, 12, 1)) +
+  theme_minimal() +
+  theme(panel.grid.minor = element_blank())
+
+p1 | p2
+```
+
+```{r}
+#| label: tbl-chronotype-completeness
+#| tbl-cap: "Chronotype data completeness"
+
+# Calculate completeness statistics
+n_total <- nrow(data.panel_raw |> filter(wave == 1))
+n_raw_complete <- sum(raw_completeness$has_all_mctq, na.rm = TRUE)
+n_msf_calculated <- sum(!is.na(chronotype_data$msf_sc_numeric))
+n_excluded_validation <- n_raw_complete - n_msf_calculated
+
+completeness_summary <- tibble(
+  Stage = c(
+    "Total participants (Wave 1)",
+    "Complete MCTQ responses (raw)",
+    "Excluded by validation rules",
+    "Successfully calculated MSFsc",
+    "Missing/incomplete MCTQ"
+  ),
+  N = c(
+    n_total,
+    n_raw_complete,
+    n_excluded_validation,
+    n_msf_calculated,
+    n_total - n_msf_calculated
+  ),
+  `% of Total` = c(
+    100,
+    100 * n_raw_complete / n_total,
+    100 * n_excluded_validation / n_total,
+    100 * n_msf_calculated / n_total,
+    100 * (n_total - n_msf_calculated) / n_total
+  ),
+  `% of Complete` = c(
+    NA,
+    100,
+    100 * n_excluded_validation / n_raw_complete,
+    100 * n_msf_calculated / n_raw_complete,
+    NA
+  )
+)
+
+tt(completeness_summary,
+   digits = 1,
+   caption = "MSFsc Chronotype Data Completeness") |>
+  style_tt(i = c(1, 4), bold = TRUE) |>
+  format_tt(digits = 1, num_fmt = "decimal")
+```
+
+```{r}
+#| label: tbl-chronotype-stats
+#| tbl-cap: "Descriptive statistics for MSFsc chronotype"
+
+chronotype_stats <- tibble(
+  Statistic = c("N", "Mean", "SD", "Median", "IQR", "Min", "Max",
+                "25th percentile", "75th percentile"),
+  Value = c(
+    sum(!is.na(chronotype_data$msf_sc_numeric)),
+    mean(chronotype_data$msf_sc_numeric, na.rm = TRUE),
+    sd(chronotype_data$msf_sc_numeric, na.rm = TRUE),
+    median(chronotype_data$msf_sc_numeric, na.rm = TRUE),
+    IQR(chronotype_data$msf_sc_numeric, na.rm = TRUE),
+    min(chronotype_data$msf_sc_numeric, na.rm = TRUE),
+    max(chronotype_data$msf_sc_numeric, na.rm = TRUE),
+    quantile(chronotype_data$msf_sc_numeric, 0.25, na.rm = TRUE),
+    quantile(chronotype_data$msf_sc_numeric, 0.75, na.rm = TRUE)
+  )
+)
+
+tt(chronotype_stats,
+   digits = 2,
+   caption = "MSFsc Chronotype Descriptive Statistics (hours after midnight)") |>
+  format_tt(digits = 2, num_fmt = "decimal")
+```
+
+**Note:** MSF~sc~ represents the mid-point of sleep on free days, corrected for sleep debt accumulated during work days. Higher values indicate later chronotype (eveningness). Typical values range from approximately 2-7 hours after midnight, with values >5 hours generally considered "evening types."
+
+## Table S7: Additional Sleep and Well-being Measures
 
 ```{r}
 #| label: tbl-other-measures
@@ -526,18 +977,20 @@ The Pittsburgh Sleep Quality Index assesses sleep quality over the past month th
 The Munich ChronoType Questionnaire collects information about typical sleep-wake behavior separately for work days and free (non-work) days:
 
 **Work Days:**
-- Bedtime (mctq_3_1): Usual time going to bed
-- Sleep latency (mctq_3_2): Time needed to fall asleep (minutes)
-- Wake time (mctq_3_3): Usual time waking up
-- Sleep inertia (mctq_3_4): Time needed to fully wake up (minutes)
+- Bedtime (mctq_3_1): Usual time going to bed (Image 1)
+- Sleep preparation time (mctq_3_3): Time when actually getting ready to fall asleep (Image 3)
+- Sleep latency (mctq_3_4): Time needed to fall asleep (minutes) (Image 4)
+- Wake time (mctq_3_5): Time of waking up (Image 5)
 - Alarm use (mctq_4_1): Whether an alarm clock is used
 
 **Free Days:**
-- Bedtime (mctq_6_1): Usual time going to bed
-- Sleep latency (mctq_6_2): Time needed to fall asleep (minutes)
-- Wake time (mctq_6_3): Usual time waking up
-- Sleep inertia (mctq_6_4): Time needed to fully wake up (minutes)
+- Bedtime (mctq_6_1): Usual time going to bed (Image 1)
+- Sleep preparation time (mctq_6_3): Time when actually getting ready to fall asleep (Image 3)
+- Sleep latency (mctq_6_4): Time needed to fall asleep (minutes) (Image 4)
+- Wake time (mctq_6_5): Time of waking up (Image 5)
 - Alarm use (mctq_7_1): Whether an alarm clock is used
+
+**Note:** Sleep duration is calculated from sleep onset (sleep prep time + sleep latency) to wake time (mctq_3_5/mctq_6_5).
 
 **Derived Measure:**
 - MSF~sc~ (msf_sc_numeric): Mid-sleep on free days corrected for sleep debt on work days, representing an individual's circadian phase/chronotype

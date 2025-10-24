@@ -338,6 +338,274 @@ gamingBiweekly <- data.gaming |>
 
 ```
 
+## Late-Night Gaming Descriptives
+
+```{r}
+#| label: gameplay-descriptives
+#| code-summary: "Histogram of monthly total late-night gaming"
+#| fig-width: 10
+#| fig-height: 5
+
+# Prepare gameplay data - aggregate to participant level for histogram
+# Using daily average thresholds: None = 0, Low < 10.7 min/day, Moderate < 32.1 min/day, High >= 32.1 min/day
+participant_gameplay <- gamingMonthly |>
+  filter(month %in% c(2, 4, 6)) |>  # Only include the three study months
+  dplyr::select(
+    pid,
+    month,
+    ln_monthly_avg_minutes_played
+  ) |>
+  filter(!is.na(ln_monthly_avg_minutes_played)) |>
+  # Aggregate to participant-month level (because data has weekend/weekday split)
+  group_by(pid, month) |>
+  summarise(
+    month_avg = mean(ln_monthly_avg_minutes_played, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  # Then aggregate to participant level (average across all study months)
+  group_by(pid) |>
+  summarise(
+    avg_minutes_per_day = mean(month_avg, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  mutate(
+    # Create categories based on daily average (300/28 = 10.7, 900/28 = 32.1)
+    category = case_when(
+      avg_minutes_per_day == 0 ~ "None",
+      avg_minutes_per_day < 10 ~ "Low (< 10 min/day)",
+      avg_minutes_per_day < 30 ~ "Moderate (10-30 min/day)",
+      TRUE ~ "High (30 min/day)"
+    ),
+    category = factor(category, levels = c("None", "Low (< 10 min/day)",
+                                           "Moderate (10-30 min/day)",
+                                           "High (30 min/day)"))
+  )
+
+# Create summary for pie chart
+pie_data <- participant_gameplay |>
+  group_by(category) |>
+  summarise(
+    n = n(),
+    .groups = "drop"
+  ) |>
+  arrange(desc(category)) |>  # Order to control slice positioning
+  mutate(
+    percentage = round(100 * n / sum(n), 1),
+    # Calculate position for labels (at the middle of each slice)
+    label_y = cumsum(n) - 0.5 * n
+  )
+
+# Create pie chart using ggplot2 with proper label positioning
+ggplot(pie_data, aes(x = 2, y = n, fill = category)) +
+  geom_bar(stat = "identity", color = "white", size = 1.5) +
+  coord_polar(theta = "y", start = 0) +
+  # Add percentage labels positioned at the center of each slice
+  geom_text(aes(y = label_y, label = paste0(percentage, "%")),
+            x = 2, color = "white", size = 6, fontface = "bold") +
+  scale_fill_manual(
+    values = c(
+      "None" = "#999999",
+      "Low (< 10 min/day)" = "#66C2A5",
+      "Moderate (10-30 min/day)" = "#FC8D62",
+      "High (30 min/day)" = "#E78AC3"
+    )
+  ) +
+  labs(
+    title = "Distribution of Participants by Late-Night Gaming Category",
+    fill = "Category"
+  ) +
+  xlim(0.5, 2.5) +  # Create donut hole for better label positioning
+  theme_void(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", size = 13, hjust = 0.5),
+    legend.position = "right",
+    legend.text = element_text(size = 10)
+  )
+
+# Print detailed summary statistics based on participant averages
+participant_gameplay |>
+  summarise(
+    N = n(),
+    Mean = mean(avg_minutes_per_day, na.rm = TRUE),
+    SD = sd(avg_minutes_per_day, na.rm = TRUE),
+    Median = median(avg_minutes_per_day, na.rm = TRUE),
+    Min = min(avg_minutes_per_day, na.rm = TRUE),
+    Max = max(avg_minutes_per_day, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  knitr::kable(digits = 2, caption = "Descriptive Statistics for Average Daily Late-Night Gaming Across Study Period (Per Participant)")
+```
+
+```{r}
+#| label: participant-category-table
+#| code-summary: "Participant distribution by late-night gaming category"
+
+# Load tinytable if not already loaded
+if (!require("tinytable")) install.packages("tinytable")
+library(tinytable)
+
+# Calculate additional metrics for the summary table
+# Need to go back to month-level data to count months with gaming
+participant_totals <- gamingMonthly |>
+  filter(month %in% c(2, 4, 6)) |>
+  dplyr::select(pid, month, ln_monthly_avg_minutes_played) |>
+  filter(!is.na(ln_monthly_avg_minutes_played)) |>
+  group_by(pid, month) |>
+  summarise(
+    month_avg = mean(ln_monthly_avg_minutes_played, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  group_by(pid) |>
+  summarise(
+    avg_minutes_per_day = mean(month_avg, na.rm = TRUE),
+    n_months_with_gaming = sum(month_avg > 0),  # Count months with any late-night gaming
+    .groups = "drop"
+  ) |>
+  mutate(
+    category = case_when(
+      avg_minutes_per_day == 0 ~ "None",
+      avg_minutes_per_day < 10 ~ "Low (< 10 min/day)",
+      avg_minutes_per_day < 30 ~ "Moderate (10-30 min/day)",
+      TRUE ~ "High (32.1+ min/day)"
+    ),
+    category = factor(category, levels = c("None", "Low (< 10 min/day)",
+                                           "Moderate (10-30 min/day)",
+                                           "High (30 min/day)"))
+  )
+
+# Create summary table
+summary_table <- participant_totals |>
+  group_by(category) |>
+  summarise(
+    n_participants = n(),
+    pct_participants = round(100 * n() / nrow(participant_totals), 1),
+    mean_months_with_gaming = round(mean(n_months_with_gaming), 1),
+    mean_avg_minutes = round(mean(avg_minutes_per_day), 1),
+    median_avg_minutes = round(median(avg_minutes_per_day), 1),
+    .groups = "drop"
+  )
+
+# Display with tinytable - rename columns to avoid LaTeX issues with underscores
+summary_table |>
+  rename(
+    Category = category,
+    `N Participants` = n_participants,
+    `% Participants` = pct_participants,
+    `Mean Months with Gaming` = mean_months_with_gaming,
+    `Mean Avg Min/Day` = mean_avg_minutes,
+    `Median Avg Min/Day` = median_avg_minutes
+  ) |>
+  tt(
+    caption = "Participant Distribution by Average Daily Late-Night Gaming Across Study Period"
+  ) |>
+  style_tt(
+    j = 1,
+    align = "l"
+  ) |>
+  style_tt(
+    j = 2:6,
+    align = "r"
+  ) |>
+  format_tt(
+    j = 2:6,
+    digits = 1
+  )
+```
+
+## Sleep and Wellbeing Descriptives
+
+Note: The dataset contains 7 WEMWBS items (SWEMWBS short form, range 7-35) rather than the full 14-item WEMWBS (range 14-70).
+
+```{r}
+#| label: raincloud-descriptives
+#| code-summary: "Raincloud plots for sleep and wellbeing variables"
+#| fig-width: 10
+#| fig-height: 8
+
+# Load ggdist for raincloud plots
+if (!require("ggdist")) install.packages("ggdist")
+library(ggdist)
+
+# Prepare data for raincloud plots - select key variables (excluding gameplay)
+descriptive_data <- gamingMonthly |>
+  dplyr::select(
+    pid,
+    month,
+    global_psqi = psqi_global,
+    sleep_duration = total_hours_sleep,
+    daytime_sleepiness = epsTotal,
+    wellbeing = wemwbs
+  ) |>
+  pivot_longer(
+    cols = c(global_psqi, sleep_duration, daytime_sleepiness, wellbeing),
+    names_to = "variable",
+    values_to = "value"
+  ) |>
+  filter(!is.na(value)) |>
+  mutate(
+    variable = factor(variable,
+                     levels = c("global_psqi", "sleep_duration", "daytime_sleepiness", "wellbeing"),
+                     labels = c("Global PSQI Score (0-21)",
+                               "Sleep Duration (hours)",
+                               "Daytime Sleepiness (EPS: 0-24)",
+                               "Wellbeing (WEMWBS: 7-35)"))
+  )
+
+# All variables are continuous, so use raincloud for all
+data_continuous <- descriptive_data
+
+# Create raincloud plot for continuous variables with facets
+ggplot(data_continuous, aes(x = 1, y = value, fill = variable)) +
+  # Boxplot - left layer
+  geom_boxplot(
+    width = 0.15,
+    outlier.shape = NA,
+    alpha = 0.5
+  ) +
+  # Half violin (density distribution) - right layer
+  stat_slab(
+    adjust = 2,
+    side = "right",
+    scale = 0.6,
+    normalize = "groups",
+    alpha = 0.7,
+    position = position_nudge(x = 0.2)
+  ) +
+  # Facet by variable with free y-scales
+  facet_wrap(~ variable, scales = "free_y", nrow = 1) +
+  # Styling
+  scale_fill_brewer(palette = "Set2", guide = "none") +
+  labs(
+    title = "Distribution of Sleep and Wellbeing Variables",
+    y = "Value",
+    x = ""
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    strip.text = element_text(face = "bold", size = 10),
+    plot.title = element_text(face = "bold", size = 14, hjust = 0.5)
+  )
+
+# Print summary statistics
+descriptive_data |>
+  group_by(variable) |>
+  summarise(
+    `Unique Participants` = n_distinct(pid),
+    N = n(),
+    Mean = mean(value, na.rm = TRUE),
+    SD = sd(value, na.rm = TRUE),
+    Median = median(value, na.rm = TRUE),
+    Min = min(value, na.rm = TRUE),
+    Max = max(value, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  knitr::kable(digits = 2, caption = "Descriptive Statistics for Sleep and Wellbeing Variables")
+```
+
 ## Sample Demographics
 
 The analytical sample includes all participants who contributed at least one datapoint on at least one of the four outcome variables (sleep quality, sleep duration, daytime sleepiness, or wellbeing). The table below presents the demographic composition of this sample along key covariates.
@@ -512,235 +780,6 @@ summary_rows |>
   format_tt(i = header_rows, j = 1, fn = function(x) str_remove_all(x, "\\*\\*")) |>
   # Remove leading spaces from sub-items (since we're using CSS indent instead)
   format_tt(i = sub_item_rows, j = 1, fn = function(x) str_trim(x))
-```
-
-## Late-Night Gaming Descriptives
-
-```{r}
-#| label: gameplay-descriptives
-#| code-summary: "Histogram of monthly total late-night gaming"
-#| fig-width: 10
-#| fig-height: 5
-
-# Prepare gameplay data - aggregate to participant level for histogram
-# Using daily average thresholds: None = 0, Low < 10.7 min/day, Moderate < 32.1 min/day, High >= 32.1 min/day
-participant_gameplay <- gamingMonthly |>
-  filter(month %in% c(2, 4, 6)) |>  # Only include the three study months
-  dplyr::select(
-    pid,
-    month,
-    ln_monthly_avg_minutes_played
-  ) |>
-  filter(!is.na(ln_monthly_avg_minutes_played)) |>
-  # Aggregate to participant-month level (because data has weekend/weekday split)
-  group_by(pid, month) |>
-  summarise(
-    month_avg = mean(ln_monthly_avg_minutes_played, na.rm = TRUE),
-    .groups = "drop"
-  ) |>
-  # Then aggregate to participant level (average across all study months)
-  group_by(pid) |>
-  summarise(
-    avg_minutes_per_day = mean(month_avg, na.rm = TRUE),
-    .groups = "drop"
-  ) |>
-  mutate(
-    # Create categories based on daily average
-    category = case_when(
-      avg_minutes_per_day == 0 ~ "0 min",
-      avg_minutes_per_day <= 10 ~ "0-10 min/day",
-      avg_minutes_per_day <= 20 ~ "10-20 min/day",
-      avg_minutes_per_day <= 30 ~ "20-30 min/day",
-      TRUE ~ "30+ min/day"
-    ),
-    category = factor(category, levels = c("0 min", "0-10 min/day",
-                                           "10-20 min/day", "20-30 min/day",
-                                           "30+ min/day"))
-  )
-
-# Print detailed summary statistics based on participant averages
-participant_gameplay |>
-  summarise(
-    N = n(),
-    Mean = mean(avg_minutes_per_day, na.rm = TRUE),
-    SD = sd(avg_minutes_per_day, na.rm = TRUE),
-    Median = median(avg_minutes_per_day, na.rm = TRUE),
-    Min = min(avg_minutes_per_day, na.rm = TRUE),
-    Max = max(avg_minutes_per_day, na.rm = TRUE),
-    .groups = "drop"
-  ) |>
-  knitr::kable(digits = 2, caption = "Descriptive Statistics for Average Daily Late-Night Gaming Across Study Period (Per Participant)")
-```
-
-```{r}
-#| label: participant-category-table
-#| code-summary: "Participant distribution by late-night gaming category"
-
-# Load tinytable if not already loaded
-if (!require("tinytable")) install.packages("tinytable")
-library(tinytable)
-
-# Calculate additional metrics for the summary table
-# Need to go back to month-level data to count months with gaming
-participant_totals <- gamingMonthly |>
-  filter(month %in% c(2, 4, 6)) |>
-  dplyr::select(pid, month, ln_monthly_avg_minutes_played) |>
-  filter(!is.na(ln_monthly_avg_minutes_played)) |>
-  group_by(pid, month) |>
-  summarise(
-    month_avg = mean(ln_monthly_avg_minutes_played, na.rm = TRUE),
-    .groups = "drop"
-  ) |>
-  group_by(pid) |>
-  summarise(
-    avg_minutes_per_day = mean(month_avg, na.rm = TRUE),
-    n_months_with_gaming = sum(month_avg > 0),  # Count months with any late-night gaming
-    .groups = "drop"
-  ) |>
-  mutate(
-    category = case_when(
-      avg_minutes_per_day == 0 ~ "0 min",
-      avg_minutes_per_day <= 10 ~ "0-10 min/day",
-      avg_minutes_per_day <= 20 ~ "10-20 min/day",
-      avg_minutes_per_day <= 30 ~ "20-30 min/day",
-      TRUE ~ "30+ min/day"
-    ),
-    category = factor(category, levels = c("0 min", "0-10 min/day",
-                                           "10-20 min/day", "20-30 min/day",
-                                           "30+ min/day"))
-  )
-
-# Create summary table
-summary_table <- participant_totals |>
-  group_by(category) |>
-  summarise(
-    n_participants = n(),
-    pct_participants = round(100 * n() / nrow(participant_totals), 1),
-    mean_months_with_gaming = round(mean(n_months_with_gaming), 1),
-    mean_avg_minutes = round(mean(avg_minutes_per_day), 1),
-    median_avg_minutes = round(median(avg_minutes_per_day), 1),
-    .groups = "drop"
-  )
-
-# Display with tinytable - rename columns to avoid LaTeX issues with underscores
-summary_table |>
-  rename(
-    Category = category,
-    `N Participants` = n_participants,
-    `% Participants` = pct_participants,
-    `Mean Months with Gaming` = mean_months_with_gaming,
-    `Mean Avg Min/Day` = mean_avg_minutes,
-    `Median Avg Min/Day` = median_avg_minutes
-  ) |>
-  tt(
-    caption = "Participant Distribution by Average Daily Late-Night Gaming Across Study Period"
-  ) |>
-  style_tt(
-    j = 1,
-    align = "l"
-  ) |>
-  style_tt(
-    j = 2:6,
-    align = "r"
-  ) |>
-  format_tt(
-    j = 2:6,
-    digits = 1
-  )
-```
-
-## Sleep and Wellbeing Descriptives
-
-Note: The dataset contains 7 WEMWBS items (SWEMWBS short form, range 7-35) rather than the full 14-item WEMWBS (range 14-70).
-
-```{r}
-#| label: raincloud-descriptives
-#| code-summary: "Raincloud plots for sleep and wellbeing variables"
-#| fig-width: 10
-#| fig-height: 8
-
-# Load ggdist for raincloud plots
-if (!require("ggdist")) install.packages("ggdist")
-library(ggdist)
-
-# Prepare data for raincloud plots - select key variables (excluding gameplay)
-descriptive_data <- gamingMonthly |>
-  dplyr::select(
-    pid,
-    month,
-    global_psqi = psqi_global,
-    sleep_duration = total_hours_sleep,
-    daytime_sleepiness = epsTotal,
-    wellbeing = wemwbs
-  ) |>
-  pivot_longer(
-    cols = c(global_psqi, sleep_duration, daytime_sleepiness, wellbeing),
-    names_to = "variable",
-    values_to = "value"
-  ) |>
-  filter(!is.na(value)) |>
-  mutate(
-    variable = factor(variable,
-                     levels = c("global_psqi", "sleep_duration", "daytime_sleepiness", "wellbeing"),
-                     labels = c("Global PSQI Score (0-21)",
-                               "Sleep Duration (hours)",
-                               "Daytime Sleepiness (EPS: 0-24)",
-                               "Wellbeing (WEMWBS: 7-35)"))
-  )
-
-# All variables are continuous, so use raincloud for all
-data_continuous <- descriptive_data
-
-# Create raincloud plot for continuous variables with facets
-ggplot(data_continuous, aes(x = 1, y = value, fill = variable)) +
-  # Boxplot - left layer
-  geom_boxplot(
-    width = 0.15,
-    outlier.shape = NA,
-    alpha = 0.5
-  ) +
-  # Half violin (density distribution) - right layer
-  stat_slab(
-    adjust = 2,
-    side = "right",
-    scale = 0.6,
-    normalize = "groups",
-    alpha = 0.7,
-    position = position_nudge(x = 0.2)
-  ) +
-  # Facet by variable with free y-scales
-  facet_wrap(~ variable, scales = "free_y", nrow = 1) +
-  # Styling
-  scale_fill_brewer(palette = "Set2", guide = "none") +
-  labs(
-    title = "Distribution of Sleep and Wellbeing Variables",
-    y = "Value",
-    x = ""
-  ) +
-  theme_minimal(base_size = 12) +
-  theme(
-    panel.grid.minor = element_blank(),
-    panel.grid.major.x = element_blank(),
-    axis.text.x = element_blank(),
-    axis.ticks.x = element_blank(),
-    strip.text = element_text(face = "bold", size = 10),
-    plot.title = element_text(face = "bold", size = 14, hjust = 0.5)
-  )
-
-# Print summary statistics
-descriptive_data |>
-  group_by(variable) |>
-  summarise(
-    `Unique Participants` = n_distinct(pid),
-    N = n(),
-    Mean = mean(value, na.rm = TRUE),
-    SD = sd(value, na.rm = TRUE),
-    Median = median(value, na.rm = TRUE),
-    Min = min(value, na.rm = TRUE),
-    Max = max(value, na.rm = TRUE),
-    .groups = "drop"
-  ) |>
-  knitr::kable(digits = 2, caption = "Descriptive Statistics for Sleep and Wellbeing Variables")
 ```
 
 
