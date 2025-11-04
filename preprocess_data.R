@@ -1,4 +1,4 @@
-# Data preprocessing script for platform-study-rr-sleep
+# Data preprocessing script for manuscript
 # This script processes raw data files and creates derived variables
 # needed for analysis
 
@@ -437,7 +437,40 @@ process_intake <- function(intake_path) {
       SES_index_scaled = scale(SES_index)[,1],
 
       # Create region variable from country (UK or US)
-      region = country
+      region = country,
+
+      # Recode gender: keep Man, Woman, Non-binary; group others as "None of the above"
+      gender = case_when(
+        gender %in% c("Man", "Woman", "Non-binary") ~ gender,
+        !is.na(gender) ~ "None of the above",
+        TRUE ~ NA_character_
+      ),
+
+      # Process timezone data with UK imputation
+      # Convert GMT offset format (e.g., "GMT-0500") to hours offset
+      tz_offset_hours = case_when(
+        is.na(local_timezone) ~ NA_real_,
+        str_detect(local_timezone, "GMT[+-]") ~ {
+          sign <- ifelse(str_detect(local_timezone, "GMT-"), -1, 1)
+          offset_str <- str_extract(local_timezone, "\\d{4}")
+          hours <- as.numeric(substr(offset_str, 1, 2))
+          minutes <- as.numeric(substr(offset_str, 3, 4))
+          sign * (hours + minutes/60)
+        },
+        TRUE ~ 0  # GMT+0000
+      ),
+      # IMPORTANT: Impute timezone for UK participants
+      # UK has only one timezone: GMT (UTC+0)
+      tz_offset_hours = case_when(
+        !is.na(tz_offset_hours) ~ tz_offset_hours,  # Keep existing timezone
+        country == "UK" ~ 0,  # Impute GMT+0000 for UK participants
+        TRUE ~ NA_real_  # Keep NA for others (US without timezone)
+      ),
+      timezone_source = case_when(
+        !is.na(local_timezone) ~ "Reported",
+        country == "UK" & is.na(local_timezone) ~ "Imputed (UK=GMT)",
+        TRUE ~ "Missing"
+      )
     )
 
   return(intake)
@@ -467,21 +500,420 @@ process_panel <- function(panel_path, intake_processed) {
   return(panel)
 }
 
+# Process gaming data
+process_gaming_data <- function(panel_path, intake_processed) {
+  library(data.table)  # For efficient concurrent session calculation
+
+  # Load panel data to calculate day 0 (study start date) for each participant
+  data.panel.raw <- read_csv(panel_path, show_col_types = FALSE) %>%
+    mutate(date = as_datetime(date))
+
+  # Calculate day 0 (first panel date) for each participant
+  day_zero <- data.panel.raw %>%
+    group_by(pid) %>%
+    summarise(day_0 = min(date, na.rm = TRUE), .groups = "drop") %>%
+    mutate(pid = as.character(pid))
+
+  message(sprintf("Calculated day 0 for %d participants", nrow(day_zero)))
+
+  # Identify participants with at least one valid outcome measure
+  # Outcome measures: WEMWBS (wellbeing), PSQI duration/quality, ESS (sleepiness)
+  outcome_check <- data.panel.raw %>%
+    mutate(
+      # Check if any WEMWBS items are non-missing
+      has_wemwbs = !is.na(wemwbs_1) | !is.na(wemwbs_2) | !is.na(wemwbs_3) |
+                   !is.na(wemwbs_4) | !is.na(wemwbs_5) | !is.na(wemwbs_6) |
+                   !is.na(wemwbs_7),
+      # Check if any PSQI items are non-missing (duration and quality)
+      has_psqi = !is.na(`psqi_1#1_1_1`) | !is.na(psqi_2) | !is.na(psqi_6) |
+                 !is.na(psqi_9),
+      # Check if any ESS items are non-missing
+      has_ess = !is.na(eps_1_1) | !is.na(eps_1_2) | !is.na(eps_1_3) |
+                !is.na(eps_1_4) | !is.na(eps_1_5) | !is.na(eps_1_6) |
+                !is.na(eps_1_7) | !is.na(eps_1_8)
+    )
+
+  valid_participants_outcomes <- outcome_check %>%
+    filter(has_wemwbs | has_psqi | has_ess) %>%
+    pull(pid) %>%
+    unique()
+
+  n_with_outcomes <- length(valid_participants_outcomes)
+  n_without_outcomes <- nrow(day_zero) - n_with_outcomes
+
+  message(sprintf("\n=== STEP 1: Outcome Measure Filter ==="))
+  message(sprintf("Participants with valid outcome data: %d", n_with_outcomes))
+  message(sprintf("Participants WITHOUT outcome data: %d (excluded)", n_without_outcomes))
+
+  # Load timezone data from intake
+  timezone_data <- intake_processed %>%
+    select(pid, local_timezone, country) %>%
+    mutate(
+      # Convert GMT offset format (e.g., "GMT-0500") to hours offset
+      tz_offset_hours = case_when(
+        is.na(local_timezone) ~ NA_real_,
+        str_detect(local_timezone, "GMT[+-]") ~ {
+          sign <- ifelse(str_detect(local_timezone, "GMT-"), -1, 1)
+          offset_str <- str_extract(local_timezone, "\\d{4}")
+          hours <- as.numeric(substr(offset_str, 1, 2))
+          minutes <- as.numeric(substr(offset_str, 3, 4))
+          sign * (hours + minutes/60)
+        },
+        TRUE ~ 0  # GMT+0000
+      ),
+      # IMPORTANT: Impute timezone for UK participants
+      # UK has only one timezone: GMT (UTC+0)
+      tz_offset_hours = case_when(
+        !is.na(tz_offset_hours) ~ tz_offset_hours,  # Keep existing timezone
+        country == "UK" ~ 0,  # Impute GMT+0000 for UK participants
+        TRUE ~ NA_real_  # Keep NA for others (US without timezone)
+      ),
+      timezone_source = case_when(
+        !is.na(local_timezone) ~ "Reported",
+        country == "UK" & is.na(local_timezone) ~ "Imputed (UK=GMT)",
+        TRUE ~ "Missing"
+      )
+    )
+
+  # Participants with valid timezone (all participants have timezone if they're UK)
+  # For US participants, we require explicit timezone data
+  valid_participants_timezone <- timezone_data %>%
+    filter(!is.na(tz_offset_hours)) %>%
+    pull(pid) %>%
+    unique()
+
+  n_with_timezone <- length(valid_participants_timezone)
+  n_total_intake <- nrow(intake_processed)
+  n_without_timezone <- n_total_intake - n_with_timezone
+
+  # Count timezone sources
+  tz_source_summary <- timezone_data %>%
+    group_by(timezone_source) %>%
+    summarise(n = n(), .groups = "drop")
+
+  n_reported <- tz_source_summary %>% filter(timezone_source == "Reported") %>% pull(n)
+  n_imputed <- tz_source_summary %>% filter(timezone_source == "Imputed (UK=GMT)") %>% pull(n)
+  n_missing <- tz_source_summary %>% filter(timezone_source == "Missing") %>% pull(n)
+
+  # Handle cases where categories might be empty
+  if (length(n_reported) == 0) n_reported <- 0
+  if (length(n_imputed) == 0) n_imputed <- 0
+  if (length(n_missing) == 0) n_missing <- 0
+
+  message(sprintf("\n=== STEP 2: Timezone Data Filter ==="))
+  message(sprintf("Total participants in intake: %d", n_total_intake))
+  message(sprintf("Participants with valid timezone data: %d", n_with_timezone))
+  message(sprintf("  - Reported timezone: %d", n_reported))
+  message(sprintf("  - Imputed UK timezone (GMT): %d", n_imputed))
+  message(sprintf("Participants WITHOUT timezone data: %d (excluded - US only)", n_without_timezone))
+
+  # Check overlap with outcome filter
+  n_outcomes_and_timezone <- length(intersect(valid_participants_outcomes, valid_participants_timezone))
+  n_outcomes_but_no_timezone <- length(setdiff(valid_participants_outcomes, valid_participants_timezone))
+
+  message(sprintf("\nCombined Filter (Outcomes AND Timezone):"))
+  message(sprintf("  With outcomes AND timezone: %d", n_outcomes_and_timezone))
+  message(sprintf("  With outcomes but NO timezone: %d (excluded - US participants or no intake)", n_outcomes_but_no_timezone))
+
+  # Reference date for identifying future sessions
+  ref_date <- now()
+
+  # Helper function to efficiently calculate concurrent sessions using data.table
+  calculate_concurrent_sessions <- function(data) {
+    # Convert to data.table for efficient overlap calculation
+    dt <- as.data.table(data)
+    dt[, session_id := .I]
+
+    # Use foverlaps for efficient interval overlap detection
+    dt_intervals <- dt[, .(pid, session_id, start = sessionStart, end = sessionEnd)]
+    setkey(dt_intervals, pid, start, end)
+
+    # Self-join to find overlapping sessions within each participant
+    overlaps <- foverlaps(dt_intervals, dt_intervals, type = "any", nomatch = 0L)
+
+    # Count overlaps for each session
+    n_concurrent <- overlaps[, .(n_concurrent = .N), by = .(pid, session_id)]
+
+    # Merge back to original data
+    dt <- merge(dt, n_concurrent, by = c("pid", "session_id"), all.x = TRUE)
+    dt[is.na(n_concurrent), n_concurrent := 1]
+    dt[, session_id := NULL]
+    return(as_tibble(dt))
+  }
+
+  # Load and standardize gaming data from all platforms
+  message("Loading gaming data...")
+
+  # Nintendo
+  data.nin.std <- read_csv("data/nintendo.csv.gz", show_col_types = FALSE) %>%
+    rename(sessionStart = session_start, sessionEnd = session_end) %>%
+    mutate(
+      date = as_date(sessionStart),
+      duration_minutes = as.numeric(duration),
+      flag_future = sessionStart > ref_date | sessionEnd > ref_date,
+      flag_long_session = duration_minutes > 600,
+      platform = "Nintendo"
+    ) %>%
+    calculate_concurrent_sessions() %>%
+    mutate(
+      flag_concurrent = n_concurrent >= 3,
+      exclude_quality = flag_future | flag_long_session | flag_concurrent
+    )
+
+  # Xbox
+  data.xbox.std <- read_csv("data/xbox.csv.gz", show_col_types = FALSE) %>%
+    rename(sessionStart = session_start, sessionEnd = session_end) %>%
+    mutate(
+      date = as_date(sessionStart),
+      duration_minutes = as.numeric(duration),
+      flag_future = sessionStart > ref_date | sessionEnd > ref_date,
+      flag_long_session = duration_minutes > 600,
+      platform = "Xbox"
+    ) %>%
+    calculate_concurrent_sessions() %>%
+    mutate(
+      flag_concurrent = n_concurrent >= 3,
+      exclude_quality = flag_future | flag_long_session | flag_concurrent
+    )
+
+  # Steam
+  data.steam.std <- read_csv("data/steam.csv.gz", show_col_types = FALSE) %>%
+    rename(sessionStart = session_start, sessionEnd = session_end) %>%
+    mutate(
+      date = as_date(sessionStart),
+      duration_minutes = as.numeric(difftime(sessionEnd, sessionStart, units = "mins")),
+      flag_future = sessionStart > ref_date | sessionEnd > ref_date,
+      flag_long_session = duration_minutes > 600,
+      platform = "Steam"
+    ) %>%
+    calculate_concurrent_sessions() %>%
+    mutate(
+      flag_concurrent = n_concurrent >= 3,
+      exclude_quality = flag_future | flag_long_session | flag_concurrent
+    )
+
+  # Combine all gaming data
+  message("Combining and filtering gaming data...")
+  data.gaming <- bind_rows(data.xbox.std, data.steam.std, data.nin.std) %>%
+    mutate(pid = as.character(pid)) %>%
+    # Filter out sessions flagged for quality issues
+    filter(!exclude_quality) %>%
+    # Join with day_zero to calculate days from study start
+    left_join(day_zero, by = "pid") %>%
+    mutate(days_from_day_0 = as.numeric(difftime(sessionStart, day_0, units = "days"))) %>%
+    # Filter to study window: 28 days before to 77 days after first panel
+    filter(
+      !is.na(day_0),  # Must have a valid day 0
+      days_from_day_0 >= -28,  # At least 28 days before day 0
+      days_from_day_0 <= 77    # At most 77 days after day 0
+    ) %>%
+    # Join with timezone data
+    left_join(timezone_data %>% select(pid, tz_offset_hours, country), by = "pid") %>%
+    # Filter to participants with valid timezone data
+    # IMPORTANT: Without timezone data, we cannot accurately determine late-night gaming
+    filter(!is.na(tz_offset_hours)) %>%
+    mutate(
+      # Convert UTC timestamps to local time by adding timezone offset
+      sessionStart_local = sessionStart + hours(tz_offset_hours),
+      sessionEnd_local = sessionEnd + hours(tz_offset_hours),
+
+      # Use local time for all time-based calculations
+      date_local = as_date(sessionStart_local),
+
+      # Redefine day to begin and end at 6am (not midnight)
+      # This properly assigns late-night sessions to the previous calendar day
+      # IMPORTANT: Use local time for this calculation
+      dateRecoded = if_else(hour(sessionStart_local) < 6, date_local - 1, date_local),
+
+      # Calculate minutes_played
+      minutes_played = duration_minutes,
+
+      # Binary variable: late-night if session starts between 23:00 and 06:00 LOCAL TIME
+      latenight = ifelse(hour(sessionStart_local) >= 23 | hour(sessionStart_local) < 6, 1, 0),
+
+      # Weekend variable: Friday and Saturday nights (based on LOCAL TIME)
+      isWeekend = ifelse(weekdays(sessionStart_local) %in% c("Friday", "Saturday"), 1, 0),
+
+      # Calculate late-night minutes using interval overlap (using LOCAL TIME)
+      interval_gaming = interval(sessionStart_local, sessionEnd_local),
+      interval_latenight = interval(dateRecoded + hours(23), dateRecoded + hours(30)),
+      latenightMinutes = as.numeric(intersect(interval_gaming, interval_latenight)) / 60
+    ) %>%
+    # Assign sessions to waves based on days_from_day_0
+    mutate(
+      wave = case_when(
+        days_from_day_0 >= 0 & days_from_day_0 <= 14 ~ 1,
+        days_from_day_0 >= 15 & days_from_day_0 <= 28 ~ 2,
+        days_from_day_0 >= 29 & days_from_day_0 <= 42 ~ 3,
+        days_from_day_0 >= 43 & days_from_day_0 <= 56 ~ 4,
+        days_from_day_0 >= 57 & days_from_day_0 <= 70 ~ 5,
+        days_from_day_0 >= 71 & days_from_day_0 <= 84 ~ 6,
+        TRUE ~ NA_real_
+      )
+    ) %>%
+    select(pid, sessionStart, sessionEnd, platform, dateRecoded, minutes_played,
+           latenight, latenightMinutes, isWeekend, wave, days_from_day_0)
+
+  n_sessions_before_participant_filter <- nrow(data.gaming)
+  n_participants_before_participant_filter <- n_distinct(data.gaming$pid)
+
+  message(sprintf("\n=== Gaming Data After Quality & Study Window Filters ==="))
+  message(sprintf("Sessions: %d", n_sessions_before_participant_filter))
+  message(sprintf("Participants: %d", n_participants_before_participant_filter))
+
+  # Identify participants with at least one valid gaming session in the study period
+  participants_with_gaming <- data.gaming %>%
+    pull(pid) %>%
+    unique()
+
+  n_with_gaming <- length(participants_with_gaming)
+
+  message(sprintf("\n=== STEP 3: Gaming Data Filter ==="))
+  message(sprintf("Participants with at least one valid gaming session: %d", n_with_gaming))
+
+  # Check overlap with previous filters
+  n_outcomes_timezone_and_gaming <- length(intersect(
+    intersect(valid_participants_outcomes, valid_participants_timezone),
+    participants_with_gaming
+  ))
+  n_outcomes_and_timezone_but_no_gaming <- n_outcomes_and_timezone - n_outcomes_timezone_and_gaming
+
+  message(sprintf("\nCombined Filter (Outcomes AND Timezone AND Gaming):"))
+  message(sprintf("  With outcomes, timezone AND gaming: %d", n_outcomes_timezone_and_gaming))
+  message(sprintf("  With outcomes & timezone but NO gaming: %d (excluded)", n_outcomes_and_timezone_but_no_gaming))
+
+  # Final valid participant list: must have outcomes, timezone, AND gaming data
+  final_valid_participants <- intersect(
+    intersect(valid_participants_outcomes, valid_participants_timezone),
+    participants_with_gaming
+  )
+
+  # Filter gaming data to only include final valid participants
+  data.gaming <- data.gaming %>%
+    filter(pid %in% final_valid_participants)
+
+  n_final_sessions <- nrow(data.gaming)
+  n_final_participants <- n_distinct(data.gaming$pid)
+  n_excluded_sessions <- n_sessions_before_participant_filter - n_final_sessions
+  n_excluded_participants <- n_participants_before_participant_filter - n_final_participants
+
+  message(sprintf("\n=== FINAL VALID SAMPLE ==="))
+  message(sprintf("Final participants: %d", n_final_participants))
+  message(sprintf("Final sessions: %d", n_final_sessions))
+  message(sprintf("\nExcluded in final step:"))
+  message(sprintf("  Participants: %d (had gaming but no outcomes or timezone)", n_excluded_participants))
+  message(sprintf("  Sessions: %d", n_excluded_sessions))
+
+  # Return both gaming data and the list of valid participants
+  return(list(
+    gaming_data = data.gaming,
+    valid_participants = final_valid_participants
+  ))
+}
+
+# Export all gaming sessions with late-night enrichment (session-level data)
+create_gaming_sessions_export <- function(data.gaming) {
+  message("Creating gaming sessions export with late-night enrichment...")
+
+  # Select relevant session-level variables
+  sessions_export <- data.gaming %>%
+    select(
+      pid,
+      sessionStart,
+      sessionEnd,
+      minutes_played,
+      latenight,
+      latenightMinutes,
+      platform
+    ) %>%
+    # Keep only sessions within the study period (after quality filtering)
+    filter(!is.na(sessionStart))
+
+  message(sprintf("Exported %d gaming sessions from %d participants",
+                  nrow(sessions_export), n_distinct(sessions_export$pid)))
+
+  return(sessions_export)
+}
+
+# Create self-report data from panel (includes date column for gaming calculations)
+create_selfreport <- function(panel_path, intake_processed, valid_participants) {
+  message("Creating self-report data...")
+
+  # Load raw panel data to get completion dates
+  panel_raw <- read_csv(panel_path, show_col_types = FALSE) %>%
+    select(pid, wave, date) %>%
+    distinct(pid, wave, .keep_all = TRUE)
+
+  # Process panel data with all computed variables
+  panel_processed <- process_panel(panel_path, intake_processed)
+
+  # Select relevant variables for modeling and merge with date
+  # IMPORTANT: Filter to only include valid participants (passed 3-step filter)
+  selfreport <- panel_processed %>%
+    filter(pid %in% valid_participants) %>%  # Apply 3-step participant filter
+    select(
+      pid, wave,
+      # Outcomes
+      psqi_global, total_hours_sleep, epsTotal, wemwbs,
+      # PSQI components (needed for H2a model)
+      psqi_6,
+      # Moderator
+      msf_sc_numeric,
+      # Covariates
+      age_scaled, bmi_scaled, SES_index_scaled, region, gender
+    ) %>%
+    filter(!is.na(wave)) %>%  # Only include waves with data
+    # Now join the date from raw panel
+    left_join(panel_raw, by = c("pid", "wave")) %>%
+    filter(!is.na(date))  # Only keep records with valid dates
+
+  message(sprintf("Created %d self-report records from %d participants",
+                  nrow(selfreport), n_distinct(selfreport$pid)))
+  message(sprintf("  (Filtered to valid participants who passed 3-step filter)"))
+
+  return(selfreport)
+}
+
 # Main preprocessing function
 preprocess_all_data <- function() {
   # Process intake
+  message("Processing intake data...")
   intake_processed <- process_intake("data/intake.csv.gz")
 
   # Process panel
+  message("Processing panel data...")
   panel_processed <- process_panel("data/panel.csv.gz", intake_processed)
 
+  # Process gaming data (returns both gaming data and valid participants list)
+  message("Processing gaming data...")
+  gaming_result <- process_gaming_data("data/panel.csv.gz", intake_processed)
+  gaming_data <- gaming_result$gaming_data
+  valid_participants <- gaming_result$valid_participants
+
+  # Export session-level gaming data with late-night enrichment
+  message("\nExporting gaming sessions...")
+  gaming_sessions <- create_gaming_sessions_export(gaming_data)
+
+  # Create self-report data (filtered to valid participants only)
+  message("\nCreating self-report data...")
+  selfreport <- create_selfreport("data/panel.csv.gz", intake_processed, valid_participants)
+
   # Save processed data
+  message("\nSaving processed data...")
   dir.create("data/processed", showWarnings = FALSE, recursive = TRUE)
   write_csv(panel_processed, "data/processed/panel_clean.csv.gz")
   write_csv(intake_processed, "data/processed/intake_clean.csv.gz")
+  write_csv(gaming_sessions, "data/processed/gaming_sessions.csv.gz")
+  write_csv(selfreport, "data/processed/selfreport.csv.gz")
 
-  message("Data preprocessing complete!")
-  message("Processed files saved to data/processed/")
+  message("\nData preprocessing complete!")
+  message("Processed files saved to data/processed/:")
+  message("  - panel_clean.csv.gz")
+  message("  - intake_clean.csv.gz")
+  message("  - gaming_sessions.csv.gz (session-level data with late-night enrichment)")
+  message("  - selfreport.csv.gz")
+  message("\nNote: Gaming exposure (14-day and 28-day windows) should be")
+  message("      calculated in the qmd relative to each self-report date")
 }
 
 # Run preprocessing if script is sourced
