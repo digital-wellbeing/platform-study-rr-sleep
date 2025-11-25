@@ -439,10 +439,11 @@ process_intake <- function(intake_path) {
       # Create region variable from country (UK or US)
       region = country,
 
-      # Recode gender: keep Man, Woman, Non-binary; group others as "None of the above"
+      # Recode gender: 3-level variable with Man, Woman, and "Non-binary or other gender identity"
       gender = case_when(
-        gender %in% c("Man", "Woman", "Non-binary") ~ gender,
-        !is.na(gender) ~ "None of the above",
+        gender == "Man" ~ "Man",
+        gender == "Woman" ~ "Woman",
+        !is.na(gender) ~ "Non-binary or other gender identity",
         TRUE ~ NA_character_
       ),
 
@@ -751,7 +752,8 @@ process_gaming_data <- function(panel_path, intake_processed) {
         TRUE ~ NA_real_
       )
     ) %>%
-    select(pid, sessionStart, sessionEnd, platform, dateRecoded, minutes_played,
+    select(pid, sessionStart, sessionEnd, sessionStart_local, sessionEnd_local,
+           platform, dateRecoded, minutes_played,
            latenight, latenightMinutes, isWeekend, wave, days_from_day_0)
 
   n_sessions_before_participant_filter <- nrow(data.gaming)
@@ -819,12 +821,14 @@ create_gaming_sessions_export <- function(data.gaming) {
   sessions_export <- data.gaming %>%
     select(
       pid,
+      platform,
       sessionStart,
       sessionEnd,
+      sessionStart_local,
+      sessionEnd_local,
       minutes_played,
       latenight,
-      latenightMinutes,
-      platform
+      latenightMinutes
     ) %>%
     # Keep only sessions within the study period (after quality filtering)
     filter(!is.na(sessionStart))
@@ -856,7 +860,7 @@ create_selfreport <- function(panel_path, intake_processed, valid_participants) 
       # Outcomes
       psqi_global, total_hours_sleep, epsTotal, wemwbs,
       # PSQI components (needed for H2a model)
-      psqi_6,
+      psqi_06,  # Numeric version: 0=Very good, 1=Fairly good, 2=Fairly bad, 3=Very bad
       # Moderator
       msf_sc_numeric,
       # Covariates

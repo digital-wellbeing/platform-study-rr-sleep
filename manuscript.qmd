@@ -87,7 +87,7 @@ library(tinytable)
 # Create measures overview table
 measures_table <- tibble::tribble(
   ~Measure, ~Instrument, ~Items, ~Range, ~Interpretation,
-  "Sleep Quality", "Pittsburgh Sleep Quality Index (PSQI)", "19 items, 7 components", "0–21", "Higher scores indicate worse sleep quality; >5 indicates poor sleep",
+  "Sleep Quality", "Pittsburgh Sleep Quality Index (PSQI) - Item 6", "1 item (subjective sleep quality)", "1–4 (ordinal)", "Overall self-rated sleep quality over the past month; 1=Very good to 4=Very bad",
   "Sleep Duration", "Pittsburgh Sleep Quality Index (PSQI)", "1 item (hours of actual sleep)", "Hours", "Total hours of actual sleep per night",
   "Daytime Sleepiness", "Epworth Sleepiness Scale (ESS)", "8 items", "0–24", "Higher scores indicate greater daytime sleepiness; >10 indicates excessive sleepiness",
   "Wellbeing", "Short Warwick-Edinburgh Mental Wellbeing Scale (SWEMWBS)", "7 items", "7–35", "Higher scores indicate better mental wellbeing",
@@ -135,238 +135,115 @@ eval_h2 <- TRUE  # Set to FALSE to skip H2 hypotheses
 #| message: false
 #| warning: false
 
-# Load raw data
-data.panel.raw <- read_csv("data/panel.csv.gz", show_col_types = FALSE)
-data.intake.raw <- read_csv("data/intake.csv.gz", show_col_types = FALSE)
+# IMPORTANT: Run preprocess_data.R first to generate processed data files
+# Rscript preprocess_data.R
 
-# Process intake data (demographics, scaled variables)
-data.intake <- process_intake("data/intake.csv.gz")
+# Check if processed data exists, if not, run preprocessing
+if (!file.exists("data/processed/selfreport.csv.gz") ||
+    !file.exists("data/processed/gaming_sessions.csv.gz")) {
+  message("Processed data not found. Running preprocessing...")
+  preprocess_all_data()
+}
 
-# Process panel data (compute derived sleep/wellbeing variables, merge with intake)
-data.panel <- process_panel("data/panel.csv.gz", data.intake) |>
-  dplyr::select(pid, wave, region, starts_with(c("mctq", "eps", "psqi")),
+# Load preprocessed data (includes 3-step filtering: outcomes + timezone + gaming)
+selfreport <- read_csv("data/processed/selfreport.csv.gz", show_col_types = FALSE)
+data.intake <- read_csv("data/processed/intake_clean.csv.gz", show_col_types = FALSE)
+data.panel <- read_csv("data/processed/panel_clean.csv.gz", show_col_types = FALSE)
+
+# For backwards compatibility, create data.panel in expected format
+# Filter to only valid participants (those who passed 3-step filter)
+valid_pids <- unique(selfreport$pid)
+data.panel <- data.panel |>
+  filter(pid %in% valid_pids) |>
+  dplyr::select(pid, wave, date, region, starts_with(c("mctq", "eps", "psqi")),
                 total_hours_sleep, wemwbs, epsTotal,
                 age_scaled, bmi_scaled, SES_index_scaled, msf_sc_numeric, gender) |>
   mutate(
     pid = as.character(pid)
   )
 
-# Load gaming data
-data.nin <- read_csv("data/nintendo.csv.gz", show_col_types = FALSE)
-data.xbox <- read_csv("data/xbox.csv.gz", show_col_types = FALSE)
-data.steam <- read_csv("data/steam.csv.gz", show_col_types = FALSE)
-
-# Create participant-specific study start dates based on first completed panel survey
-participant_start_dates <- data.panel.raw |>
-  mutate(date = as_datetime(date)) |>
-  group_by(pid) |>
-  summarise(studyStartDate = min(date, na.rm = TRUE)) |>
-  ungroup() |>
-  mutate(pid = as.character(pid))
+# NOTE: Gaming session data (gaming_sessions.csv.gz) is loaded in the "merge gaming data" chunk
+# where it is used to dynamically calculate gaming exposure windows relative to each survey date.
+# The preprocessing includes:
+# - 3-step filtering (outcomes + timezone + gaming)
+# - UK timezone imputation
+# - Late-night gaming calculation (23:00-06:00 local time)
+# - Quality filtering (duration, concurrent sessions, study period)
 
 ```
 
+
+
 ```{r}
-#| label: merge data
+#| label: merge gaming data
 #| echo: false
 #| message: false
 #| warning: false
 
-# Standardize column names across gaming platforms
-# Nintendo: session_start, session_end, duration
-# Xbox: session_start, session_end, duration
-# Steam: session_start, session_end (need to compute duration)
+# Load session-level gaming data
+gaming_sessions <- read_csv("data/processed/gaming_sessions.csv.gz", show_col_types = FALSE)
 
-# Reference date for identifying future sessions
-ref_date <- now()
+# Calculate gaming exposure windows dynamically for each selfreport record
+# For each survey completion date, calculate:
+# - ln_biweekly_avg_minutes_played: average late-night minutes in preceding 14 days
+# - ln_monthly_avg_minutes_played: average late-night minutes in preceding 28 days
 
-# Helper function to efficiently calculate concurrent sessions using data.table
-calculate_concurrent_sessions <- function(data) {
-  # Convert to data.table for efficient overlap calculation
-  dt <- as.data.table(data)
-  dt[, session_id := .I]
+calculate_gaming_windows <- function(selfreport_data, sessions_data) {
+  # For each selfreport record, calculate windows
+  gaming_exposure <- selfreport_data |>
+    rowwise() |>
+    mutate(
+      # Calculate isWeekend based on survey completion date
+      # Friday and Saturday are coded as weekend (following original logic)
+      isWeekend = ifelse(weekdays(date) %in% c("Friday", "Saturday"), 1, 0),
 
-  # Use foverlaps for efficient interval overlap detection
-  dt_intervals <- dt[, .(pid, session_id, start = sessionStart, end = sessionEnd)]
-  setkey(dt_intervals, pid, start, end)
+      # Calculate 14-day window (biweekly)
+      biweekly_total = sum(
+        sessions_data$latenightMinutes[
+          sessions_data$pid == pid &
+          sessions_data$sessionStart >= (date - days(14)) &
+          sessions_data$sessionStart <= date
+        ],
+        na.rm = TRUE
+      ),
+      ln_biweekly_avg_minutes_played = biweekly_total / 14,
 
-  # Self-join to find overlapping sessions within each participant
-  overlaps <- foverlaps(dt_intervals, dt_intervals, type = "any", nomatch = 0L)
+      # Calculate 28-day window (monthly)
+      monthly_total = sum(
+        sessions_data$latenightMinutes[
+          sessions_data$pid == pid &
+          sessions_data$sessionStart >= (date - days(28)) &
+          sessions_data$sessionStart <= date
+        ],
+        na.rm = TRUE
+      ),
+      ln_monthly_avg_minutes_played = monthly_total / 28
+    ) |>
+    ungroup() |>
+    dplyr::select(-biweekly_total, -monthly_total)
 
-  # Count overlaps for each session
-  n_concurrent <- overlaps[, .(n_concurrent = .N), by = .(pid, session_id)]
-
-  # Merge back to original data
-  dt <- merge(dt, n_concurrent, by = c("pid", "session_id"), all.x = TRUE)
-  dt[is.na(n_concurrent), n_concurrent := 1]
-  dt[, session_id := NULL]
-
-  return(as_tibble(dt))
+  return(gaming_exposure)
 }
 
-# XBOX: Apply data quality heuristics
-data.xbox.std <- data.xbox |>
-  rename(sessionStart = session_start, sessionEnd = session_end) |>
-  mutate(
-    date = as_date(sessionStart),
-    platform = "Xbox",
-    # Calculate duration in minutes for consistency
-    duration_minutes = duration,
-    # Heuristic (a): Flag sessions in the future
-    flag_future = sessionStart > ref_date | sessionEnd > ref_date,
-    # Heuristic (b): Flag sessions longer than 10 hours (600 minutes)
-    flag_long_session = duration_minutes > 600
-  ) |>
-  # Heuristic (c): Calculate concurrent sessions using efficient method
-  calculate_concurrent_sessions() |>
-  mutate(flag_concurrent = n_concurrent >= 3)
-
-# NINTENDO: Apply data quality heuristics
-data.nin.std <- data.nin |>
-  rename(sessionStart = session_start, sessionEnd = session_end) |>
-  mutate(
-    date = as_date(sessionStart),
-    platform = "Nintendo",
-    duration_minutes = duration,
-    flag_future = sessionStart > ref_date | sessionEnd > ref_date,
-    flag_long_session = duration_minutes > 600
-  ) |>
-  calculate_concurrent_sessions() |>
-  mutate(flag_concurrent = n_concurrent >= 3)
-
-# STEAM: Apply data quality heuristics (using existing concurrent_titles column)
-data.steam.std <- data.steam |>
-  rename(sessionStart = session_start, sessionEnd = session_end) |>
-  mutate(
-    date = as_date(sessionStart),
-    platform = "Steam",
-    duration_minutes = as.numeric(difftime(sessionEnd, sessionStart, units = "mins")),
-    flag_future = sessionStart > ref_date | sessionEnd > ref_date,
-    flag_long_session = duration_minutes > 600,
-    # Steam has concurrent_titles already computed
-    n_concurrent = if_else(is.na(concurrent_titles), 1L, as.integer(concurrent_titles)),
-    flag_concurrent = n_concurrent >= 3
-  )
-
-# Report data quality statistics before filtering
-cat("\n=== DATA QUALITY HEURISTICS ===\n\n")
-
-report_quality <- function(data, platform_name) {
-  total <- nrow(data)
-  n_future <- sum(data$flag_future, na.rm = TRUE)
-  n_long <- sum(data$flag_long_session, na.rm = TRUE)
-  n_concurrent <- sum(data$flag_concurrent, na.rm = TRUE)
-  n_any_flag <- sum(data$flag_future | data$flag_long_session | data$flag_concurrent, na.rm = TRUE)
-  pct_removed <- round(100 * n_any_flag / total, 1)
-
-  cat(sprintf("%s:\n", platform_name))
-  cat(sprintf("  Total sessions: %d\n", total))
-  cat(sprintf("  Sessions in future: %d (%.1f%%)\n", n_future, 100*n_future/total))
-  cat(sprintf("  Sessions >10 hours: %d (%.1f%%)\n", n_long, 100*n_long/total))
-  cat(sprintf("  Sessions with 3+ concurrent games: %d (%.1f%%)\n", n_concurrent, 100*n_concurrent/total))
-  cat(sprintf("  Total flagged for removal: %d (%.1f%%)\n\n", n_any_flag, pct_removed))
-}
-
-report_quality(data.xbox.std, "Xbox")
-report_quality(data.steam.std, "Steam")
-report_quality(data.nin.std, "Nintendo")
-
-# Combine quality flags into a single exclusion flag
-data.xbox.std <- data.xbox.std |>
-  mutate(exclude_quality = flag_future | flag_long_session | flag_concurrent)
-
-data.steam.std <- data.steam.std |>
-  mutate(exclude_quality = flag_future | flag_long_session | flag_concurrent)
-
-data.nin.std <- data.nin.std |>
-  mutate(exclude_quality = flag_future | flag_long_session | flag_concurrent)
-
-# merge xbox, steam and nintendo (keeping quality flags for transparency)
-data.gaming <- bind_rows(data.xbox.std, data.steam.std, data.nin.std) |>
-  mutate(pid = as.character(pid)) |>
-  # Filter out sessions flagged for quality issues
-  filter(!exclude_quality) |>
-  # Join participant-specific study start dates
-  left_join(participant_start_dates, by = "pid") |>
-
-  mutate(
-
-    # redefine day to begin and end at 4am, rather than midnight, so we can properly
-    # assign late-night sessions to the previous calendar day
-    dateRecoded = if_else(hour(sessionStart) < 6, date - 1, date),
-
-    # calculate minutes_played for data.gaming using sessionEnd and sessionStart
-    # create a binary variable for data.gaming called latenight if the sessionStart is between 23:00 and 06:00
-    # create an isWeekend variable for data.gaming if the sessionStart is on a Saturday, Sunday or Friday
-    minutes_played = as.numeric(difftime(sessionEnd, sessionStart, units = "mins")),
-    latenight = ifelse(hour(sessionStart) >= 23 | hour(sessionStart) < 6, 1, 0),
-    isWeekend = ifelse(weekdays(sessionStart) %in% c("Friday", "Saturday"), 1, 0),
-
-    # calculate late night using lubridate::interval objects
-    interval_gaming = interval(sessionStart, sessionEnd),
-    interval_latenight = interval(dateRecoded + hours(23), dateRecoded + hours(30)), # gets the 11pm to 6am following day interval from date
-    latenightMinutes = as.numeric(intersect(interval_gaming, interval_latenight))/60 # calculate overlap in minutes
-  ) |>
-
-  # assign each session to a wave based on participant-specific study start date
-  # Each participant's study begins when they complete their first panel survey
-  mutate(
-    days_since_start = as.numeric(difftime(sessionStart, studyStartDate, units = "days")),
-    month = case_when(
-      days_since_start >= 0 & days_since_start <= 28 ~ 2,
-      days_since_start >= 29 & days_since_start <= 56 ~ 4,
-      days_since_start >= 57 & days_since_start <= 84 ~ 6,
-      TRUE ~ NA_real_
-    ),
-    # Define biweekly waves (14-day intervals) that end at day 84
-    wave = case_when(
-      days_since_start >= 0 & days_since_start <= 14 ~ 1,
-      days_since_start >= 15 & days_since_start <= 28 ~ 2,
-      days_since_start >= 29 & days_since_start <= 42 ~ 3,
-      days_since_start >= 43 & days_since_start <= 56 ~ 4,
-      days_since_start >= 57 & days_since_start <= 70 ~ 5,
-      days_since_start >= 71 & days_since_start <= 84 ~ 6,
-      TRUE ~ NA_real_  # Assign NA for days beyond 84
-    )
-  ) |>
-  # Remove the studyStartDate column as it's no longer needed
-  select(-studyStartDate) 
-
-# group gaming by PID, wave and latenight and calculate daily average minutes_played
-gamingMonthly <- data.gaming |>
-  # Filter to only include gaming within the study period (months 2, 4, 6)
-  filter(!is.na(month), month %in% c(2, 4, 6)) |>
-  group_by(pid, month, isWeekend) %>%
-  summarise(
-    ln_monthly_avg_minutes_played = sum(latenightMinutes)/28,
-    ln_monthly_total_minutes_played = sum(latenightMinutes),
-  ) |>
-  left_join(data.panel |> dplyr::select(-msf_sc_numeric) |> filter(wave %in% c(2, 4, 6)),
-            by = c("pid","month" = "wave")) |>
-  left_join(data.panel |> dplyr::select(pid, msf_sc_numeric) |> filter(!is.na(msf_sc_numeric)),
-            by = c("pid")) |> # hacky way to make sure chronotype (measured in wave 1 only) doesn't get lost
-  mutate(
-    ln_monthly_avg_minutes_played = replace_na(ln_monthly_avg_minutes_played, 0),
-    ln_monthly_total_minutes_played = replace_na(ln_monthly_total_minutes_played, 0)
-  ) |>
-  ungroup() |>
-  arrange(as.integer(pid), month)
-
-# group gaming by PID, wave and latenight and calculate daily average minutes_played
-gamingBiweekly <- data.gaming |>
-  # Filter to only include gaming within the study period (waves 1-6, days 0-84)
-  filter(!is.na(wave), wave %in% 1:6) |>
-  group_by(pid, wave, isWeekend) |>
-  summarise(
-    ln_biweekly_avg_minutes_played = sum(latenightMinutes)/14,
-  ) |>
-  left_join(data.panel |> dplyr::select(-msf_sc_numeric), by = c("pid", "wave")) |>
-  left_join(data.panel |> dplyr::select(pid, msf_sc_numeric) |> filter(!is.na(msf_sc_numeric)),
-            by = c("pid")) |> # hacky way to make sure chronotype (measured in wave 1 only) doesn't get lost
-  mutate(ln_biweekly_avg_minutes_played = replace_na(ln_biweekly_avg_minutes_played, 0)) |>
-  ungroup() |>
+# Calculate for all waves (gamingBiweekly)
+# First calculate gaming windows, removing msf_sc_numeric to avoid duplication
+gamingBiweekly <- calculate_gaming_windows(selfreport |> dplyr::select(-msf_sc_numeric), gaming_sessions) |>
+  # Then add msf_sc_numeric once per participant (not per wave)
+  left_join(selfreport |> dplyr::select(pid, msf_sc_numeric) |> filter(!is.na(msf_sc_numeric)) |> distinct(pid, .keep_all = TRUE),
+            by = "pid") |>
   arrange(as.integer(pid), wave) |>
   dplyr::select(pid, wave, msf_sc_numeric, everything())
+
+# Calculate for waves 2, 4, 6 only (gamingMonthly)
+gamingMonthly <- selfreport |>
+  filter(wave %in% c(2, 4, 6)) |>
+  dplyr::select(-msf_sc_numeric) |>
+  calculate_gaming_windows(gaming_sessions) |>
+  rename(month = wave) |>
+  # Add msf_sc_numeric once per participant
+  left_join(selfreport |> dplyr::select(pid, msf_sc_numeric) |> filter(!is.na(msf_sc_numeric)) |> distinct(pid, .keep_all = TRUE),
+            by = "pid") |>
+  arrange(as.integer(pid), month)
 
 ```
 
@@ -384,8 +261,10 @@ if (!require("tinytable")) install.packages("tinytable")
 library(tinytable)
 
 # Identify analytical sample: participants with at least one non-missing outcome
-analytical_sample <- gamingMonthly |>
-  filter(!is.na(psqi_global) | !is.na(total_hours_sleep) |
+# Use selfreport (not gamingMonthly) to include all participants with outcomes,
+# regardless of whether they have gaming data
+analytical_sample <- selfreport |>
+  filter(!is.na(psqi_06) | !is.na(total_hours_sleep) |
          !is.na(epsTotal) | !is.na(wemwbs)) |>
   distinct(pid) |>
   pull(pid)
@@ -592,6 +471,7 @@ participant_gameplay <- gamingMonthly |>
 
 # Print detailed summary statistics based on participant averages
 participant_gameplay |>
+  group_by(category) |>
   summarise(
     N = n(),
     Mean = mean(avg_minutes_per_day, na.rm = TRUE),
@@ -601,7 +481,10 @@ participant_gameplay |>
     Max = max(avg_minutes_per_day, na.rm = TRUE),
     .groups = "drop"
   ) |>
-  knitr::kable(digits = 2, caption = "Descriptive Statistics for Average Daily Late-Night Gaming Across Study Period (Per Participant)")
+  knitr::kable(
+    digits = 2, 
+    caption = "Descriptive Statistics for Average Daily Late-Night Gaming Across Study Period (Per Participant), by Category"
+  )
 ```
 
 ```{r}
@@ -696,19 +579,20 @@ if (!require("ggdist")) install.packages("ggdist")
 library(ggdist)
 
 # Prepare data for raincloud plots - select key variables (excluding gameplay)
+# Use selfreport (not gamingMonthly) to include ALL participants with outcome data
 # For chronotype, we only take one value per participant (measured at Wave 1)
-descriptive_data <- gamingMonthly |>
+descriptive_data <- selfreport |>
   dplyr::select(
     pid,
-    month,
-    global_psqi = psqi_global,
+    wave,
+    sleep_quality = psqi_06,  # Already numeric: 0=Very good, 1=Fairly good, 2=Fairly bad, 3=Very bad
     sleep_duration = total_hours_sleep,
     daytime_sleepiness = epsTotal,
     wellbeing = wemwbs,
     chronotype = msf_sc_numeric
   ) |>
   pivot_longer(
-    cols = c(global_psqi, sleep_duration, daytime_sleepiness, wellbeing, chronotype),
+    cols = c(sleep_quality, sleep_duration, daytime_sleepiness, wellbeing, chronotype),
     names_to = "variable",
     values_to = "value"
   ) |>
@@ -719,8 +603,8 @@ descriptive_data <- gamingMonthly |>
   ungroup() |>
   mutate(
     variable = factor(variable,
-                     levels = c("global_psqi", "sleep_duration", "daytime_sleepiness", "wellbeing", "chronotype"),
-                     labels = c("Global PSQI Score (0-21)",
+                     levels = c("sleep_quality", "sleep_duration", "daytime_sleepiness", "wellbeing", "chronotype"),
+                     labels = c("Sleep Quality (PSQI Item 6: 1-4)",
                                "Sleep Duration (hours)",
                                "Daytime Sleepiness (EPS: 0-24)",
                                "Wellbeing (WEMWBS: 7-35)",
@@ -785,9 +669,11 @@ descriptive_data |>
 
 ## H1a: Late-night gaming is associated with poorer sleep quality.
 
-Multilevel ordinal regression whereby monthly average minutes played predicts sleep quality (PSQI), controlling for age, BMI, SES index, region, and whether playtime falls on a weekend, with a random intercept for participants.
+Multilevel ordinal regression whereby monthly average minutes played predicts sleep quality (PSQI item 6: "Overall, how would you rate your sleep quality during the past month?"), controlling for age, BMI, SES index, region, and whether playtime falls on a weekend, with random intercepts for participants and gender.
 
-Model syntax: `psqi_global ~ ln_monthly_avg_minutes_played + age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend + (1 | pid)`
+**Deviation from pre-registered analysis plan**: The pre-registered random effects structure `(1 + ln_monthly_avg_minutes_played | pid) + (1 | gender)` resulted in convergence issues. The random slope variance was estimated at near-zero, and the gender random effect variance was also estimated at zero, indicating insufficient variation in both components. To address these computational issues, we simplified the random effects structure to a single random intercept for participants: `(1 | pid)`. Gender is retained as a fixed effect covariate. This change does not affect the fixed effects (the hypothesis tests) but provides more stable variance estimates.
+
+Model syntax: `psqi_6_ord ~ ln_monthly_avg_minutes_played + age_scaled + bmi_scaled + SES_index_scaled + gender + region + isWeekend + (1 | pid)`
 
 ```{r}
 #| label: h1a
@@ -799,10 +685,23 @@ if (!dir.exists("output/models")) {
   dir.create("output/models", recursive = TRUE)
 }
 
-# Fit the model using global PSQI score (0-21, higher = worse sleep quality)
-model.h1a <- lmer(psqi_global ~ ln_monthly_avg_minutes_played + (1 | pid) +
-                    age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend,
-                  data = gamingMonthly)
+# Prepare data with ordinal psqi_06 (already numeric: 0-3)
+gamingMonthly_h1a <- gamingMonthly |>
+  mutate(
+    psqi_6_ord = factor(psqi_06,
+                       levels = c(0, 1, 2, 3),
+                       labels = c("Very good", "Fairly good", "Fairly bad", "Very bad"),
+                       ordered = TRUE)
+  ) |>
+  filter(!is.na(psqi_6_ord))
+
+# Fit cumulative link mixed model (ordinal regression)
+# Original pre-registered: (1 + ln_monthly_avg_minutes_played | pid) + (1 | gender)
+# Simplified to: (1 | pid) without 
+model.h1a <- clmm(psqi_6_ord ~ ln_monthly_avg_minutes_played +
+                    age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+                    (1 | pid),
+                  data = gamingMonthly_h1a)
 
 # Save the model
 saveRDS(model.h1a, "output/models/model_h1a.rds")
@@ -1095,11 +994,12 @@ Model syntax: `psqi_6 ~ ln_monthly_avg_minutes_played * msf_sc_numeric + age_sca
 #| code-summary: "Fit H2a model"
 #| eval: !expr eval_h2
 
-# Prepare data with ordinal psqi_6
+# Prepare data with ordinal psqi_06 (already numeric: 0-3)
 gamingMonthly_h2a <- gamingMonthly |>
   mutate(
-    psqi_6_ord = factor(psqi_6,
-                       levels = c("Very good", "Fairly good", "Fairly bad", "Very bad"),
+    psqi_6_ord = factor(psqi_06,
+                       levels = c(0, 1, 2, 3),
+                       labels = c("Very good", "Fairly good", "Fairly bad", "Very bad"),
                        ordered = TRUE)
   ) |>
   filter(!is.na(psqi_6_ord))
