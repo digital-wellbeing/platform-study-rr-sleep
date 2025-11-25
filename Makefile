@@ -1,18 +1,18 @@
-# Makefile for downloading data from platform-study-rr repository
+# Makefile for downloading data from open-play repository
 
 # GitHub repository details
-REPO := digital-wellbeing/platform-study-rr
-COMMIT := 8eefedde66b3a90a605f3ec5e921450bfe287335
-BASE_URL := https://raw.githubusercontent.com/$(REPO)/$(COMMIT)/data/clean
+REPO := digital-wellbeing/open-play
+TAG := v1.0.0
+BASE_URL := https://raw.githubusercontent.com/$(REPO)/$(TAG)/data/clean
 
 # Data directory
 DATA_DIR := data
 
 # List of data files
-DATA_FILES := diary.csv.gz \
-              intake.csv.gz \
+DATA_FILES := survey_daily.csv.gz \
+              survey_intake.csv.gz \
+              survey_biweekly.csv.gz \
               nintendo.csv.gz \
-              panel.csv.gz \
               simon.csv.gz \
               steam.csv.gz \
               xbox.csv.gz

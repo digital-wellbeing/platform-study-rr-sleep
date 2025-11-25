@@ -17,15 +17,16 @@ library(mctq)  # For proper MCTQ chronotype calculations
 library(questionnaires)  # For PSQI computation
 
 # Function to rename PSQI columns to match Questionnaires package format
-# Converts platform-study format to standard PSQI naming convention
+# Converts open-play format to standard PSQI naming convention
 prepare_psqi_columns <- function(data) {
   data %>%
     mutate(
       # Q1: Bedtime (HH:MM format) - combine hour, minute, AM/PM
+      # open-play columns: psqi_bedtime_hour, psqi_bedtime_minute, psqi_bedtime_ampm
       # Note: Some entries may already be in 24-hour format (hour > 12)
-      bedtime_hour = as.numeric(`psqi_1#1_1_1`),
-      bedtime_min = as.numeric(`psqi_1#1_1_2`),
-      bedtime_ampm = `psqi_1#2_1`,
+      bedtime_hour = as.numeric(psqi_bedtime_hour),
+      bedtime_min = as.numeric(psqi_bedtime_minute),
+      bedtime_ampm = psqi_bedtime_ampm,
       bedtime_hour_24 = case_when(
         is.na(bedtime_hour) ~ NA_real_,
         bedtime_hour > 12 ~ bedtime_hour,  # Already in 24-hour format
@@ -37,13 +38,15 @@ prepare_psqi_columns <- function(data) {
                         sprintf("%02d:%02d:00", bedtime_hour_24, bedtime_min)),
 
       # Q2: Minutes before sleep
-      psqi_02 = as.numeric(psqi_2),
+      # open-play column: psqi_sleep_latency_min
+      psqi_02 = as.numeric(psqi_sleep_latency_min),
 
       # Q3: Rising time (HH:MM format) - combine hour, minute, AM/PM
+      # open-play columns: psqi_waketime_hour, psqi_waketime_minute, psqi_waketime_ampm
       # Note: Some entries may already be in 24-hour format (hour > 12)
-      risetime_hour = as.numeric(`psqi_3#1_1_1`),
-      risetime_min = as.numeric(`psqi_3#1_1_2`),
-      risetime_ampm = `psqi_3#2_1`,
+      risetime_hour = as.numeric(psqi_waketime_hour),
+      risetime_min = as.numeric(psqi_waketime_minute),
+      risetime_ampm = psqi_waketime_ampm,
       risetime_hour_24 = case_when(
         is.na(risetime_hour) ~ NA_real_,
         risetime_hour > 12 ~ risetime_hour,  # Already in 24-hour format
@@ -55,127 +58,126 @@ prepare_psqi_columns <- function(data) {
                         sprintf("%02d:%02d:00", risetime_hour_24, risetime_min)),
 
       # Q4: Hours of sleep (decimal hours)
-      sleep_hours = as.numeric(`psqi_4#1_1_1`),
-      sleep_minutes = as.numeric(`psqi_4#1_1_2`),
+      # open-play columns: psqi_sleepdur_hours, psqi_sleepdur_minutes
+      sleep_hours = as.numeric(psqi_sleepdur_hours),
+      sleep_minutes = as.numeric(psqi_sleepdur_minutes),
       psqi_04 = sleep_hours + sleep_minutes / 60,
 
       # Q5a: Trouble sleeping within 30min (frequency scale 0-3)
+      # open-play column: psqi_prob_fall_asleep_30min
       psqi_05a = case_when(
-        psqi_5_1 == "Not during the past month" ~ 0,
-        psqi_5_1 == "Less than once a week" ~ 1,
-        psqi_5_1 == "Once or twice a week" ~ 2,
-        psqi_5_1 == "Three or more times a week" ~ 3,
+        psqi_prob_fall_asleep_30min == "Not during the past month" ~ 0,
+        psqi_prob_fall_asleep_30min == "Less than once a week" ~ 1,
+        psqi_prob_fall_asleep_30min == "Once or twice a week" ~ 2,
+        psqi_prob_fall_asleep_30min == "Three or more times a week" ~ 3,
         TRUE ~ NA_real_
       ),
 
       # Q5b-j: Sleep troubles (frequency scale 0-3)
+      # open-play columns: psqi_prob_wake_midnight, psqi_prob_bathroom, etc.
       psqi_05b = case_when(
-        psqi_5_2 == "Not during the past month" ~ 0,
-        psqi_5_2 == "Less than once a week" ~ 1,
-        psqi_5_2 == "Once or twice a week" ~ 2,
-        psqi_5_2 == "Three or more times a week" ~ 3,
+        psqi_prob_wake_midnight == "Not during the past month" ~ 0,
+        psqi_prob_wake_midnight == "Less than once a week" ~ 1,
+        psqi_prob_wake_midnight == "Once or twice a week" ~ 2,
+        psqi_prob_wake_midnight == "Three or more times a week" ~ 3,
         TRUE ~ NA_real_
       ),
       psqi_05c = case_when(
-        psqi_5_3 == "Not during the past month" ~ 0,
-        psqi_5_3 == "Less than once a week" ~ 1,
-        psqi_5_3 == "Once or twice a week" ~ 2,
-        psqi_5_3 == "Three or more times a week" ~ 3,
+        psqi_prob_bathroom == "Not during the past month" ~ 0,
+        psqi_prob_bathroom == "Less than once a week" ~ 1,
+        psqi_prob_bathroom == "Once or twice a week" ~ 2,
+        psqi_prob_bathroom == "Three or more times a week" ~ 3,
         TRUE ~ NA_real_
       ),
       psqi_05d = case_when(
-        psqi_5_4 == "Not during the past month" ~ 0,
-        psqi_5_4 == "Less than once a week" ~ 1,
-        psqi_5_4 == "Once or twice a week" ~ 2,
-        psqi_5_4 == "Three or more times a week" ~ 3,
+        psqi_prob_breathing == "Not during the past month" ~ 0,
+        psqi_prob_breathing == "Less than once a week" ~ 1,
+        psqi_prob_breathing == "Once or twice a week" ~ 2,
+        psqi_prob_breathing == "Three or more times a week" ~ 3,
         TRUE ~ NA_real_
       ),
       psqi_05e = case_when(
-        psqi_5_5 == "Not during the past month" ~ 0,
-        psqi_5_5 == "Less than once a week" ~ 1,
-        psqi_5_5 == "Once or twice a week" ~ 2,
-        psqi_5_5 == "Three or more times a week" ~ 3,
+        psqi_prob_cough_snore == "Not during the past month" ~ 0,
+        psqi_prob_cough_snore == "Less than once a week" ~ 1,
+        psqi_prob_cough_snore == "Once or twice a week" ~ 2,
+        psqi_prob_cough_snore == "Three or more times a week" ~ 3,
         TRUE ~ NA_real_
       ),
       psqi_05f = case_when(
-        psqi_5_6 == "Not during the past month" ~ 0,
-        psqi_5_6 == "Less than once a week" ~ 1,
-        psqi_5_6 == "Once or twice a week" ~ 2,
-        psqi_5_6 == "Three or more times a week" ~ 3,
+        psqi_prob_cold == "Not during the past month" ~ 0,
+        psqi_prob_cold == "Less than once a week" ~ 1,
+        psqi_prob_cold == "Once or twice a week" ~ 2,
+        psqi_prob_cold == "Three or more times a week" ~ 3,
         TRUE ~ NA_real_
       ),
       psqi_05g = case_when(
-        psqi_5_7 == "Not during the past month" ~ 0,
-        psqi_5_7 == "Less than once a week" ~ 1,
-        psqi_5_7 == "Once or twice a week" ~ 2,
-        psqi_5_7 == "Three or more times a week" ~ 3,
+        psqi_prob_hot == "Not during the past month" ~ 0,
+        psqi_prob_hot == "Less than once a week" ~ 1,
+        psqi_prob_hot == "Once or twice a week" ~ 2,
+        psqi_prob_hot == "Three or more times a week" ~ 3,
         TRUE ~ NA_real_
       ),
       psqi_05h = case_when(
-        psqi_5_8 == "Not during the past month" ~ 0,
-        psqi_5_8 == "Less than once a week" ~ 1,
-        psqi_5_8 == "Once or twice a week" ~ 2,
-        psqi_5_8 == "Three or more times a week" ~ 3,
+        psqi_prob_bad_dreams == "Not during the past month" ~ 0,
+        psqi_prob_bad_dreams == "Less than once a week" ~ 1,
+        psqi_prob_bad_dreams == "Once or twice a week" ~ 2,
+        psqi_prob_bad_dreams == "Three or more times a week" ~ 3,
         TRUE ~ NA_real_
       ),
       psqi_05i = case_when(
-        psqi_5_9 == "Not during the past month" ~ 0,
-        psqi_5_9 == "Less than once a week" ~ 1,
-        psqi_5_9 == "Once or twice a week" ~ 2,
-        psqi_5_9 == "Three or more times a week" ~ 3,
+        psqi_prob_pain == "Not during the past month" ~ 0,
+        psqi_prob_pain == "Less than once a week" ~ 1,
+        psqi_prob_pain == "Once or twice a week" ~ 2,
+        psqi_prob_pain == "Three or more times a week" ~ 3,
         TRUE ~ NA_real_
       ),
       # Q5j: Other reasons (frequency scale 0-3)
-      # Note: The frequency can be in either psqi_5_c or psqi_5_cr_1 depending on
-      # whether a text description was provided. When text is provided, it goes in
-      # psqi_5_c and frequency goes in psqi_5_cr_1. Otherwise frequency is in psqi_5_c.
+      # open-play columns: psqi_prob_other_text, psqi_prob_other_freq
       psqi_05j = case_when(
-        # First check psqi_5_cr_1 (used when there's a text description)
-        psqi_5_cr_1 == "Not during the past month" ~ 0,
-        psqi_5_cr_1 == "Less than once a week" ~ 1,
-        psqi_5_cr_1 == "Once or twice a week" ~ 2,
-        psqi_5_cr_1 == "Three or more times a week" ~ 3,
-        # Fall back to psqi_5_c (used when no text description provided)
-        psqi_5_c == "Not during the past month" ~ 0,
-        psqi_5_c == "Less than once a week" ~ 1,
-        psqi_5_c == "Once or twice a week" ~ 2,
-        psqi_5_c == "Three or more times a week" ~ 3,
+        psqi_prob_other_freq == "Not during the past month" ~ 0,
+        psqi_prob_other_freq == "Less than once a week" ~ 1,
+        psqi_prob_other_freq == "Once or twice a week" ~ 2,
+        psqi_prob_other_freq == "Three or more times a week" ~ 3,
         TRUE ~ NA_real_
       ),
 
       # Q6: Sleep quality (0-3 scale: 0=Very good, 1=Fairly good, 2=Fairly bad, 3=Very bad)
+      # open-play column: psqi_overall_quality
       psqi_06 = case_when(
-        psqi_6 == "Very good" ~ 0,
-        psqi_6 == "Fairly good" ~ 1,
-        psqi_6 == "Fairly bad" ~ 2,
-        psqi_6 == "Very bad" ~ 3,
+        psqi_overall_quality == "Very good" ~ 0,
+        psqi_overall_quality == "Fairly good" ~ 1,
+        psqi_overall_quality == "Fairly bad" ~ 2,
+        psqi_overall_quality == "Very bad" ~ 3,
         TRUE ~ NA_real_
       ),
 
       # Q7: Sleep medication (frequency scale 0-3)
+      # open-play column: psqi_sleep_meds_freq
       psqi_07 = case_when(
-        psqi_7 == "Not during the past month" ~ 0,
-        psqi_7 == "Less than once a week" ~ 1,
-        psqi_7 == "Once or twice a week" ~ 2,
-        psqi_7 == "Three or more times a week" ~ 3,
+        psqi_sleep_meds_freq == "Not during the past month" ~ 0,
+        psqi_sleep_meds_freq == "Less than once a week" ~ 1,
+        psqi_sleep_meds_freq == "Once or twice a week" ~ 2,
+        psqi_sleep_meds_freq == "Three or more times a week" ~ 3,
         TRUE ~ NA_real_
       ),
 
       # Q8: Trouble staying awake (frequency scale 0-3)
+      # open-play column: psqi_trouble_stay_awake
       psqi_08 = case_when(
-        psqi_8 == "Not during the past month" ~ 0,
-        psqi_8 == "Less than once a week" ~ 1,
-        psqi_8 == "Once or twice a week" ~ 2,
-        psqi_8 == "Three or more times a week" ~ 3,
+        psqi_trouble_stay_awake == "Not during the past month" ~ 0,
+        psqi_trouble_stay_awake == "Less than once a week" ~ 1,
+        psqi_trouble_stay_awake == "Once or twice a week" ~ 2,
+        psqi_trouble_stay_awake == "Three or more times a week" ~ 3,
         TRUE ~ NA_real_
       ),
 
       # Q9: Enthusiasm/maintaining problem (0-3 scale)
+      # open-play column: psqi_daytime_enthusiasm
       psqi_09 = case_when(
-        psqi_9 == "No problem at all" ~ 0,
-        psqi_9 == "Only a very slight problem" ~ 1,
-        psqi_9 == "Somewhat of a problem" ~ 2,
-        psqi_9 == "A very big problem" ~ 3,
+        psqi_daytime_enthusiasm == "No problem at all" ~ 0,
+        psqi_daytime_enthusiasm == "Only a very slight problem" ~ 1,
+        psqi_daytime_enthusiasm == "Somewhat of a problem" ~ 2,
+        psqi_daytime_enthusiasm == "A very big problem" ~ 3,
         TRUE ~ NA_real_
       )
     ) %>%
@@ -250,18 +252,68 @@ compute_psqi <- function(data) {
 }
 
 # Function to compute Epworth Sleepiness Scale total
+# open-play columns: eps_reading, eps_tv, eps_public, eps_passenger,
+#                    eps_afternoon, eps_talking, eps_lunch, eps_car
 compute_eps_total <- function(data) {
   data %>%
     mutate(
-      # Sum EPS items (eps_1_1 through eps_1_8)
-      # Convert text responses to numeric if needed
-      across(starts_with("eps_1_"), ~case_when(
-        . == "No chance of dozing" ~ 0,
-        . == "Slight chance of dozing" ~ 1,
-        . == "Moderate chance of dozing" ~ 2,
-        . == "High chance of dozing" ~ 3,
-        TRUE ~ as.numeric(.)
-      ), .names = "{.col}_num")
+      # Convert text responses to numeric for each ESS item
+      eps_reading_num = case_when(
+        eps_reading == "No chance of dozing" ~ 0,
+        eps_reading == "Slight chance of dozing" ~ 1,
+        eps_reading == "Moderate chance of dozing" ~ 2,
+        eps_reading == "High chance of dozing" ~ 3,
+        TRUE ~ as.numeric(eps_reading)
+      ),
+      eps_tv_num = case_when(
+        eps_tv == "No chance of dozing" ~ 0,
+        eps_tv == "Slight chance of dozing" ~ 1,
+        eps_tv == "Moderate chance of dozing" ~ 2,
+        eps_tv == "High chance of dozing" ~ 3,
+        TRUE ~ as.numeric(eps_tv)
+      ),
+      eps_public_num = case_when(
+        eps_public == "No chance of dozing" ~ 0,
+        eps_public == "Slight chance of dozing" ~ 1,
+        eps_public == "Moderate chance of dozing" ~ 2,
+        eps_public == "High chance of dozing" ~ 3,
+        TRUE ~ as.numeric(eps_public)
+      ),
+      eps_passenger_num = case_when(
+        eps_passenger == "No chance of dozing" ~ 0,
+        eps_passenger == "Slight chance of dozing" ~ 1,
+        eps_passenger == "Moderate chance of dozing" ~ 2,
+        eps_passenger == "High chance of dozing" ~ 3,
+        TRUE ~ as.numeric(eps_passenger)
+      ),
+      eps_afternoon_num = case_when(
+        eps_afternoon == "No chance of dozing" ~ 0,
+        eps_afternoon == "Slight chance of dozing" ~ 1,
+        eps_afternoon == "Moderate chance of dozing" ~ 2,
+        eps_afternoon == "High chance of dozing" ~ 3,
+        TRUE ~ as.numeric(eps_afternoon)
+      ),
+      eps_talking_num = case_when(
+        eps_talking == "No chance of dozing" ~ 0,
+        eps_talking == "Slight chance of dozing" ~ 1,
+        eps_talking == "Moderate chance of dozing" ~ 2,
+        eps_talking == "High chance of dozing" ~ 3,
+        TRUE ~ as.numeric(eps_talking)
+      ),
+      eps_lunch_num = case_when(
+        eps_lunch == "No chance of dozing" ~ 0,
+        eps_lunch == "Slight chance of dozing" ~ 1,
+        eps_lunch == "Moderate chance of dozing" ~ 2,
+        eps_lunch == "High chance of dozing" ~ 3,
+        TRUE ~ as.numeric(eps_lunch)
+      ),
+      eps_car_num = case_when(
+        eps_car == "No chance of dozing" ~ 0,
+        eps_car == "Slight chance of dozing" ~ 1,
+        eps_car == "Moderate chance of dozing" ~ 2,
+        eps_car == "High chance of dozing" ~ 3,
+        TRUE ~ as.numeric(eps_car)
+      )
     ) %>%
     mutate(
       epsTotal = rowSums(pick(ends_with("_num")), na.rm = FALSE)
@@ -294,44 +346,37 @@ compute_wemwbs <- function(data) {
 # Function to compute MSFsc (mid-sleep on free days corrected for sleep debt)
 # Using the mctq package: https://github.com/ropensci/mctq
 # Reshapes our MCTQ data to match the expected format, then uses mctq functions
+# open-play column mapping:
+#   mctq_has_regular_work_schedule -> work (Yes/No -> TRUE/FALSE)
+#   mctq_wd_bedtime -> bt_w (bedtime work)
+#   mctq_wd_sleep_onset_time -> sprep_w (sleep prep time work)
+#   mctq_wd_sleep_latency_minutes -> slat_w (sleep latency work)
+#   mctq_wd_wake_time -> se_w (wake time work)
+#   mctq_wd_getup_delay_minutes -> si_w (sleep inertia work)
+#   mctq_wd_alarm_clock_used -> alarm_w
+#   mctq_fd_* -> same pattern for free days
+#   mctq_fd_alarm_clock_used -> alarm_f
 compute_mctq_msf_sc <- function(data) {
   data %>%
     mutate(
-      # Create a temporary dataset in mctq expected format
-      # Our mapping (based on MCTQ codebook):
-      # mctq_1: work (Yes/No -> TRUE/FALSE)
-      # mctq_3_1: bt_w (bedtime work - Image 1: going to bed)
-      # mctq_3_2: time awake in bed before sleep prep (minutes) - Image 2
-      # mctq_3_3: sprep_w (sleep prep time work - Image 3: ready to fall asleep)
-      # mctq_3_4: slat_w (sleep latency work, minutes - Image 4: time to fall asleep)
-      # mctq_3_5: se_w (wake time work - Image 5: wake up at)
-      # mctq_3_6: si_w (sleep inertia work - Image 6: time to get up after waking)
-      # mctq_4_1: alarm_w (alarm on work days)
-      # mctq_6_1-6: same pattern for free days
-      # mctq_7_1: alarm_f (alarm on free days)
-      #
-      # Note: For MSFsc calculation, we use sleep prep time (mctq_3_3/mctq_6_3)
-      # as the bedtime equivalent and add sleep latency (mctq_3_4/mctq_6_4).
-
       # Map to mctq format
       work = case_when(
-        mctq_1 == "Yes" ~ TRUE,
-        mctq_1 == "No" ~ FALSE,
+        mctq_has_regular_work_schedule == "Yes" ~ TRUE,
+        mctq_has_regular_work_schedule == "No" ~ FALSE,
         TRUE ~ NA
       ),
 
       wd = case_when(
-        mctq_4_1 == "Yes" ~ 5,  # Assume 5 work days if using alarm on work days
-        mctq_4_1 == "No" ~ 0,
+        mctq_wd_alarm_clock_used == "Yes" ~ 5,  # Assume 5 work days if using alarm on work days
+        mctq_wd_alarm_clock_used == "No" ~ 0,
         TRUE ~ 5
       ),
 
       # Data quality check: validate bedtime -> sleep prep interval
-      # Calculate interval between bedtime (3_1/6_1) and sleep prep (3_3/6_3)
-      bt_raw_w = hms::as_hms(mctq_3_1),
-      sp_raw_w = hms::as_hms(mctq_3_3),
-      bt_raw_f = hms::as_hms(mctq_6_1),
-      sp_raw_f = hms::as_hms(mctq_6_3),
+      bt_raw_w = hms::as_hms(mctq_wd_bedtime),
+      sp_raw_w = hms::as_hms(mctq_wd_sleep_onset_time),
+      bt_raw_f = hms::as_hms(mctq_fd_bedtime),
+      sp_raw_f = hms::as_hms(mctq_fd_sleep_onset_time),
 
       # Calculate intervals (handling overnight transitions)
       # Interval 1: Bedtime -> Sleep prep
@@ -342,8 +387,8 @@ compute_mctq_msf_sc <- function(data) {
       int_bt_sp_f = ifelse(int_bt_sp_f < 0, int_bt_sp_f + 24, int_bt_sp_f),
 
       # Interval 2: Sleep prep -> Wake time (for sleep duration validation)
-      wake_raw_w = hms::as_hms(mctq_3_5),
-      wake_raw_f = hms::as_hms(mctq_6_5),
+      wake_raw_w = hms::as_hms(mctq_wd_wake_time),
+      wake_raw_f = hms::as_hms(mctq_fd_wake_time),
 
       int_sp_wake_w = as.numeric(difftime(wake_raw_w, sp_raw_w, units = "hours")),
       int_sp_wake_w = ifelse(int_sp_wake_w < 0, int_sp_wake_w + 24, int_sp_wake_w),
@@ -353,27 +398,27 @@ compute_mctq_msf_sc <- function(data) {
 
       # Work days - convert to hms and apply validation (survey requested 24-hour format)
       # Validation rule: Set wake time to NA if sleep prep->wake interval < 2 hours (very short sleep only)
-      bt_w = hms::as_hms(mctq_3_1),
-      sprep_w = hms::as_hms(mctq_3_3),
-      slat_w = lubridate::dminutes(as.numeric(mctq_3_4)),  # Sleep latency
+      bt_w = hms::as_hms(mctq_wd_bedtime),
+      sprep_w = hms::as_hms(mctq_wd_sleep_onset_time),
+      slat_w = lubridate::dminutes(as.numeric(mctq_wd_sleep_latency_minutes)),  # Sleep latency
       se_w = case_when(
         int_sp_wake_w < 2 ~ NA,  # Very short sleep duration
-        TRUE ~ hms::as_hms(mctq_3_5)
+        TRUE ~ hms::as_hms(mctq_wd_wake_time)
       ),
-      si_w = lubridate::dminutes(as.numeric(mctq_3_6)),  # Sleep inertia
-      alarm_w = mctq_4_1 == "Yes",
+      si_w = lubridate::dminutes(as.numeric(mctq_wd_getup_delay_minutes)),  # Sleep inertia
+      alarm_w = mctq_wd_alarm_clock_used == "Yes",
 
       # Free days - convert to hms and apply validation (survey requested 24-hour format)
       # Validation rule: Set wake time to NA if sleep prep->wake interval < 2 hours (very short sleep only)
-      bt_f = hms::as_hms(mctq_6_1),
-      sprep_f = hms::as_hms(mctq_6_3),
-      slat_f = lubridate::dminutes(as.numeric(mctq_6_4)),  # Sleep latency
+      bt_f = hms::as_hms(mctq_fd_bedtime),
+      sprep_f = hms::as_hms(mctq_fd_sleep_onset_time),
+      slat_f = lubridate::dminutes(as.numeric(mctq_fd_sleep_latency_minutes)),  # Sleep latency
       se_f = case_when(
         int_sp_wake_f < 2 ~ NA,  # Very short sleep duration
-        TRUE ~ hms::as_hms(mctq_6_5)
+        TRUE ~ hms::as_hms(mctq_fd_wake_time)
       ),
-      si_f = lubridate::dminutes(as.numeric(mctq_6_6)),  # Sleep inertia
-      alarm_f = mctq_7_1 == "Yes"
+      si_f = lubridate::dminutes(as.numeric(mctq_fd_getup_delay_minutes)),  # Sleep inertia
+      alarm_f = mctq_fd_alarm_clock_used == "Yes"
     ) %>%
     mutate(
       # Now use mctq functions with properly formatted data
@@ -492,7 +537,8 @@ process_panel <- function(panel_path, intake_processed) {
       by = "pid"
     ) %>%
     mutate(
-      psqi_6_ord = factor(psqi_06,
+      # Create ordered factor from original text column (psqi_overall_quality in open-play)
+      psqi_6_ord = factor(psqi_overall_quality,
                          levels = c("Very good", "Fairly good", "Fairly bad", "Very bad"),
                          ordered = TRUE),
       pid = as.character(pid)
@@ -519,6 +565,7 @@ process_gaming_data <- function(panel_path, intake_processed) {
 
   # Identify participants with at least one valid outcome measure
   # Outcome measures: WEMWBS (wellbeing), PSQI duration/quality, ESS (sleepiness)
+  # open-play column names
   outcome_check <- data.panel.raw %>%
     mutate(
       # Check if any WEMWBS items are non-missing
@@ -526,12 +573,14 @@ process_gaming_data <- function(panel_path, intake_processed) {
                    !is.na(wemwbs_4) | !is.na(wemwbs_5) | !is.na(wemwbs_6) |
                    !is.na(wemwbs_7),
       # Check if any PSQI items are non-missing (duration and quality)
-      has_psqi = !is.na(`psqi_1#1_1_1`) | !is.na(psqi_2) | !is.na(psqi_6) |
-                 !is.na(psqi_9),
+      # open-play: psqi_bedtime_hour, psqi_sleep_latency_min, psqi_overall_quality, psqi_daytime_enthusiasm
+      has_psqi = !is.na(psqi_bedtime_hour) | !is.na(psqi_sleep_latency_min) |
+                 !is.na(psqi_overall_quality) | !is.na(psqi_daytime_enthusiasm),
       # Check if any ESS items are non-missing
-      has_ess = !is.na(eps_1_1) | !is.na(eps_1_2) | !is.na(eps_1_3) |
-                !is.na(eps_1_4) | !is.na(eps_1_5) | !is.na(eps_1_6) |
-                !is.na(eps_1_7) | !is.na(eps_1_8)
+      # open-play: eps_reading, eps_tv, eps_public, eps_passenger, eps_afternoon, eps_talking, eps_lunch, eps_car
+      has_ess = !is.na(eps_reading) | !is.na(eps_tv) | !is.na(eps_public) |
+                !is.na(eps_passenger) | !is.na(eps_afternoon) | !is.na(eps_talking) |
+                !is.na(eps_lunch) | !is.na(eps_car)
     )
 
   valid_participants_outcomes <- outcome_check %>%
@@ -677,12 +726,12 @@ process_gaming_data <- function(panel_path, intake_processed) {
       exclude_quality = flag_future | flag_long_session | flag_concurrent
     )
 
-  # Steam
+  # Steam (open-play uses approximate_session_start/end and has minutes column)
   data.steam.std <- read_csv("data/steam.csv.gz", show_col_types = FALSE) %>%
-    rename(sessionStart = session_start, sessionEnd = session_end) %>%
+    rename(sessionStart = approximate_session_start, sessionEnd = approximate_session_end) %>%
     mutate(
       date = as_date(sessionStart),
-      duration_minutes = as.numeric(difftime(sessionEnd, sessionStart, units = "mins")),
+      duration_minutes = as.numeric(minutes),  # open-play provides minutes directly
       flag_future = sessionStart > ref_date | sessionEnd > ref_date,
       flag_long_session = duration_minutes > 600,
       platform = "Steam"
@@ -882,15 +931,15 @@ create_selfreport <- function(panel_path, intake_processed, valid_participants) 
 preprocess_all_data <- function() {
   # Process intake
   message("Processing intake data...")
-  intake_processed <- process_intake("data/intake.csv.gz")
+  intake_processed <- process_intake("data/survey_intake.csv.gz")
 
   # Process panel
   message("Processing panel data...")
-  panel_processed <- process_panel("data/panel.csv.gz", intake_processed)
+  panel_processed <- process_panel("data/survey_biweekly.csv.gz", intake_processed)
 
   # Process gaming data (returns both gaming data and valid participants list)
   message("Processing gaming data...")
-  gaming_result <- process_gaming_data("data/panel.csv.gz", intake_processed)
+  gaming_result <- process_gaming_data("data/survey_biweekly.csv.gz", intake_processed)
   gaming_data <- gaming_result$gaming_data
   valid_participants <- gaming_result$valid_participants
 
@@ -900,7 +949,7 @@ preprocess_all_data <- function() {
 
   # Create self-report data (filtered to valid participants only)
   message("\nCreating self-report data...")
-  selfreport <- create_selfreport("data/panel.csv.gz", intake_processed, valid_participants)
+  selfreport <- create_selfreport("data/survey_biweekly.csv.gz", intake_processed, valid_participants)
 
   # Save processed data
   message("\nSaving processed data...")

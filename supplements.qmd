@@ -35,8 +35,8 @@ p_load(tidyverse, tinytable, lubridate, mctq)
 source("preprocess_data.R")
 
 # Load and process data
-data.intake <- process_intake("data/intake.csv.gz")
-data.panel <- process_panel("data/panel.csv.gz", data.intake)
+data.intake <- process_intake("data/survey_intake.csv.gz")
+data.panel <- process_panel("data/survey_biweekly.csv.gz", data.intake)
 ```
 
 ## Table S1: Pittsburgh Sleep Quality Index (PSQI) Components
@@ -493,7 +493,7 @@ library(patchwork)
 
 # Load RAW panel data (before validation rules are applied)
 # This ensures we see the true distribution of intervals before cleaning
-data.panel_raw <- read_csv("data/panel.csv.gz", show_col_types = FALSE)
+data.panel_raw <- read_csv("data/survey_biweekly.csv.gz", show_col_types = FALSE)
 
 # Calculate intervals between time points from RAW data
 mctq_intervals <- data.panel_raw |>
