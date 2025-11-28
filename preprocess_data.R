@@ -187,6 +187,25 @@ prepare_psqi_columns <- function(data) {
            -sleep_hours, -sleep_minutes)
 }
 
+# Function to detect and replace outliers (values outside ±3σ) with NA
+detect_outliers <- function(x) {
+  mean_x <- mean(x, na.rm = TRUE)
+  sd_x <- sd(x, na.rm = TRUE)
+  lower_bound <- mean_x - 3 * sd_x
+  upper_bound <- mean_x + 3 * sd_x
+
+  # Replace values outside ±3σ with NA
+  x_clean <- ifelse(!is.na(x) & (x < lower_bound | x > upper_bound), NA, x)
+
+  n_outliers <- sum(!is.na(x) & is.na(x_clean))
+  if (n_outliers > 0) {
+    message(sprintf("  Outlier detection: %d values outside ±3σ [%.2f, %.2f] set to NA",
+                    n_outliers, lower_bound, upper_bound))
+  }
+
+  return(x_clean)
+}
+
 # Function to compute all PSQI components and global score
 # Uses the questionnaires package for standardized PSQI computation
 compute_psqi <- function(data) {
@@ -524,6 +543,8 @@ process_intake <- function(intake_path) {
 
 # Process panel data
 process_panel <- function(panel_path, intake_processed) {
+  message("\nApplying outlier detection (±3σ) to Sleep duration and MSFsc...")
+
   panel <- read_csv(panel_path, show_col_types = FALSE) %>%
     # Compute derived variables
     compute_psqi() %>%
@@ -543,6 +564,20 @@ process_panel <- function(panel_path, intake_processed) {
                          ordered = TRUE),
       pid = as.character(pid)
     )
+
+  # Apply outlier detection to Sleep duration (total_hours_sleep)
+  message("Sleep duration (total_hours_sleep):")
+  panel <- panel %>%
+    mutate(total_hours_sleep = detect_outliers(total_hours_sleep))
+
+  # Apply outlier detection to MSFsc (msf_sc_numeric)
+  message("MSFsc (msf_sc_numeric):")
+  panel <- panel %>%
+    mutate(msf_sc_numeric = detect_outliers(msf_sc_numeric))
+
+  # Mean-center MSFsc for modeling (after outlier detection)
+  panel <- panel %>%
+    mutate(msf_sc_centered = msf_sc_numeric - mean(msf_sc_numeric, na.rm = TRUE))
 
   return(panel)
 }
@@ -911,7 +946,7 @@ create_selfreport <- function(panel_path, intake_processed, valid_participants) 
       # PSQI components (needed for H2a model)
       psqi_06,  # Numeric version: 0=Very good, 1=Fairly good, 2=Fairly bad, 3=Very bad
       # Moderator
-      msf_sc_numeric,
+      msf_sc_numeric, msf_sc_centered,
       # Covariates
       age_scaled, bmi_scaled, SES_index_scaled, region, gender
     ) %>%
