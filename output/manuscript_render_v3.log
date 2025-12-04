@@ -1,0 +1,93 @@
+[31m
+
+processing file: manuscript.qmd
+[39m1/29                        
+2/29 [load-libraries]       
+3/29                        
+4/29 [load-data]            
+5/29                        
+6/29 [prepare gaming data]  
+7/29                        
+8/29 [data-quality-controls]
+9/29                        
+10/29 [tbl-demographics]     
+11/29                        
+12/29 [fig-raincloud]        
+13/29                        
+14/29 [h1-main-effects]      
+15/29                        
+16/29 [fit-h1-models]        
+17/29                        
+18/29 [tbl-h1-combined]      
+[31mWarning: program compiled against libxml 213 using older 209
+[39m19/29                        
+20/29 [h2-main-effects]      
+21/29                        
+22/29 [fit-h2-models]        
+23/29                        
+24/29 [tbl-h2-combined]      
+25/29                        
+26/29 [appendix-h1-original] 
+27/29                        
+28/29 [appendix-h2-original] 
+29/29                        
+[31moutput file: manuscript.knit.md
+
+[39m[1mpandoc [22m
+  to: html
+  output-file: manuscript.html
+  standalone: true
+  embed-resources: true
+  section-divs: true
+  html-math-method: katex
+  wrap: none
+  default-image-extension: png
+  toc: true
+  variables: {}
+  
+[1mmetadata[22m
+  document-css: false
+  link-citations: true
+  date-format: long
+  lang: en
+  toc-location: left
+  theme: cosmo
+  title: Late-Night Gaming, Sleep and Wellbeing
+  subtitle: The Pri(n)ce of Playing Past Bedtime
+  running-head: Late-Night Gaming
+  author:
+    - name: Tamás A. Földes
+      email: tamas.foldes@oii.ox.ac.uk
+      orcid: 0000-0002-0623-9149
+      url: https://example.com
+      corresponding: true
+      affiliation:
+        - ref: 1
+    - name: Second Author
+      affiliation:
+        - ref: 2
+  affiliations:
+    - id: 1
+      name: First University
+      department: Department Name
+    - id: 2
+      name: Second University
+  abstract: |
+    Your abstract goes here. This will appear prominently at the top of your document.
+  categories:
+    - keyword1
+    - keyword2
+    - keyword3
+  authornote: |
+    Author notes go here.
+  date: last-modified
+  bibliography:
+    - bibliography.bib
+  
+[33mWARNING (/opt/quarto/share/filters/main.lua:9478) Unable to parse table from raw html block: skipping.
+[39m[33mWARNING (/opt/quarto/share/filters/main.lua:9478) Unable to parse table from raw html block: skipping.
+[39m[33mWARNING (/opt/quarto/share/filters/main.lua:9478) Unable to parse table from raw html block: skipping.
+[39m[33mWARNING (/opt/quarto/share/filters/main.lua:9478) Unable to parse table from raw html block: skipping.
+[39m[33mWARNING (/opt/quarto/share/filters/main.lua:9478) Unable to parse table from raw html block: skipping.
+[39mOutput created: manuscript.html
+

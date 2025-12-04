@@ -1,0 +1,34 @@
+[31m
+
+processing file: manuscript.qmd
+[39m1/29                        
+2/29 [load-libraries]       
+3/29                        
+4/29 [load-data]            
+5/29                        
+6/29 [prepare gaming data]  
+[31mError in `mutate()`:
+ℹ In argument: `isWeekend = ifelse(wday(date, label = FALSE) %in% c(6,
+  7), 1, 0)`.
+Caused by error in `wday()`:
+! unused argument (label = FALSE)
+Backtrace:
+     ▆
+  1. ├─base::lapply(selfreport_versions, build_gaming_inputs)
+  2. │ └─global FUN(X[[i]], ...)
+  3. │   ├─dplyr::mutate(...)
+  4. │   └─dplyr:::mutate.data.frame(...)
+  5. │     └─dplyr:::mutate_cols(.data, dplyr_quosures(...), by)
+  6. │       ├─base::withCallingHandlers(...)
+  7. │       └─dplyr:::mutate_col(dots[[i]], data, mask, new_columns)
+  8. │         └─mask$eval_all_mutate(quo)
+  9. │           └─dplyr (local) eval()
+ 10. ├─base::ifelse(wday(date, label = FALSE) %in% c(6, 7), 1, 0)
+ 11. ├─wday(date, label = FALSE) %in% c(6, 7)
+ 12. └─base::.handleSimpleError(...)
+ 13.   └─dplyr (local) h(simpleError(msg, call))
+ 14.     └─rlang::abort(message, class = error_class, parent = parent, call = error_call)
+[39m[31m
+Quitting from manuscript.qmd:179-226 [prepare gaming data]
+[39m[31mExecution halted
+[39m[33mWARN: Error encountered when rendering files[39m

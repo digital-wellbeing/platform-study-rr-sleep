@@ -1,0 +1,202 @@
+── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.2
+✔ ggplot2   3.5.2     ✔ tibble    3.3.0
+✔ lubridate 1.9.4     ✔ tidyr     1.3.1
+✔ purrr     1.1.0     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+
+Attaching package: ‘mice’
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+The following objects are masked from ‘package:base’:
+
+    cbind, rbind
+
+
+Attaching package: ‘zoo’
+
+The following objects are masked from ‘package:base’:
+
+    as.Date, as.Date.numeric
+
+Processing intake data...
+Processing panel data...
+
+Applying outlier detection (±3σ) to Sleep duration and MSFsc...
+Sleep duration (total_hours_sleep):
+  Outlier detection: 31 values outside ±3σ [3.44, 10.98] set to NA
+MSFsc (msf_sc_numeric):
+  Outlier detection: 45 values outside ±3σ [-6.58, 21.01] set to NA
+Processing gaming data...
+
+Attaching package: ‘data.table’
+
+The following objects are masked from ‘package:zoo’:
+
+    yearmon, yearqtr
+
+The following objects are masked from ‘package:lubridate’:
+
+    hour, isoweek, mday, minute, month, quarter, second, wday, week,
+    yday, year
+
+The following objects are masked from ‘package:dplyr’:
+
+    between, first, last
+
+The following object is masked from ‘package:purrr’:
+
+    transpose
+
+Calculated day 0 for 1948 participants
+
+=== STEP 1: Outcome Measure Filter ===
+Participants with valid outcome data: 1843
+Participants WITHOUT outcome data: 105 (excluded)
+
+=== STEP 2: Timezone Data Filter ===
+Total participants in intake: 34922
+Participants with valid timezone data: 33876
+  - Reported timezone: 21788
+  - Imputed UK timezone (GMT): 12088
+Participants WITHOUT timezone data: 1046 (excluded - US only)
+
+Combined Filter (Outcomes AND Timezone):
+  With outcomes AND timezone: 1723
+  With outcomes but NO timezone: 120 (excluded - US participants or no intake)
+Loading gaming data...
+Combining and filtering gaming data...
+
+=== Gaming Data After Quality & Study Window Filters ===
+Sessions: 363833
+Participants: 1644
+
+=== STEP 3: Gaming Data Filter ===
+Participants with at least one valid gaming session: 1644
+
+Combined Filter (Outcomes AND Timezone AND Gaming):
+  With outcomes, timezone AND gaming: 1580
+  With outcomes & timezone but NO gaming: 143 (excluded)
+
+=== FINAL VALID SAMPLE ===
+Final participants: 1580
+Final sessions: 352278
+
+Excluded in final step:
+  Participants: 64 (had gaming but no outcomes or timezone)
+  Sessions: 11555
+
+Exporting gaming sessions...
+Creating gaming sessions export with late-night enrichment...
+Exported 352278 gaming sessions from 1580 participants
+
+Creating self-report data...
+Creating self-report data...
+
+Applying outlier detection (±3σ) to Sleep duration and MSFsc...
+Sleep duration (total_hours_sleep):
+  Outlier detection: 31 values outside ±3σ [3.44, 10.98] set to NA
+MSFsc (msf_sc_numeric):
+  Outlier detection: 45 values outside ±3σ [-6.58, 21.01] set to NA
+Created 6259 self-report records from 1580 participants
+  (Filtered to valid participants who passed 3-step filter)
+
+Saving processed data...
+  - Wrote raw self-report data to data/processed/selfreport_raw.csv.gz
+
+Preparing data for imputation (wave expansion, date filling, gaming exposures)...
+  - Dropped 3 participants lacking WEMWBS at wave 1
+  - Expanded to 9462 rows (1577 participants × 6 waves)
+  - Inferred dates for 3221 records
+Calculating gaming exposure predictors (overall + late-night)...
+  - Calculated gaming exposure windows for all rows
+  - Added isWeekend column
+  - Wrote prepared data to data/processed/selfreport_prepared.csv.gz
+    Total rows: 9462, columns: 31
+
+Running multiple imputation pipeline for self-report outcomes...
+=== Multiple Imputation for Self-Report Variables ===
+
+Loading data...
+  Loaded 9462 observations from 1577 participants
+  Skipping preparation steps (data already prepared)
+Reshaping data to wide format...
+  Filtered to waves 1-6: 9462 observations
+  Wide format: 1577 participants, 39 variables
+  Monthly variables (waves 2,4,6): 9
+  Biweekly variables (waves 1-6): 6
+  Monthly gaming predictors: 6
+  Biweekly gaming predictors: 12
+  Auxiliary predictors: 6
+
+=== Running Parallel Multiple Imputation (Chunked) ===
+Available CPU cores: 24
+Number of imputations (m): 20
+Number of iterations: 20
+Running 20 parallel jobs with ~1 imputations each
+Setting up predictor matrix...
+  Average predictors per variable: 10.7
+Setting up imputation methods...
+  Variables to impute: 15 (using PMM)
+    Monthly (waves 2,4,6): 9 columns
+    Biweekly (waves 1-6): 6 columns
+  Variables as predictors only: 24
+
+Missingness summary for variables to impute:
+  total_hours_sleep_w2: 470 (29.8%) missing
+  total_hours_sleep_w4: 673 (42.7%) missing
+  total_hours_sleep_w6: 880 (55.8%) missing
+  psqi_06_w2: 457 (29.0%) missing
+  psqi_06_w4: 662 (42.0%) missing
+  psqi_06_w6: 875 (55.5%) missing
+  epsTotal_w2: 471 (29.9%) missing
+  epsTotal_w4: 668 (42.4%) missing
+  epsTotal_w6: 887 (56.2%) missing
+  wemwbs_w2: 454 (28.8%) missing
+  wemwbs_w3: 529 (33.5%) missing
+  wemwbs_w4: 660 (41.9%) missing
+  wemwbs_w5: 739 (46.9%) missing
+  wemwbs_w6: 871 (55.2%) missing
+
+Starting parallel imputation...
+Combining imputed datasets...
+
+Imputation complete in 0.2 minutes
+Total imputed datasets: 20
+
+Creating diagnostic plots...
+  Creating convergence plots...
+  Creating density comparison plots...
+  Creating strip plots...
+  Creating imputation summary...
+  Diagnostic output saved to output/imputation/
+
+Saving imputed data to data/processed/selfreport_imputed.rds
+Converting imputed datasets to long format...
+  Saved: data/processed/selfreport_imputed.rds (mids object)
+  Saved: data/processed/selfreport_imputed_long.rds (long format, stacked)
+
+=== Imputation Complete ===
+Imputed datasets: 20
+Iterations: 20
+Aggregating imputed values (mean across imputations) for convenience...
+  - selfreport.csv.gz now includes *_original and *_imputed columns
+  - Total rows: 9462 (expected: 9462 participants × 6 waves)
+
+Data preprocessing complete!
+Processed files saved to data/processed/:
+  - intake_clean.csv.gz
+  - gaming_sessions.csv.gz (session-level data with late-night enrichment)
+  - selfreport_raw.csv.gz (pre-imputation)
+  - selfreport_imputed.rds / selfreport_imputed_long.rds (mids + stacked long)
+  - selfreport.csv.gz (with *_original and *_imputed outcome columns)
+
+Diagnostics available under output/imputation/.
+There were 26 warnings (use warnings() to see them)

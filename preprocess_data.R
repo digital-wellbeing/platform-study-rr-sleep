@@ -1006,19 +1006,71 @@ preprocess_all_data <- function() {
   write_csv(selfreport, selfreport_raw_path)
   message(glue("  - Wrote raw self-report data to {selfreport_raw_path}"))
 
+  message("\nPreparing data for imputation (wave expansion, date filling, gaming exposures)...")
+
+  # Source the imputation helper functions (prevent auto-run)
+  Sys.setenv(RUN_IMPUTATION_ON_SOURCE = "0")
+  source("imputation.R")
+  Sys.setenv(RUN_IMPUTATION_ON_SOURCE = "1")  # Reset
+
+  # Drop participants missing WEMWBS at wave 1 (insufficient predictors)
+  dropped_pids <- selfreport %>%
+    filter(wave == 1, is.na(wemwbs)) %>%
+    distinct(pid) %>%
+    pull(pid)
+
+  if (length(dropped_pids) > 0) {
+    selfreport <- selfreport %>% filter(!pid %in% dropped_pids)
+    message(sprintf("  - Dropped %d participants lacking WEMWBS at wave 1", length(dropped_pids)))
+  }
+
+  # Expand to full wave grid (1,577 × 6 waves = 9,462 rows)
+  selfreport_expanded <- expand_to_all_waves(selfreport, waves = c(1, 2, 3, 4, 5, 6))
+  message(sprintf("  - Expanded to %d rows (%d participants × 6 waves)",
+                  nrow(selfreport_expanded), n_distinct(selfreport_expanded$pid)))
+
+  # Fill missing survey dates using interpolation
+  wave_reference_dates <- build_wave_reference_dates(selfreport_expanded)
+  selfreport_expanded <- fill_missing_dates(selfreport_expanded, wave_reference_dates)
+  n_inferred_dates <- sum(selfreport_expanded$date_inferred_flag, na.rm = TRUE)
+  message(sprintf("  - Inferred dates for %d records", n_inferred_dates))
+
+  # Categorize gender
+  selfreport_expanded <- selfreport_expanded %>%
+    mutate(gender = categorize_gender(gender))
+
+  # Calculate gaming exposure windows for ALL rows (using inferred dates)
+  selfreport_expanded <- add_gaming_exposure(selfreport_expanded, GAMING_SESSIONS_PATH)
+  message("  - Calculated gaming exposure windows for all rows")
+
+  # Add isWeekend column (Friday=6, Saturday=7 in wday)
+  selfreport_expanded <- selfreport_expanded %>%
+    mutate(isWeekend = ifelse(wday(date_imputed) %in% c(6, 7), 1, 0))
+  message("  - Added isWeekend column")
+
+  # Save the prepared data (ready for imputation)
+  selfreport_prepared_path <- "data/processed/selfreport_prepared.csv.gz"
+  write_csv(selfreport_expanded, selfreport_prepared_path)
+  message(sprintf("  - Wrote prepared data to %s", selfreport_prepared_path))
+  message(sprintf("    Total rows: %d, columns: %d",
+                  nrow(selfreport_expanded), ncol(selfreport_expanded)))
+
   message("\nRunning multiple imputation pipeline for self-report outcomes...")
   imp <- run_imputation(
-    input_path = selfreport_raw_path,
+    input_path = selfreport_prepared_path,
     output_path = "data/processed/selfreport_imputed.rds",
     n_imputations = N_IMPUTATIONS,
     n_iterations = N_ITERATIONS,
     create_diagnostics_flag = TRUE,
     parallel_method = "chunked",
-    drop_wemwbs_w1_missing_flag = TRUE
+    drop_wemwbs_w1_missing_flag = FALSE,  # Already dropped above
+    skip_preparation = TRUE  # Data is already prepared
   )
 
   message("Aggregating imputed values (mean across imputations) for convenience...")
   imputed_long <- load_imputed_long("data/processed/selfreport_imputed_long.rds")
+
+  # Average imputed outcomes across all 20 imputations
   imputed_summary <- imputed_long %>%
     group_by(pid, wave) %>%
     summarise(
@@ -1029,19 +1081,32 @@ preprocess_all_data <- function() {
       .groups = "drop"
     )
 
-  selfreport_with_versions <- selfreport %>%
-    rename_with(
-      ~paste0(.x, "_original"),
-      all_of(VARS_TO_IMPUTE)
-    ) %>%
+  # Extract covariates from first imputation (they're identical across imputations)
+  # This includes: age, BMI, SES, chronotype, gender, region, date, gaming exposures, flags
+  covariates_full <- imputed_long %>%
+    filter(.imp == 1) %>%
+    select(-all_of(VARS_TO_IMPUTE), -.imp)
+
+  # Create full dataset with imputed outcomes + covariates
+  # Start with covariates_full to preserve all wave-expanded rows
+  selfreport_with_versions <- covariates_full %>%
     left_join(
       imputed_summary %>%
         rename_with(~paste0(.x, "_imputed"), all_of(VARS_TO_IMPUTE)),
+      by = c("pid", "wave")
+    ) %>%
+    left_join(
+      selfreport %>%
+        select(pid, wave, all_of(VARS_TO_IMPUTE)) %>%
+        rename_with(~paste0(.x, "_original"), all_of(VARS_TO_IMPUTE)),
       by = c("pid", "wave")
     )
 
   write_csv(selfreport_with_versions, "data/processed/selfreport.csv.gz")
   message("  - selfreport.csv.gz now includes *_original and *_imputed columns")
+  message(sprintf("  - Total rows: %d (expected: %d participants × 6 waves)",
+                  nrow(selfreport_with_versions),
+                  length(unique(selfreport_with_versions$pid)) * 6))
 
   message("\nData preprocessing complete!")
   message("Processed files saved to data/processed/:")

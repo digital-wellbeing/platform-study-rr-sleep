@@ -1240,50 +1240,9 @@ h2d_ln_minutes_msf <- get_h2_interaction(
   path = "output/models/imputed_model_h2d.rds",
   term = "ln_monthly_avg_minutes_played:msf_sc_centered"
 )
-
-# (Exploratory) main effects for late-night gaming and chronotype
-h2a_main_ln <- get_h2_interaction(
-  path = "output/models/imputed_model_h2a.rds",
-  term = "ln_monthly_avg_minutes_played",
-  exponentiate = TRUE,
-  label_if_exp = "OR"
-)
-h2a_main_msf <- get_h2_interaction(
-  path = "output/models/imputed_model_h2a.rds",
-  term = "msf_sc_centered"
-)
-
-h2b_main_ln <- get_h2_interaction(
-  path = "output/models/imputed_model_h2b.rds",
-  term = "ln_monthly_avg_minutes_played"
-)
-h2b_main_msf <- get_h2_interaction(
-  path = "output/models/imputed_model_h2b.rds",
-  term = "msf_sc_centered"
-)
-
-h2c_main_ln <- get_h2_interaction(
-  path = "output/models/imputed_model_h2c.rds",
-  term = "ln_biweekly_avg_minutes_played"
-)
-h2c_main_msf <- get_h2_interaction(
-  path = "output/models/imputed_model_h2c.rds",
-  term = "msf_sc_centered"
-)
-
-h2d_main_ln <- get_h2_interaction(
-  path = "output/models/imputed_model_h2d.rds",
-  term = "ln_monthly_avg_minutes_played"
-)
-h2d_main_msf <- get_h2_interaction(
-  path = "output/models/imputed_model_h2d.rds",
-  term = "msf_sc_centered"
-)
 ```
 
 Under these implemented models, the chronotype × late-night gaming interaction in the sleep-quality model (H2a) is estimated as `r h2a_ln_minutes_msf`, providing little evidence that the association between late-night gaming and sleep quality differs meaningfully across the chronotype continuum. The corresponding interaction effects are `r h2b_ln_minutes_msf` for sleep duration (H2b), `r h2c_ln_minutes_msf` for wellbeing (H2c), and `r h2d_ln_minutes_msf` for daytime sleepiness (H2d), all of which suggest that any moderation by chronotype is small in magnitude and statistically uncertain. These interaction terms constitute the primary tests of H2 and are estimated conditional on the same covariate set as in H1 (age, BMI, SES index, region, gender, and weekend versus weekday timing). Full model summaries, including main effects and random-effect estimates, are reported in the H2 regression table.
-
-Although not part of our preregistered hypotheses, the main effect of late-night gaming in the sleep-quality model (H2a) was `r h2a_main_ln` and the main effect of chronotype was `r h2a_main_msf`, indicating only modest associations between each predictor and subjective sleep quality when considered marginally. Analogous main effects were `r h2b_main_ln` and `r h2b_main_msf` for sleep duration (H2b), `r h2c_main_ln` and `r h2c_main_msf` for wellbeing (H2c), and `r h2d_main_ln` and `r h2d_main_msf` for daytime sleepiness (H2d), which likewise suggest that, in this sample, both chronotype and late-night gaming showed at most small marginal associations with the outcomes once covariates were controlled. These exploratory estimates are reported for completeness, but should be interpreted cautiously given their non-preregistered status.
 
 ```{r}
 #| label: fit-h2-models
@@ -1509,3 +1468,4 @@ if (eval_h2 && "original" %in% names(h2_models)) {
   cat("Complete-case H2 models were not estimated (no original outcome version available).\n")
 }
 ```
+

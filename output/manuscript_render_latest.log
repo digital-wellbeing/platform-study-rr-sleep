@@ -1,0 +1,41 @@
+[31m
+
+processing file: manuscript.qmd
+[39m1/29                        
+2/29 [load-libraries]       
+3/29                        
+4/29 [load-data]            
+5/29                        
+6/29 [prepare gaming data]  
+7/29                        
+8/29 [data-quality-controls]
+9/29                        
+10/29 [tbl-demographics]     
+11/29                        
+12/29 [fig-raincloud]        
+13/29                        
+14/29 [h1-main-effects]      
+15/29                        
+16/29 [fit-h1-models]        
+17/29                        
+18/29 [tbl-h1-combined]      
+[31mWarning: program compiled against libxml 213 using older 209
+[39m19/29                        
+20/29 [h2-main-effects]      
+21/29                        
+22/29 [fit-h2-models]        
+[31mError in `contrasts<-`:
+! contrasts can be applied only to factors with 2 or more levels
+Backtrace:
+    ▆
+ 1. └─global fit_h2_models(gaming_inputs[[ver]], ver)
+ 2.   └─ordinal::clmm(...)
+ 3.     └─ordinal:::clmm.frames(modelcall = mc, formulae = formulae, contrasts)
+ 4.       └─ordinal:::getX(fullmf, fixedmf, contrasts)
+ 5.         ├─stats::model.matrix(fixedTerms, fullmf, contrasts)
+ 6.         └─stats::model.matrix.default(fixedTerms, fullmf, contrasts)
+ 7.           └─stats::`contrasts<-`(`*tmp*`, value = contr.funs[1 + isOF[nn]])
+[39m[31m
+Quitting from manuscript.qmd:1245-1302 [fit-h2-models]
+[39m[31mExecution halted
+[39m[33mWARN: Error encountered when rendering files[39m

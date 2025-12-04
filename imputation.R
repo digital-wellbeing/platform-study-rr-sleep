@@ -73,7 +73,7 @@ AUXILIARY_VARS <- c(
 
 # Wave-invariant covariates (measured once, repeated across waves)
 WAVE_INVARIANT <- c("age_scaled", "bmi_scaled", "SES_index_scaled",
-                    "msf_sc_numeric", "region", "gender")
+                    "msf_sc_numeric", "msf_sc_centered", "region", "gender")
 
 # ==============================================================================
 # FUNCTIONS
@@ -970,7 +970,8 @@ run_imputation <- function(input_path = "data/processed/selfreport.csv.gz",
                            n_iterations = N_ITERATIONS,
                            create_diagnostics_flag = TRUE,
                            parallel_method = "chunked",
-                           drop_wemwbs_w1_missing_flag = TRUE) {
+                           drop_wemwbs_w1_missing_flag = TRUE,
+                           skip_preparation = FALSE) {
 
   message("=== Multiple Imputation for Self-Report Variables ===\n")
 
@@ -987,46 +988,67 @@ run_imputation <- function(input_path = "data/processed/selfreport.csv.gz",
   data_long <- data_long %>%
     filter(wave %in% 1:6)
 
-  # Optionally drop participants missing WEMWBS at wave 1 (insufficient predictors)
   dropped_pids <- character()
-  if (drop_wemwbs_w1_missing_flag) {
-    dropped_pids <- data_long %>%
-      filter(wave == 1, is.na(wemwbs)) %>%
-      distinct(pid) %>%
-      pull(pid)
+  date_inference_stats <- list(n_records = 0, n_participants = 0)
 
-    if (length(dropped_pids) > 0) {
-      data_long <- data_long %>% filter(!pid %in% dropped_pids)
-      message(sprintf("  Dropped %d participants lacking WEMWBS at wave 1",
-                      length(dropped_pids)))
+  if (!skip_preparation) {
+    # Optionally drop participants missing WEMWBS at wave 1 (insufficient predictors)
+    if (drop_wemwbs_w1_missing_flag) {
+      dropped_pids <- data_long %>%
+        filter(wave == 1, is.na(wemwbs)) %>%
+        distinct(pid) %>%
+        pull(pid)
+
+      if (length(dropped_pids) > 0) {
+        data_long <- data_long %>% filter(!pid %in% dropped_pids)
+        message(sprintf("  Dropped %d participants lacking WEMWBS at wave 1",
+                        length(dropped_pids)))
+      }
     }
+
+    # 1b. Ensure each participant has rows for all waves
+    data_long <- expand_to_all_waves(data_long)
+
+    # 1c. Estimate missing survey dates to support gaming exposure calculation
+    wave_reference_dates <- build_wave_reference_dates(data_long)
+    data_long <- fill_missing_dates(data_long, wave_reference_dates)
+    n_inferred_dates <- sum(data_long$date_inferred_flag, na.rm = TRUE)
+    n_participants_inferred <- data_long %>%
+      filter(date_inferred_flag) %>%
+      summarise(n = n_distinct(pid)) %>%
+      pull(n)
+    if (length(n_participants_inferred) == 0 || is.na(n_participants_inferred)) {
+      n_participants_inferred <- 0
+    }
+    date_inference_stats <- list(
+      n_records = ifelse(is.na(n_inferred_dates), 0, n_inferred_dates),
+      n_participants = n_participants_inferred
+    )
+
+    # 1d. Categorize gender after ensuring alignment
+    data_long <- data_long %>%
+      mutate(gender = categorize_gender(gender))
+
+    # 1e. Attach gaming exposure predictors (auxiliary, not imputed)
+    data_long <- add_gaming_exposure(data_long, GAMING_SESSIONS_PATH)
+  } else {
+    message("  Skipping preparation steps (data already prepared)")
+    # Extract date inference stats from prepared data
+    n_inferred_dates <- sum(data_long$date_inferred_flag, na.rm = TRUE)
+    n_participants_inferred <- data_long %>%
+      filter(date_inferred_flag) %>%
+      summarise(n = n_distinct(pid)) %>%
+      pull(n)
+    if (length(n_participants_inferred) == 0 || is.na(n_participants_inferred)) {
+      n_participants_inferred <- 0
+    }
+    date_inference_stats <- list(
+      n_records = ifelse(is.na(n_inferred_dates), 0, n_inferred_dates),
+      n_participants = n_participants_inferred
+    )
   }
 
-  # 1b. Ensure each participant has rows for all waves
-  data_long <- expand_to_all_waves(data_long)
-
-  # 1c. Estimate missing survey dates to support gaming exposure calculation
-  wave_reference_dates <- build_wave_reference_dates(data_long)
-  data_long <- fill_missing_dates(data_long, wave_reference_dates)
-  n_inferred_dates <- sum(data_long$date_inferred_flag, na.rm = TRUE)
-  n_participants_inferred <- data_long %>%
-    filter(date_inferred_flag) %>%
-    summarise(n = n_distinct(pid)) %>%
-    pull(n)
-  if (length(n_participants_inferred) == 0 || is.na(n_participants_inferred)) {
-    n_participants_inferred <- 0
-  }
-  date_inference_stats <- list(
-    n_records = ifelse(is.na(n_inferred_dates), 0, n_inferred_dates),
-    n_participants = n_participants_inferred
-  )
-
-  # 1d. Categorize gender after ensuring alignment
-  data_long <- data_long %>%
-    mutate(gender = categorize_gender(gender))
-
-  # 1e. Attach gaming exposure predictors (auxiliary, not imputed)
-  data_long <- add_gaming_exposure(data_long, GAMING_SESSIONS_PATH)
+  # Create date diagnostics for reporting
   date_diagnostics <- data_long %>%
     mutate(
       date_original = date,
