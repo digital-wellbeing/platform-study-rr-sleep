@@ -1,0 +1,53 @@
+── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.2
+✔ ggplot2   3.5.2     ✔ tibble    3.3.0
+✔ lubridate 1.9.4     ✔ tidyr     1.3.1
+✔ purrr     1.1.0     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+
+Attaching package: ‘mice’
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+The following objects are masked from ‘package:base’:
+
+    cbind, rbind
+
+
+Attaching package: ‘zoo’
+
+The following objects are masked from ‘package:base’:
+
+    as.Date, as.Date.numeric
+
+=== Multiple Imputation for Self-Report Variables ===
+
+Loading data...
+  Loaded 9462 observations from 1577 participants
+Error in `filter()`:
+ℹ In argument: `is.na(wemwbs)`.
+Caused by error:
+! object 'wemwbs' not found
+Backtrace:
+     ▆
+  1. ├─global run_imputation(...)
+  2. │ └─... %>% pull(pid)
+  3. ├─dplyr::pull(., pid)
+  4. ├─dplyr::distinct(., pid)
+  5. ├─dplyr::filter(., wave == 1, is.na(wemwbs))
+  6. ├─dplyr:::filter.data.frame(., wave == 1, is.na(wemwbs))
+  7. │ └─dplyr:::filter_rows(.data, dots, by)
+  8. │   └─dplyr:::filter_eval(...)
+  9. │     ├─base::withCallingHandlers(...)
+ 10. │     └─mask$eval_all_filter(dots, env_filter)
+ 11. │       └─dplyr (local) eval()
+ 12. └─base::.handleSimpleError(...)
+ 13.   └─dplyr (local) h(simpleError(msg, call))
+ 14.     └─rlang::abort(message, class = error_class, parent = parent, call = error_call)
+Execution halted

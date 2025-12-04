@@ -483,7 +483,7 @@ Note: Lower PSQI scores indicate better sleep quality (0 = "Very good", 3 = "Ver
 #| code-summary: "Prepare sleep quality and wellbeing data"
 
 # Get PSQI sleep quality component and WEMWBS from panel data
-# PSQI sleep quality is item 6 (psqi_06): 0=Very good, 1=Fairly good, 2=Fairly bad, 3=Very bad
+# PSQI sleep quality is item 6 (psqi_comp1_quality): 0=Very good, 1=Fairly good, 2=Fairly bad, 3=Very bad
 # WEMWBS is the wellbeing total score
 
 dqc4_data <- selfreport |>

@@ -964,7 +964,7 @@ tt(other_measures,
 
 The Pittsburgh Sleep Quality Index assesses sleep quality over the past month through 19 self-rated questions across 7 components:
 
-1. **Subjective sleep quality** (psqi_06): Overall self-rating of sleep quality
+1. **Subjective sleep quality** (psqi_comp1_quality): Overall self-rating of sleep quality
 2. **Sleep latency** (psqi_02, psqi_05a): Time to fall asleep and frequency of trouble falling asleep
 3. **Sleep duration** (psqi_04): Hours of actual sleep per night  
 4. **Sleep efficiency** (psqi_01, psqi_03, psqi_04): Percentage of time in bed actually spent sleeping

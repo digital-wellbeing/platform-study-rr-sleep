@@ -148,7 +148,9 @@ prepare_psqi_columns <- function(data) {
       ),
 
       # Q6: Sleep quality (0-3 scale: 0=Very good, 1=Fairly good, 2=Fairly bad, 3=Very bad)
+      # This is PSQI component 1 (subjective sleep quality)
       # open-play column: psqi_overall_quality
+      # Note: This creates psqi_06 as input; psqi_compute() will create psqi_comp1_quality as output
       psqi_06 = case_when(
         psqi_overall_quality == "Very good" ~ 0,
         psqi_overall_quality == "Fairly good" ~ 1,
@@ -231,7 +233,7 @@ compute_psqi <- function(data) {
       risingtime = psqi_03,
       hours_sleep = psqi_04,
       no_sleep_30min = psqi_05a,
-      sleepquality = psqi_06,
+      sleepquality = psqi_06,  # Input: raw response; Output: psqi_comp1_quality
       medication = psqi_07,
       keep_awake = psqi_08,
       keep_enthused = psqi_09,
@@ -273,7 +275,8 @@ compute_psqi <- function(data) {
       # Extract sleep duration in hours for compatibility
       total_hours_sleep = psqi_04
     ) %>%
-    select(-bedtime_hms, -waketime_hms, -diffhour, -newtib, -tmphse)
+    # Remove temporary columns including psqi_06 (use psqi_comp1_quality instead)
+    select(-bedtime_hms, -waketime_hms, -diffhour, -newtib, -tmphse, -psqi_06)
 }
 
 # Function to compute Epworth Sleepiness Scale total
@@ -949,8 +952,8 @@ create_selfreport <- function(panel_path, intake_processed, valid_participants) 
       pid, wave,
       # Outcomes
       psqi_global, total_hours_sleep, epsTotal, wemwbs,
-      # PSQI components (all 7 for demographics table + item 6 for H2a)
-      psqi_06,  # Numeric version: 0=Very good, 1=Fairly good, 2=Fairly bad, 3=Very bad
+      # PSQI components (all 7 for demographics table + comp1 for H2a)
+      # Note: psqi_comp1_quality is subjective sleep quality (0=Very good to 3=Very bad)
       psqi_comp1_quality, psqi_comp2_latency, psqi_comp3_duration,
       psqi_comp4_efficiency, psqi_comp5_problems, psqi_comp6_medication,
       psqi_comp7_tired,
@@ -1070,12 +1073,12 @@ preprocess_all_data <- function() {
   message("Aggregating imputed values (mean across imputations) for convenience...")
   imputed_long <- load_imputed_long("data/processed/selfreport_imputed_long.rds")
 
-  # Average imputed outcomes across all 20 imputations
+  # Average imputed outcomes and derived variables across all 20 imputations
   imputed_summary <- imputed_long %>%
     group_by(pid, wave) %>%
     summarise(
       across(
-        all_of(VARS_TO_IMPUTE),
+        all_of(c(VARS_TO_IMPUTE, DERIVED_VARS)),  # Include psqi_global
         ~if (all(is.na(.x))) NA_real_ else mean(.x, na.rm = TRUE)
       ),
       .groups = "drop"
@@ -1085,28 +1088,42 @@ preprocess_all_data <- function() {
   # This includes: age, BMI, SES, chronotype, gender, region, date, gaming exposures, flags
   covariates_full <- imputed_long %>%
     filter(.imp == 1) %>%
-    select(-all_of(VARS_TO_IMPUTE), -.imp)
+    select(-all_of(c(VARS_TO_IMPUTE, DERIVED_VARS)), -.imp)
 
-  # Create full dataset with imputed outcomes + covariates
-  # Start with covariates_full to preserve all wave-expanded rows
-  selfreport_with_versions <- covariates_full %>%
-    left_join(
-      imputed_summary %>%
-        rename_with(~paste0(.x, "_imputed"), all_of(VARS_TO_IMPUTE)),
-      by = c("pid", "wave")
-    ) %>%
-    left_join(
-      selfreport %>%
-        select(pid, wave, all_of(VARS_TO_IMPUTE)) %>%
-        rename_with(~paste0(.x, "_original"), all_of(VARS_TO_IMPUTE)),
-      by = c("pid", "wave")
-    )
+  # Get original (pre-imputation) values
+  original_outcomes <- selfreport %>%
+    select(pid, wave, all_of(c(VARS_TO_IMPUTE, DERIVED_VARS)))
 
-  write_csv(selfreport_with_versions, "data/processed/selfreport.csv.gz")
-  message("  - selfreport.csv.gz now includes *_original and *_imputed columns")
+  # Create full dataset with:
+  # - Single column per variable (using imputed value)
+  # - *_imputed_flag column for each variable (TRUE if imputed, FALSE if observed)
+  selfreport_with_flags <- covariates_full %>%
+    left_join(imputed_summary, by = c("pid", "wave")) %>%
+    left_join(original_outcomes, by = c("pid", "wave"), suffix = c("_imp", "_orig"))
+
+  # For each imputed variable, create the final column and imputation flag
+  for (var in c(VARS_TO_IMPUTE, DERIVED_VARS)) {
+    imp_col <- paste0(var, "_imp")
+    orig_col <- paste0(var, "_orig")
+    flag_col <- paste0(var, "_imputed_flag")
+
+    # Variable column uses imputed value (which is same as original if not imputed)
+    selfreport_with_flags[[var]] <- selfreport_with_flags[[imp_col]]
+
+    # Flag is TRUE where original was NA but imputed is not NA
+    selfreport_with_flags[[flag_col]] <- is.na(selfreport_with_flags[[orig_col]]) &
+                                          !is.na(selfreport_with_flags[[imp_col]])
+
+    # Remove temporary columns
+    selfreport_with_flags[[imp_col]] <- NULL
+    selfreport_with_flags[[orig_col]] <- NULL
+  }
+
+  write_csv(selfreport_with_flags, "data/processed/selfreport.csv.gz")
+  message("  - selfreport.csv.gz now includes outcome variables with *_imputed_flag columns")
   message(sprintf("  - Total rows: %d (expected: %d participants × 6 waves)",
-                  nrow(selfreport_with_versions),
-                  length(unique(selfreport_with_versions$pid)) * 6))
+                  nrow(selfreport_with_flags),
+                  length(unique(selfreport_with_flags$pid)) * 6))
 
   message("\nData preprocessing complete!")
   message("Processed files saved to data/processed/:")
@@ -1114,11 +1131,14 @@ preprocess_all_data <- function() {
   message("  - gaming_sessions.csv.gz (session-level data with late-night enrichment)")
   message("  - selfreport_raw.csv.gz (pre-imputation)")
   message("  - selfreport_imputed.rds / selfreport_imputed_long.rds (mids + stacked long)")
-  message("  - selfreport.csv.gz (with *_original and *_imputed outcome columns)")
+  message("  - selfreport.csv.gz (with *_imputed_flag for each outcome)")
+  message("\nFor complete case: filter where *_imputed_flag == FALSE")
+  message("For imputed analysis: use all data (values already filled in)")
   message("\nDiagnostics available under output/imputation/.")
 }
 
-# Run preprocessing if script is sourced
-if (!interactive()) {
+# Run preprocessing if script is sourced (unless explicitly skipped)
+skip_on_source <- identical(Sys.getenv("SKIP_PREPROCESS_ON_SOURCE", "0"), "1")
+if (!interactive() && !skip_on_source) {
   preprocess_all_data()
 }

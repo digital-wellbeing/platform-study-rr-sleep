@@ -4,10 +4,14 @@
 # Assumes Missing at Random (MAR) mechanism
 #
 # Variables imputed:
-#   - total_hours_sleep: Sleep duration (PSQI-derived) - waves 2, 4, 6 only
-#   - psqi_06: Sleep quality (0-3 scale) - waves 2, 4, 6 only
-#   - epsTotal: Epworth Sleepiness Scale total score - waves 2, 4, 6 only
+#   - total_hours_sleep: Sleep duration (PSQI-derived) - waves 2, 4, 6
+#   - psqi_comp1_quality through psqi_comp7_tired: PSQI components (0-3 ordinal) - waves 2, 4, 6
+#     Note: psqi_comp1_quality is subjective sleep quality (formerly psqi_06)
+#   - epsTotal: Epworth Sleepiness Scale total score - waves 2, 4, 6
 #   - wemwbs: SWEMWBS wellbeing score - all waves (1-6)
+#
+# Derived variables (passive imputation):
+#   - psqi_global: PSQI global score (sum of 7 components, 0-21) - waves 2, 4, 6
 #
 # Note: Sleep measures (PSQI, ESS) were only collected at waves 2, 4, 6 by design.
 #       Wave 7 is excluded (only 11 observations, data collection artifact).
@@ -34,8 +38,23 @@ N_ITERATIONS <- 20
 SEED <- 42
 
 # Variables to impute (outcome variables)
-# Monthly measures (waves 2, 4, 6 only)
-MONTHLY_VARS <- c("total_hours_sleep", "psqi_06", "epsTotal")
+# PSQI components (each 0-3 ordinal scale, waves 2, 4, 6 only)
+PSQI_COMPONENT_VARS <- c(
+  "psqi_comp1_quality",
+  "psqi_comp2_latency",
+  "psqi_comp3_duration",
+  "psqi_comp4_efficiency",
+  "psqi_comp5_problems",
+  "psqi_comp6_medication",
+  "psqi_comp7_tired"
+)
+
+# Other monthly outcome measures (waves 2, 4, 6 only)
+# Note: psqi_06 is identical to psqi_comp1_quality, so we only use the latter
+MONTHLY_OUTCOMES <- c("total_hours_sleep", "epsTotal")
+
+# Combined monthly variables (all to be imputed at waves 2, 4, 6)
+MONTHLY_VARS <- c(MONTHLY_OUTCOMES, PSQI_COMPONENT_VARS)
 
 # Biweekly measures (all waves 1-6)
 BIWEEKLY_VARS <- c("wemwbs")
@@ -50,8 +69,11 @@ BIWEEKLY_GAMING_VARS <- c(
   "ln_biweekly_avg_minutes_played"
 )
 
-# Combined for reference
-VARS_TO_IMPUTE <- c(MONTHLY_VARS, BIWEEKLY_VARS)
+# Variables to impute (excluding derived variables)
+VARS_TO_IMPUTE <- c(MONTHLY_OUTCOMES, PSQI_COMPONENT_VARS, BIWEEKLY_VARS)
+
+# Derived variables (calculated via passive imputation from imputed components)
+DERIVED_VARS <- c("psqi_global")
 
 # Gaming telemetry path (needed for auxiliary predictors)
 GAMING_SESSIONS_PATH <- "data/processed/gaming_sessions.csv.gz"
@@ -124,12 +146,16 @@ build_wave_reference_dates <- function(data) {
 
 #' Fill missing survey dates via interpolation/extrapolation
 #'
+#' Ensures consecutive waves are at least 14 days (2 weeks) apart.
+#'
 #' @param data Long-format self-report data
 #' @param wave_reference_dates Tibble from build_wave_reference_dates()
 #' @return Data with date_imputed and date_inferred_flag columns
 fill_missing_dates <- function(data, wave_reference_dates) {
   wave_lookup <- setNames(wave_reference_dates$median_date,
                           wave_reference_dates$wave)
+
+  MIN_DAYS_BETWEEN_WAVES <- 14  # 2 weeks
 
   data %>%
     arrange(pid, wave) %>%
@@ -139,9 +165,12 @@ fill_missing_dates <- function(data, wave_reference_dates) {
       wave_idx <- df$wave
       date_numeric <- as.numeric(df$date)
 
+      # Initial fill using interpolation/extrapolation
       if (all(is.na(date_numeric))) {
+        # No observed dates - use population median dates
         filled_numeric <- as.numeric(wave_lookup[as.character(wave_idx)])
       } else {
+        # Use linear interpolation between observed dates
         filled_numeric <- na.approx(
           date_numeric,
           x = wave_idx,
@@ -152,6 +181,18 @@ fill_missing_dates <- function(data, wave_reference_dates) {
         if (any(missing_idx)) {
           fallback <- as.numeric(wave_lookup[as.character(wave_idx[missing_idx])])
           filled_numeric[missing_idx] <- fallback
+        }
+      }
+
+      # Enforce minimum 14-day spacing between consecutive waves
+      # Go through waves sequentially and ensure each is at least 14 days after previous
+      for (i in seq_len(length(filled_numeric))) {
+        if (i > 1) {
+          min_date <- filled_numeric[i-1] + (MIN_DAYS_BETWEEN_WAVES * 86400)  # 86400 seconds per day
+          if (!is.na(filled_numeric[i]) && !is.na(filled_numeric[i-1]) &&
+              filled_numeric[i] < min_date) {
+            filled_numeric[i] <- min_date
+          }
         }
       }
 
@@ -396,14 +437,22 @@ reshape_to_wide <- function(data) {
 
   message(sprintf("  Filtered to waves 1-6: %d observations", nrow(data)))
 
+  # Variables to reshape for monthly waves (2, 4, 6)
+  monthly_reshape_vars <- c(
+    MONTHLY_OUTCOMES,      # total_hours_sleep, epsTotal
+    PSQI_COMPONENT_VARS,   # 7 PSQI components (includes psqi_comp1_quality)
+    DERIVED_VARS,          # psqi_global (will be recalculated via passive imputation)
+    MONTHLY_GAMING_VARS    # gaming predictors
+  )
+
   # 1. Reshape monthly variables (waves 2, 4, 6 only)
   monthly_wide <- data %>%
     filter(wave %in% MONTHLY_WAVES) %>%
-    select(pid, wave, all_of(c(MONTHLY_VARS, MONTHLY_GAMING_VARS))) %>%
+    select(pid, wave, all_of(monthly_reshape_vars)) %>%
     pivot_wider(
       id_cols = pid,
       names_from = wave,
-      values_from = all_of(c(MONTHLY_VARS, MONTHLY_GAMING_VARS)),
+      values_from = all_of(monthly_reshape_vars),
       names_glue = "{.value}_w{wave}"  # Ensure consistent naming
     )
 
@@ -433,11 +482,16 @@ reshape_to_wide <- function(data) {
                   nrow(data_wide), ncol(data_wide) - 1))  # -1 for pid
 
   # Report variable counts
-  n_monthly <- length(MONTHLY_VARS) * length(MONTHLY_WAVES)
+  n_monthly_outcomes <- length(MONTHLY_OUTCOMES) * length(MONTHLY_WAVES)
+  n_psqi_components <- length(PSQI_COMPONENT_VARS) * length(MONTHLY_WAVES)
+  n_derived <- length(DERIVED_VARS) * length(MONTHLY_WAVES)
   n_biweekly <- length(BIWEEKLY_VARS) * length(BIWEEKLY_WAVES)
   n_monthly_gaming <- length(MONTHLY_GAMING_VARS) * length(MONTHLY_WAVES)
   n_biweekly_gaming <- length(BIWEEKLY_GAMING_VARS) * length(BIWEEKLY_WAVES)
-  message(sprintf("  Monthly variables (waves 2,4,6): %d", n_monthly))
+
+  message(sprintf("  Monthly outcomes (waves 2,4,6): %d", n_monthly_outcomes))
+  message(sprintf("  PSQI components (waves 2,4,6): %d", n_psqi_components))
+  message(sprintf("  Derived variables (waves 2,4,6): %d", n_derived))
   message(sprintf("  Biweekly variables (waves 1-6): %d", n_biweekly))
   message(sprintf("  Monthly gaming predictors: %d", n_monthly_gaming))
   message(sprintf("  Biweekly gaming predictors: %d", n_biweekly_gaming))
@@ -470,15 +524,16 @@ reshape_to_long <- function(data_wide, original_data) {
   original_filtered <- original_data %>%
     filter(wave %in% 1:6)
 
-  # Identify which imputed variables exist in the long data
-  imputed_vars <- intersect(VARS_TO_IMPUTE, names(data_long))
+  # Identify which imputed and derived variables exist in the long data
+  imputed_and_derived_vars <- c(VARS_TO_IMPUTE, DERIVED_VARS)
+  vars_to_replace <- intersect(imputed_and_derived_vars, names(data_long))
 
   # Join back with original data to restore other variables not in imputation
-  # Keep original structure, replacing only imputed variables
+  # Keep original structure, replacing imputed and derived variables
   result <- original_filtered %>%
-    select(-any_of(imputed_vars)) %>%
+    select(-any_of(vars_to_replace)) %>%
     left_join(
-      data_long %>% select(pid, wave, all_of(imputed_vars)),
+      data_long %>% select(pid, wave, all_of(vars_to_replace)),
       by = c("pid", "wave")
     )
 
@@ -491,22 +546,61 @@ reshape_to_long <- function(data_wide, original_data) {
 #' Configure which variables predict which in the imputation model.
 #' Uses the quickpred() helper with adjustments.
 #'
+#' Gaming exposure variables are included as predictors (they improve imputation
+#' by ~9% despite causing minor collinearity warnings). Derived variables are
+#' excluded to prevent circular dependencies.
+#'
 #' @param data Data frame in wide format
+#' @param include_gaming_vars Whether to include gaming exposure as predictors (default TRUE)
 #' @return Predictor matrix for mice
-setup_predictor_matrix <- function(data) {
+setup_predictor_matrix <- function(data, include_gaming_vars = TRUE) {
   message("Setting up predictor matrix...")
+
+  # Identify variables to exclude as predictors
+  # Gaming exposure variables - KEPT by default (improve imputation +9%)
+  gaming_vars <- grep("(total_|ln_)(biweekly|monthly)_avg_minutes_played",
+                      names(data), value = TRUE)
+
+  # Derived variables (calculated from other variables, cause circular dependencies)
+  # These MUST be excluded
+  derived_vars <- grep(paste0("^(", paste(DERIVED_VARS, collapse = "|"), ")_w"),
+                       names(data), value = TRUE)
+
+  # Combine exclusions
+  if (include_gaming_vars) {
+    exclude_vars <- c("pid", derived_vars)
+    message("  Including gaming exposure variables as predictors")
+  } else {
+    exclude_vars <- c("pid", gaming_vars, derived_vars)
+    message("  Excluding gaming exposure variables from predictors")
+  }
 
   # Start with quickpred to get initial predictor selection
   # mincor = 0.1 includes variables with at least 0.1 correlation
-  pred <- quickpred(data, mincor = 0.1, exclude = "pid")
+  pred <- quickpred(data, mincor = 0.1, exclude = exclude_vars)
 
-  # Ensure pid is never used as predictor or imputed
+  # Ensure excluded variables are never used as predictors
+  for (var in exclude_vars) {
+    if (var %in% colnames(pred)) {
+      pred[, var] <- 0  # Don't use as predictor
+    }
+  }
+
+  # Ensure pid is never imputed (it's always observed)
   pred["pid", ] <- 0
-  pred[, "pid"] <- 0
 
   # Summary
   n_predictors <- rowSums(pred > 0)
   message(sprintf("  Average predictors per variable: %.1f", mean(n_predictors)))
+  if (include_gaming_vars) {
+    message(sprintf("  Gaming predictors: %d variables (total + late-night exposure)",
+                    length(gaming_vars)))
+    message(sprintf("  Excluded: %d derived variables only",
+                    length(derived_vars)))
+  } else {
+    message(sprintf("  Excluded: %d gaming + %d derived variables",
+                    length(gaming_vars), length(derived_vars)))
+  }
 
   return(pred)
 }
@@ -529,26 +623,61 @@ setup_methods <- function(data) {
   methods <- rep("", ncol(data))
   names(methods) <- names(data)
 
-  # Build regex pattern for columns to impute:
-  # - Monthly variables at waves 2, 4, 6
-  # - Biweekly variables at waves 1-6
-  monthly_pattern <- paste0("^(", paste(MONTHLY_VARS, collapse = "|"), ")_w[246]$")
-  biweekly_pattern <- paste0("^(", paste(BIWEEKLY_VARS, collapse = "|"), ")_w[1-6]$")
+  # Build regex patterns for different variable types
+  monthly_outcomes_pattern <- paste0(
+    "^(", paste(MONTHLY_OUTCOMES, collapse = "|"), ")_w[246]$"
+  )
 
-  monthly_cols <- names(data)[str_detect(names(data), monthly_pattern)]
+  psqi_components_pattern <- paste0(
+    "^(", paste(PSQI_COMPONENT_VARS, collapse = "|"), ")_w[246]$"
+  )
+
+  biweekly_pattern <- paste0(
+    "^(", paste(BIWEEKLY_VARS, collapse = "|"), ")_w[1-6]$"
+  )
+
+  derived_pattern <- paste0(
+    "^(", paste(DERIVED_VARS, collapse = "|"), ")_w[246]$"
+  )
+
+  # Identify columns
+  monthly_outcome_cols <- names(data)[str_detect(names(data), monthly_outcomes_pattern)]
+  psqi_component_cols <- names(data)[str_detect(names(data), psqi_components_pattern)]
   biweekly_cols <- names(data)[str_detect(names(data), biweekly_pattern)]
-  outcome_cols <- c(monthly_cols, biweekly_cols)
+  derived_cols <- names(data)[str_detect(names(data), derived_pattern)]
 
-  # Set PMM for all outcome columns
+  # Set PMM for outcomes and components
   # PMM is robust for continuous and ordinal data
-  methods[outcome_cols] <- "pmm"
+  methods[monthly_outcome_cols] <- "pmm"
+  methods[psqi_component_cols] <- "pmm"
+  methods[biweekly_cols] <- "pmm"
 
-  n_imputed <- sum(methods != "")
-  message(sprintf("  Variables to impute: %d (using PMM)", n_imputed))
-  message(sprintf("    Monthly (waves 2,4,6): %d columns", length(monthly_cols)))
-  message(sprintf("    Biweekly (waves 1-6): %d columns", length(biweekly_cols)))
+  # Set passive imputation for derived variables
+  # psqi_global = sum of 7 PSQI components
+  for (col in derived_cols) {
+    # Extract wave number (e.g., "psqi_global_w2" -> "2")
+    wave_num <- str_extract(col, "(?<=_w)[0-9]+$")
+
+    # Create formula: ~I(comp1_w2 + comp2_w2 + ... + comp7_w2)
+    component_cols <- paste0(PSQI_COMPONENT_VARS, "_w", wave_num)
+    formula_str <- paste0(
+      "~I(", paste(component_cols, collapse = " + "), ")"
+    )
+
+    methods[col] <- formula_str
+  }
+
+  # Report summary
+  n_imputed <- sum(methods == "pmm")
+  n_derived <- sum(str_detect(methods, "^~I\\("))
+
+  message(sprintf("  Variables to impute (PMM): %d", n_imputed))
+  message(sprintf("    Monthly outcomes: %d", length(monthly_outcome_cols)))
+  message(sprintf("    PSQI components: %d", length(psqi_component_cols)))
+  message(sprintf("    Biweekly variables: %d", length(biweekly_cols)))
+  message(sprintf("  Derived variables (passive): %d", n_derived))
   message(sprintf("  Variables as predictors only: %d",
-                  length(vars_to_check) - n_imputed))
+                  length(vars_to_check) - n_imputed - n_derived))
 
   return(methods)
 }
@@ -561,8 +690,15 @@ setup_methods <- function(data) {
 #' @param data Data frame in wide format
 #' @return Character vector of column names to impute
 get_imputation_columns <- function(data) {
-  monthly_pattern <- paste0("^(", paste(MONTHLY_VARS, collapse = "|"), ")_w[246]$")
-  biweekly_pattern <- paste0("^(", paste(BIWEEKLY_VARS, collapse = "|"), ")_w[1-6]$")
+  # Monthly outcomes + PSQI components (waves 2, 4, 6)
+  monthly_pattern <- paste0(
+    "^(", paste(c(MONTHLY_OUTCOMES, PSQI_COMPONENT_VARS), collapse = "|"), ")_w[246]$"
+  )
+
+  # Biweekly variables (waves 1-6)
+  biweekly_pattern <- paste0(
+    "^(", paste(BIWEEKLY_VARS, collapse = "|"), ")_w[1-6]$"
+  )
 
   monthly_cols <- names(data)[str_detect(names(data), monthly_pattern)]
   biweekly_cols <- names(data)[str_detect(names(data), biweekly_pattern)]
@@ -581,7 +717,8 @@ get_imputation_columns <- function(data) {
 #' @param seed Random seed for reproducibility
 #' @return mids object containing imputed datasets
 run_mice_parallel <- function(data, n_imputations = N_IMPUTATIONS,
-                              n_iterations = N_ITERATIONS, seed = SEED) {
+                              n_iterations = N_ITERATIONS, seed = SEED,
+                              include_gaming_vars = TRUE) {
 
   # Detect number of available cores
   n_cores <- availableCores()
@@ -595,7 +732,7 @@ run_mice_parallel <- function(data, n_imputations = N_IMPUTATIONS,
   plan(multisession, workers = min(n_cores, n_imputations))
 
   # Set up predictor matrix and methods
-  pred <- setup_predictor_matrix(data)
+  pred <- setup_predictor_matrix(data, include_gaming_vars = include_gaming_vars)
   methods <- setup_methods(data)
 
   # Report missingness
@@ -652,7 +789,8 @@ run_mice_parallel <- function(data, n_imputations = N_IMPUTATIONS,
 #' @param seed Random seed
 #' @return mids object containing all imputed datasets
 run_mice_parallel_chunked <- function(data, n_imputations = N_IMPUTATIONS,
-                                      n_iterations = N_ITERATIONS, seed = SEED) {
+                                      n_iterations = N_ITERATIONS, seed = SEED,
+                                      include_gaming_vars = TRUE) {
 
   n_cores <- availableCores()
   message(sprintf("\n=== Running Parallel Multiple Imputation (Chunked) ==="))
@@ -668,7 +806,7 @@ run_mice_parallel_chunked <- function(data, n_imputations = N_IMPUTATIONS,
                   n_workers, imps_per_chunk))
 
   # Set up predictor matrix and methods
-  pred <- setup_predictor_matrix(data)
+  pred <- setup_predictor_matrix(data, include_gaming_vars = include_gaming_vars)
   methods <- setup_methods(data)
 
   # Report missingness
@@ -971,7 +1109,8 @@ run_imputation <- function(input_path = "data/processed/selfreport.csv.gz",
                            create_diagnostics_flag = TRUE,
                            parallel_method = "chunked",
                            drop_wemwbs_w1_missing_flag = TRUE,
-                           skip_preparation = FALSE) {
+                           skip_preparation = FALSE,
+                           include_gaming_vars = TRUE) {
 
   message("=== Multiple Imputation for Self-Report Variables ===\n")
 
@@ -1069,9 +1208,11 @@ run_imputation <- function(input_path = "data/processed/selfreport.csv.gz",
 
   # 3. Run multiple imputation
   if (parallel_method == "chunked") {
-    imp <- run_mice_parallel_chunked(data_wide, n_imputations, n_iterations)
+    imp <- run_mice_parallel_chunked(data_wide, n_imputations, n_iterations,
+                                     include_gaming_vars = include_gaming_vars)
   } else {
-    imp <- run_mice_parallel(data_wide, n_imputations, n_iterations)
+    imp <- run_mice_parallel(data_wide, n_imputations, n_iterations,
+                            include_gaming_vars = include_gaming_vars)
   }
 
   # 4. Create diagnostics
