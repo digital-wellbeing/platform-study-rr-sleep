@@ -88,7 +88,13 @@ By examining chronotype on a continuous scale as a moderating factor, this study
 
 ## Data Source and Measures
 
-The analyses reported here are part of a Stage 1 Registered Report [@ballou2024psychological] and utilize data from the Open Play dataset [@ballou2025openplay], a longitudinal study that collected multi-platform video game digital trace data alongside psychological measures from adult gamers in the UK and US over a three-month period. The study combined objective behavioral telemetry from gaming platforms with repeated self-report surveys administered biweekly across six waves. Importantly, the present analyses use only a subset of the Open Play dataset, specifically data from Nintendo, Xbox, and Steam platforms, as these provide session-level (Nintendo, Xbox) or near session-level (Steam) temporal granularity necessary for hourly aggregation of playtime to operationalize late-night gaming (23:00–06:00). The following validated measures were administered via panel surveys at multiple timepoints: **Wellbeing** was assessed using the Short Warwick-Edinburgh Mental Well-being Scale [SWEMWBS; @tennant2007warwick], a 7-item measure of mental wellbeing covering psychological functioning and subjective well-being over the past 2 weeks, with responses on a 5-point Likert scale ranging from "None of the time" to "All of the time" (score range: 7–35). **Chronotype** was measured at baseline (Wave 1) using the Munich Chronotype Questionnaire [MCTQ; @roenneberg2003life]. The key metric used in this study is MSF~sc~ (Mid-Sleep on Free Days corrected for sleep debt on work days), which represents an individual's natural sleep-wake preference when not constrained by social obligations. Higher MSF~sc~ values indicate a preference for eveningness (later sleep-wake times). **Sleep quality and duration** were assessed using the Pittsburgh Sleep Quality Index [PSQI; @buysse1989pittsburgh], a 19-item questionnaire evaluating sleep quality over the past month. The measure yields seven component scores (sleep quality, sleep latency, sleep duration, sleep efficiency, sleep disturbances, use of sleep medication, and daytime dysfunction) and a global score (range: 0–21), with scores above 5 indicating poor sleep quality. **Excessive daytime sleepiness** was measured using the Epworth Sleepiness Scale [ESS; @johns1991new], an 8-item scale assessing the likelihood of dozing off in various situations (score range: 0–24). Higher scores indicate greater propensity for daytime sleepiness, with scores above 10 typically indicating clinically significant excessive sleepiness.
+The analyses reported here are part of a Stage 1 Registered Report [@ballou2024psychological] and utilize data from the Open Play dataset [@ballou2025openplay], a longitudinal study that collected multi-platform video game digital trace data alongside psychological measures from adult gamers in the UK and US over a three-month period. The study combined objective behavioral telemetry from gaming platforms with repeated self-report surveys administered biweekly across six waves. Importantly, the present analyses use only a subset of the Open Play dataset, specifically data from Nintendo, Xbox, and Steam platforms, as these provide session-level (Nintendo, Xbox) or near session-level (Steam) temporal granularity necessary for hourly aggregation of playtime to operationalize late-night gaming (23:00–06:00). The following validated measures were administered via panel surveys at multiple timepoints: Wellbeing was assessed using the Short Warwick-Edinburgh Mental Well-being Scale [SWEMWBS; @tennant2007warwick], a 7-item measure of mental wellbeing covering psychological functioning and subjective well-being over the past 2 weeks, with responses on a 5-point Likert scale ranging from "None of the time" to "All of the time" (score range: 7–35). Sleep quality and duration were assessed using the Pittsburgh Sleep Quality Index [PSQI; @buysse1989pittsburgh], a 19-item questionnaire evaluating sleep quality over the past month. The measure yields seven component scores (sleep quality, sleep latency, sleep duration, sleep efficiency, sleep disturbances, use of sleep medication, and daytime dysfunction) and a global score (range: 0–21), with scores above 5 indicating poor sleep quality. Excessive daytime sleepiness was measured using the Epworth Sleepiness Scale [ESS; @johns1991new], an 8-item scale assessing the likelihood of dozing off in various situations (score range: 0–24). Higher scores indicate greater propensity for daytime sleepiness, with scores above 10 typically indicating clinically significant excessive sleepiness. Chronotype was measured at baseline (Wave 1) using the Munich Chronotype Questionnaire [MCTQ; @roenneberg2003life]. The key metric used in this study is MSF~sc~ (Mid-Sleep on Free Days corrected for sleep debt on work days), which represents an individual's natural sleep-wake preference when not constrained by social obligations. Higher MSF~sc~ values indicate a preference for eveningness (later sleep-wake times). 
+
+## Handling Missing Data
+
+Missingness in the longitudinal self-report outcomes (PSQI sleep duration, PSQI item 6, Epworth Sleepiness Scale, and SWEMWBS) was addressed via multiple imputation by chained equations (MICE; `mice` v3.16.0 in R), using predictive mean matching (PMM) for all continuous/ordinal targets. We imputed data to preserve statistical power under a Missing at Random assumption conditional on rich auxiliary information. The imputation model included every analysis variable, static demographics (age, BMI, SES, region, gender recoded as male/female/other), chronotype (MSF~sc~), and dynamically derived gaming exposure summaries (overall and late-night minutes averaged over the preceding 14 and 28 days, plus an indicator for weekend surveys). To guarantee that each participant contributed a full six-wave panel to the imputation model, we first expanded the self-report data to the complete pid × wave grid and inferred survey timestamps for missing waves by aligning observed dates with wave-specific medians. Those inferred dates were then used to recompute the rolling gaming exposures so that auxiliary predictors remained non-missing even when a survey wave itself had no original timestamp. We generated 20 imputed datasets with 20 iterations each—sufficient to stabilize estimates given wave-specific missingness rates up to ~55%. Diagnostic trace, density, and strip plots confirmed well-mixed chains and plausible imputations. All regressions were fit separately in each imputed dataset and combined using Rubin’s rules.
+
+The imputed outcomes serve as the primary analytic dataset throughout the main text. Complete-case (original) versions of every regression were re-estimated in parallel and included in the Supplement.
 
 # Results
 
@@ -101,7 +107,7 @@ The analyses reported here are part of a Stage 1 Registered Report [@ballou2024p
 if (!require("pacman")) install.packages("pacman")
 library(pacman)
 
-p_load(tidyverse, lme4, marginaleffects, glmmTMB, mice, ordinal, modelsummary, lubridate, data.table, mctq)
+p_load(tidyverse, lme4, marginaleffects, glmmTMB, mice, ordinal, modelsummary, lubridate, data.table, mctq, glue)
 
 # Source preprocessing functions
 source("preprocess_data.R")
@@ -131,19 +137,26 @@ if (!file.exists("data/processed/selfreport.csv.gz") ||
 # Load preprocessed data (includes 3-step filtering: outcomes + timezone + gaming)
 selfreport <- read_csv("data/processed/selfreport.csv.gz", show_col_types = FALSE)
 data.intake <- read_csv("data/processed/intake_clean.csv.gz", show_col_types = FALSE)
-data.panel <- read_csv("data/processed/panel_clean.csv.gz", show_col_types = FALSE)
 
-# For backwards compatibility, create data.panel in expected format
-# Filter to only valid participants (those who passed 3-step filter)
+# Valid participants are those in selfreport (passed 3-step filter)
 valid_pids <- unique(selfreport$pid)
-data.panel <- data.panel |>
-  filter(pid %in% valid_pids) |>
-  dplyr::select(pid, wave, date, region, starts_with(c("mctq", "eps", "psqi")),
-                total_hours_sleep, wemwbs, epsTotal,
-                age_scaled, bmi_scaled, SES_index_scaled, msf_sc_numeric, msf_sc_centered, gender) |>
-  mutate(
-    pid = as.character(pid)
-  )
+
+# Prepare original vs imputed outcome versions
+OUTCOME_VARS <- c("total_hours_sleep", "psqi_06", "epsTotal", "wemwbs")
+select_version_data <- function(df, version) {
+  suffix <- paste0("_", version)
+  df_version <- df
+  for (var in OUTCOME_VARS) {
+    df_version[[var]] <- df_version[[paste0(var, suffix)]]
+  }
+  df_version$.version <- version
+  df_version
+}
+selfreport_versions <- list(
+  imputed = select_version_data(selfreport, "imputed"),
+  original = select_version_data(selfreport, "original")
+)
+selfreport <- selfreport_versions$imputed
 
 # Note: selfreport already contains msf_sc_numeric and msf_sc_centered from preprocessing
 # msf_sc_numeric = raw chronotype for descriptives (Table 1)
@@ -212,25 +225,31 @@ calculate_gaming_windows <- function(selfreport_data, sessions_data) {
   return(gaming_exposure)
 }
 
-# Calculate for all waves (gamingBiweekly)
-# First calculate gaming windows, removing msf_sc_centered to avoid duplication
-gamingBiweekly <- calculate_gaming_windows(selfreport |> dplyr::select(-msf_sc_centered), gaming_sessions) |>
-  # Then add msf_sc_centered once per participant (not per wave)
-  left_join(selfreport |> dplyr::select(pid, msf_sc_centered) |> filter(!is.na(msf_sc_centered)) |> distinct(pid, .keep_all = TRUE),
-            by = "pid") |>
-  arrange(as.integer(pid), wave) |>
-  dplyr::select(pid, wave, msf_sc_centered, everything())
+build_gaming_inputs <- function(selfreport_data) {
+  gamingBiweekly <- calculate_gaming_windows(selfreport_data |> dplyr::select(-msf_sc_centered), gaming_sessions) |>
+    left_join(selfreport_data |> dplyr::select(pid, msf_sc_centered) |> filter(!is.na(msf_sc_centered)) |> distinct(pid, .keep_all = TRUE),
+              by = "pid") |>
+    arrange(as.integer(pid), wave) |>
+    dplyr::select(pid, wave, msf_sc_centered, everything())
 
-# Calculate for waves 2, 4, 6 only (gamingMonthly)
-gamingMonthly <- selfreport |>
-  filter(wave %in% c(2, 4, 6)) |>
-  dplyr::select(-msf_sc_centered) |>
-  calculate_gaming_windows(gaming_sessions) |>
-  rename(month = wave) |>
-  # Add msf_sc_centered once per participant
-  left_join(selfreport |> dplyr::select(pid, msf_sc_centered) |> filter(!is.na(msf_sc_centered)) |> distinct(pid, .keep_all = TRUE),
-            by = "pid") |>
-  arrange(as.integer(pid), month)
+  gamingMonthly <- selfreport_data |>
+    filter(wave %in% c(2, 4, 6)) |>
+    dplyr::select(-msf_sc_centered) |>
+    calculate_gaming_windows(gaming_sessions) |>
+    rename(month = wave) |>
+    left_join(selfreport_data |> dplyr::select(pid, msf_sc_centered) |> filter(!is.na(msf_sc_centered)) |> distinct(pid, .keep_all = TRUE),
+              by = "pid") |>
+    arrange(as.integer(pid), month)
+
+  list(
+    gamingBiweekly = gamingBiweekly,
+    gamingMonthly = gamingMonthly
+  )
+}
+
+gaming_inputs <- lapply(selfreport_versions, build_gaming_inputs)
+gamingBiweekly <- gaming_inputs$imputed$gamingBiweekly
+gamingMonthly <- gaming_inputs$imputed$gamingMonthly
 
 ```
 
@@ -345,8 +364,8 @@ dqc3_mctq <- survey_wave1 |>
   ) |>
   select(pid, sjl_hours)
 
-# Get ESS from panel data
-ess_data <- data.panel |>
+# Get ESS from selfreport data
+ess_data <- selfreport |>
   filter(wave %in% c(2, 4, 6)) |>
   group_by(pid) |>
   summarise(epsTotal = mean(epsTotal, na.rm = TRUE), .groups = "drop") |>
@@ -380,10 +399,8 @@ dqc3_text <- paste0(
 # Expected: Significant negative correlation
 # ============================================
 
-# Get PSQI and WEMWBS from panel data
-panel_clean <- read_csv("data/processed/panel_clean.csv.gz", show_col_types = FALSE)
-
-dqc4_person <- panel_clean |>
+# Get PSQI and WEMWBS from selfreport data
+dqc4_person <- selfreport |>
   filter(wave %in% c(2, 4, 6)) |>
   select(pid, psqi_comp1_quality, wemwbs) |>
   filter(!is.na(psqi_comp1_quality), !is.na(wemwbs)) |>
@@ -424,14 +441,21 @@ Prior to hypothesis testing, we conducted three positive data quality controls (
 <!-- Also include session integrity-related DQCs for Steam, Nintendo, and Xbox ensuring no overlapping sessions on Nintendo/Xbox (within each platform), and no impossible >60 minute intervals for Steam sessions. See Supplement for positive data quality control (DQC 2) details. -->
 
 
+## Participant Inclusion Criteria
+
+Participants were included in the analytical sample if they passed a three-step filter: (1) completed at least one valid outcome measure (SWEMWBS, PSQI, or ESS) across any wave, (2) had valid timezone data (either self-reported or imputed for UK participants), and (3) contributed at least one valid gaming session during the study period. This filtering approach ensured that all included participants had the necessary data to test our hypotheses about late-night gaming and its effects on sleep and wellbeing outcomes.
+
 ## Sample Demographics
 
-The analytical sample includes all participants who contributed at least one datapoint on at least one of the four outcome variables (sleep quality, sleep duration, daytime sleepiness, or wellbeing). The table below presents the demographic composition of this sample along key covariates.
+The analytical sample includes all participants who met the inclusion criteria described above. The table below presents the demographic composition of this sample along key covariates.
 
 ```{r}
 #| label: tbl-demographics
 #| code-summary: "Demographics table"
 #| tbl-cap: "Sample Characteristics"
+
+selfreport_saved <- selfreport
+selfreport <- selfreport_original
 
 # Load required packages
 if (!require("tinytable")) install.packages("tinytable")
@@ -483,9 +507,7 @@ gaming_person_level <- gaming_sessions |>
 
 # ===== STEP 3: Prepare person-level outcomes =====
 # Calculate person-level averages across waves 2, 4, 6
-panel_clean <- read_csv("data/processed/panel_clean.csv.gz", show_col_types = FALSE)
-
-outcomes_person_level <- panel_clean |>
+outcomes_person_level <- selfreport |>
   filter(pid %in% analytical_sample, wave %in% c(2, 4, 6)) |>
   group_by(pid) |>
   summarise(
@@ -507,7 +529,7 @@ outcomes_person_level <- panel_clean |>
   )
 
 # Get chronotype from wave 1 (baseline) - it was only measured at baseline
-chronotype_baseline <- panel_clean |>
+chronotype_baseline <- selfreport |>
   filter(pid %in% analytical_sample, wave == 1) |>
   select(pid, msf_sc = msf_sc_numeric, no_alarm_free = mctq_fd_alarm_clock_used) |>
   mutate(no_alarm_free = no_alarm_free == "No")  # TRUE if no alarm on free days
@@ -744,9 +766,11 @@ if (length(nested_rows) > 0) {
 }
 
 tbl
+
+selfreport <- selfreport_saved
 ```
 
-The sample characteristics align well with published norms for adult gamer populations. Self-reported sleep duration of 7.2 hours (SD = 1.1) falls within the typical range of 7.1–7.7 hours reported in systematic reviews of adult gamers [@kemp2021sleep; @derosa2024videogaming]. Mean daytime sleepiness (ESS = 5.6, SD = 3.5) was slightly elevated relative to general population norms (ESS ≈ 4.6, SD ≈ 2.8), with the majority scoring below the clinical cut-off of 10. The mean PSQI global score of 6.7 (SD = 2.8) and 64% prevalence of poor sleepers is consistent with gamer samples (40–60%) and higher than general populations (36%; @hinz2017sleep).
+The sample characteristics align well with published norms for adult gamer populations. Self-reported sleep duration of 7.2 hours (SD = 1.1) falls within the typical range of 7.1–7.7 hours reported in systematic reviews of adult gamers [@kemp2021sleep; @derosa2024videogaming]. Mean daytime sleepiness (ESS = 5.6, SD = 3.5) was slightly elevated relative to general population norms (CIT), with the majority scoring below the clinical cut-off of 10. The mean PSQI global score of 6.7 (SD = 2.8) and 64% prevalence of poor sleepers is consistent with gamer samples (40–60%) and higher than general populations [@hinz2017sleep].
 
 ```{r}
 #| label: fig-raincloud
@@ -754,6 +778,9 @@ The sample characteristics align well with published norms for adult gamer popul
 #| code-summary: "Combined hourly playtime, bar chart, and raincloud plots"
 #| fig-width: 12
 #| fig-height: 9
+
+selfreport_saved <- selfreport
+selfreport <- selfreport_original
 
 # Load required packages
 if (!require("ggdist")) install.packages("ggdist")
@@ -846,7 +873,6 @@ p_hourly_playtime <- ggplot(hourly_avg, aes(x = start_hour, y = avg_minutes_per_
   # Labels and theme
   labs(
     title = "A. Gaming Playtime by Hour of Day",
-    subtitle = "Average daily minutes per hour bin (solid = weekday, striped = weekend)",
     x = "Hour of Day (Local Time)",
     y = "Avg Minutes Played"
   ) +
@@ -949,6 +975,8 @@ p_continuous <- ggplot(continuous_data, aes(x = 1, y = value, fill = variable)) 
 # Combine plots
 (p_hourly_playtime) /
 (p_sleep_quality + p_continuous + plot_layout(widths = c(1, 3)))
+
+selfreport <- selfreport_saved
 ```
 
 
@@ -961,113 +989,69 @@ Multilevel ordinal regression whereby monthly average minutes played predicts sl
 Model syntax: `psqi_6_ord ~ ln_monthly_avg_minutes_played + age_scaled + bmi_scaled + SES_index_scaled + gender + region + isWeekend + (1 | pid)`
 
 ```{r}
-#| label: h1a
-#| code-summary: "Fit H1a model"
+#| label: fit-h1-models
+#| code-summary: "Fit H1 models for both outcome versions"
 #| eval: !expr eval_h1
+#| results: asis
 
-# Create output/models directory if it doesn't exist
+h1_models <- list()
 if (!dir.exists("output/models")) {
   dir.create("output/models", recursive = TRUE)
 }
 
-# Prepare data with ordinal psqi_06 (already numeric: 0-3)
-gamingMonthly_h1a <- gamingMonthly |>
-  mutate(
-    psqi_6_ord = factor(psqi_06,
-                       levels = c(0, 1, 2, 3),
-                       labels = c("Very good", "Fairly good", "Fairly bad", "Very bad"),
-                       ordered = TRUE)
-  ) |>
-  filter(!is.na(psqi_6_ord))
+fit_h1_models <- function(inputs, version_label) {
+  gamingMonthly <- inputs$gamingMonthly
+  gamingBiweekly <- inputs$gamingBiweekly
 
-# Fit cumulative link mixed model (ordinal regression)
-# Original pre-registered: (1 + ln_monthly_avg_minutes_played | pid)
-# Simplified to: (1 | pid) without 
-model.h1a <- clmm(psqi_6_ord ~ ln_monthly_avg_minutes_played +
-                    age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
-                    (1 | pid),
-                  data = gamingMonthly_h1a)
+  gamingMonthly_h1a <- gamingMonthly |>
+    mutate(
+      psqi_6_ord = factor(psqi_06,
+                          levels = c(0, 1, 2, 3),
+                          labels = c("Very good", "Fairly good", "Fairly bad", "Very bad"),
+                          ordered = TRUE)
+    ) |>
+    filter(!is.na(psqi_6_ord))
 
-# Save the model
-saveRDS(model.h1a, "output/models/model_h1a.rds")
-```
+  model.h1a <- clmm(psqi_6_ord ~ ln_monthly_avg_minutes_played +
+                      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+                      (1 | pid),
+                    data = gamingMonthly_h1a)
 
+  model.h1b <- lmer(total_hours_sleep ~ ln_monthly_avg_minutes_played +
+                      (1 | pid) +
+                      age_scaled + bmi_scaled + SES_index_scaled + gender + region + isWeekend,
+                    data = gamingMonthly,
+                    control = lmerControl(optimizer = "bobyqa"))
 
-## H1b: Late-night gaming is associated with shorter sleep duration.
+  model.h1c <- lmer(wemwbs ~ ln_biweekly_avg_minutes_played + (1 | pid) +
+                      age_scaled + bmi_scaled + SES_index_scaled + (1 | gender) + region + isWeekend,
+                    data = gamingBiweekly,
+                    control = lmerControl(optimizer = "bobyqa"))
 
-Multilevel linear regression whereby monthly average minutes played predicts total hours of sleep (PSQI), controlling for age, BMI, SES index, region, gender, and whether playtime falls on a weekend, with a random intercept for participants.
+  model.h1d <- lmer(epsTotal ~ ln_monthly_avg_minutes_played +
+                      (1 | pid) + (1 | gender) +
+                      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend,
+                    data = gamingMonthly,
+                    control = lmerControl(optimizer = "bobyqa"))
 
-**Deviation from pre-registered analysis plan**: The pre-registered random effects structure `(1 + ln_monthly_avg_minutes_played | pid) + (1 | gender)` resulted in a singular fit warning. The random slope variance was estimated at near-zero (SD = 0.004), and the gender random effect variance was also estimated at zero, indicating insufficient variation in both components. To address these computational issues, we simplified the random effects structure to a single random intercept for participants: `(1 | pid)`. Gender is retained as a fixed effect covariate. This change does not affect the fixed effects (the hypothesis tests) but provides more stable variance estimates.
+  saveRDS(model.h1a, glue("output/models/{version_label}_model_h1a.rds"))
+  saveRDS(model.h1b, glue("output/models/{version_label}_model_h1b.rds"))
+  saveRDS(model.h1c, glue("output/models/{version_label}_model_h1c.rds"))
+  saveRDS(model.h1d, glue("output/models/{version_label}_model_h1d.rds"))
 
-Model syntax: `total_hours_sleep ~ ln_monthly_avg_minutes_played + age_scaled + bmi_scaled + SES_index_scaled + gender + region + isWeekend + (1 | pid)`
+  list(
+    `H1a: Sleep Quality` = model.h1a,
+    `H1b: Sleep Duration` = model.h1b,
+    `H1c: Wellbeing` = model.h1c,
+    `H1d: Daytime Sleepiness` = model.h1d
+  )
+}
 
-```{r}
-#| label: h1b
-#| code-summary: "Fit H1b model"
-
-# Fit the model with simplified random effects structure
-# Original: (1 + ln_monthly_avg_minutes_played | pid) + (1 | gender) caused singular fit
-# Both random slope and gender random intercept had zero/near-zero variance
-model.h1b <- lmer(total_hours_sleep ~ ln_monthly_avg_minutes_played +
-                    (1 | pid) +
-                    age_scaled + bmi_scaled + SES_index_scaled + gender + region + isWeekend,
-                  data = gamingMonthly,
-                  control = lmerControl(optimizer = "bobyqa")
-                  )
-
-                  
-
-# Save the model
-saveRDS(model.h1b, "output/models/model_h1b.rds")
-```
-
-
-## H1c: Late-night gaming is associated with lower well-being.
-
-Multilevel linear regression whereby biweekly average minutes played predicts wellbeing (WEMWBS), controlling for age, BMI, SES index, region, gender, and whether playtime falls on a weekend, with a random intercept and slope for participants and a random intercept for gender.
-
-**Deviation from pre-registered analysis plan**: The pre-registered model specification with the default optimizer resulted in a convergence warning (max|grad| = 0.00817, tolerance = 0.002), indicating that the optimization algorithm did not fully converge. To address this computational issue, we use the BOBYQA optimizer instead of the default Nelder-Mead optimizer. This change affects only the optimization algorithm used to fit the model, not the model structure itself. The random effects structure and all fixed effects remain exactly as pre-registered.
-
-Model syntax: `wemwbs ~ ln_biweekly_avg_minutes_played + age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend + (1 + ln_biweekly_avg_minutes_played | pid) + (1 | gender)`
-
-```{r}
-#| label: h1c
-#| code-summary: "Fit H1c model"
-#| eval: !expr eval_h1
-
-# Had to remove random slope to resolve convergence issues
-model.h1c <- lmer(wemwbs ~ ln_biweekly_avg_minutes_played + (1 | pid) +
-                    age_scaled + bmi_scaled + SES_index_scaled + (1 | gender) + region + isWeekend,
-                  data = gamingBiweekly,
-                  control = lmerControl(optimizer = "bobyqa"))
-
-# Save the model
-saveRDS(model.h1c, "output/models/model_h1c.rds")
-```
-
-## H1d: Late-night gaming is associated with higher daytime sleepiness.
-
-Multilevel linear regression whereby monthly average minutes played predicts daytime sleepiness (Epworth Sleepiness Scale), controlling for age, BMI, SES index, region, gender, and whether playtime falls on a weekend, with a random intercept for participants and a random intercept for gender.
-
-**Deviation from pre-registered analysis plan**: The pre-registered random effects structure `(1 + ln_monthly_avg_minutes_played | pid)` resulted in a singular fit warning, with the correlation between random intercept and slope estimated at -1.00, indicating perfect collinearity. To address this computational issue, we simplified the random effects structure to random intercepts only: `(1 | pid) + (1 | gender)`. This change does not affect the fixed effects (the hypothesis tests) but provides more stable variance estimates.
-
-Model syntax: `epsTotal ~ ln_monthly_avg_minutes_played + age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend + (1 | pid) + (1 | gender)`
-
-```{r}
-#| label: h1d
-#| code-summary: "Fit H1d model"
-#| eval: !expr eval_h1
-
-# Fit the model with simplified random effects structure
-# Original: (1 + ln_monthly_avg_minutes_played | pid) caused singular fit
-model.h1d <- lmer(epsTotal ~ ln_monthly_avg_minutes_played +
-                    (1 | pid) + (1 | gender) +
-                    age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend,
-                  data = gamingMonthly,
-                  control = lmerControl(optimizer = "bobyqa"))
-
-# Save the model
-saveRDS(model.h1d, "output/models/model_h1d.rds")
+if (eval_h1) {
+  for (ver in names(gaming_inputs)) {
+    h1_models[[ver]] <- fit_h1_models(gaming_inputs[[ver]], ver)
+  }
+}
 ```
 
 :::: {.place arguments='top, scope: "parent", float: true'}
@@ -1079,159 +1063,59 @@ saveRDS(model.h1d, "output/models/model_h1d.rds")
 #| tbl-cap: "Summary of H1 Hypotheses: Effects of Late-Night Gaming on Sleep and Wellbeing"
 #| output: asis
 
-# Combine all H1 models into a single table
-# Custom function to reorder coefficients while preserving ALL random effects
+library(kableExtra)
 
-# Create output directory if it doesn't exist
-if (!dir.exists("output")) {
-  dir.create("output")
-}
-
-# Helper function: reorder fixed effects while preserving random effects
-modelsummary_reordered <- function(models, coef_order, output_file = NULL, ...) {
-  # Get full output as dataframe
-  df <- modelsummary(models, output = 'data.frame', ...)
-
-  # Identify fixed effects vs GOF (goodness-of-fit) rows
-  # GOF rows include: SD, Cor, Num.Obs., ICC, R2, AIC, BIC, etc.
-  is_gof <- grepl("^(SD|Cor|Num\\.|ICC|R2|AIC|BIC|Log)", df$term)
-  fixed_df <- df[!is_gof, ]
-  gof_df <- df[is_gof, ]
-
-  # Reorder fixed effects according to coef_order
-  fixed_df$order <- match(fixed_df$term, coef_order)
-  fixed_df <- fixed_df[order(fixed_df$order, na.last = TRUE), ]
-  fixed_df$order <- NULL
-
-  # Recombine: fixed effects first, then GOF (which includes random effects)
-  result_df <- rbind(fixed_df, gof_df)
-
-  # If output file specified, convert to markdown and save
-  if (!is.null(output_file)) {
-    # Convert back to modelsummary format for consistent styling
-    ms_output <- modelsummary(models, output = output_file, ...)
-  }
-
-  # Return the reordered dataframe and create display output
-  result_table <- modelsummary(models, ...)
-
-  return(result_df)
-}
-
-# Define desired coefficient order
-coef_order <- c(
-  "ln_monthly_avg_minutes_played",
-  "ln_biweekly_avg_minutes_played",
-  "age_scaled",
-  "bmi_scaled",
-  "SES_index_scaled",
-  "regionUS",
-  "isWeekend",
-  "(Intercept)"
+coef_map_h1 <- c(
+  "ln_monthly_avg_minutes_played" = "Daily LN gaming (monthly)",
+  "ln_biweekly_avg_minutes_played" = "Daily LN gaming (biweekly)",
+  "age_scaled" = "Age (scaled)",
+  "bmi_scaled" = "BMI (scaled)",
+  "SES_index_scaled" = "SES (scaled)",
+  "regionUS" = "Region: US",
+  "isWeekend" = "Day: Weekend",
+  "SD (Intercept pid)" = "SD (Intercept | Participant)",
+  "SD (ln_monthly_avg_minutes_played pid)" = "SD (LN gaming | Participant)",
+  "Cor (Intercept~ln_monthly_avg_minutes_played pid)" = "Cor (Intercept ~ LN gaming | Participant)",
+  "SD (ln_biweekly_avg_minutes_played pid)" = "SD (LN gaming | Participant)",
+  "Cor (Intercept~ln_biweekly_avg_minutes_played pid)" = "Cor (Intercept ~ LN gaming | Participant)",
+  "SD (Observations)" = "SD (Residual)",
+  "SD (Intercept gender)" = "SD (Intercept | Gender)"
 )
 
-# First create the standard table to get proper formatting
-h1_table_df <- modelsummary(
-  list(
-    `H1a: Sleep Quality` = model.h1a,
-    `H1b: Sleep Duration` = model.h1b,
-    `H1c: Wellbeing` = model.h1c,
-    `H1d: Daytime Sleepiness` = model.h1d
-  ),
-  output = 'data.frame',
+main_version <- "imputed"
+supp_versions <- setdiff(names(h1_models), main_version)
+
+cat("#### H1 summary (Imputed data)\n")
+modelsummary(
+  h1_models[[main_version]],
   fmt = 2,
   estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
   statistic = NULL,
-  gof_omit = "AIC|BIC|Log|RMSE|R2"
+  gof_omit = "AIC|BIC|Log|RMSE|R2",
+  coef_map = coef_map_h1,
+  notes = c("* p < 0.05, ** p < 0.01, *** p < 0.001",
+            "LN = late-night. Confidence intervals shown in brackets."),
+  title = "H1: Effects of Late-Night Gaming on Sleep and Wellbeing (Imputed data)"
 )
 
-# Separate fixed effects, random effects (SD/Cor), and GOF (Num.Obs., ICC)
-is_random <- grepl("^(SD|Cor)", h1_table_df$term)
-is_gof <- grepl("^(Num\\.|ICC|R2)", h1_table_df$term)
-is_fixed <- !is_random & !is_gof
+if (length(supp_versions) > 0) {
+  dir.create("output/supplement", showWarnings = FALSE, recursive = TRUE)
+  for (ver in supp_versions) {
+    supp_path <- glue("output/supplement/h1_{ver}_summary.html")
+    modelsummary(
+      h1_models[[ver]],
+      fmt = 2,
+      estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
+      statistic = NULL,
+      gof_omit = "AIC|BIC|Log|RMSE|R2",
+      coef_map = coef_map_h1,
+      notes = c("* p < 0.05, ** p < 0.01, *** p < 0.001",
+                "LN = late-night. Confidence intervals shown in brackets."),
+      title = glue("H1: Effects of Late-Night Gaming on Sleep and Wellbeing ({stringr::str_to_title(ver)} data)"),
+      output = supp_path
+    )
+  }
 
-fixed_df <- h1_table_df[is_fixed, ]
-random_df <- h1_table_df[is_random, ]
-gof_df <- h1_table_df[is_gof, ]
-
-# Reorder fixed effects
-fixed_df$order <- match(fixed_df$term, coef_order)
-fixed_df <- fixed_df[order(fixed_df$order, na.last = TRUE), ]
-fixed_df$order <- NULL
-
-# Load kableExtra for better table formatting
-library(kableExtra)
-
-# Detect output format first
-is_html <- knitr::is_html_output()
-is_latex <- knitr::is_latex_output()
-
-if (is_html) {
-  # Use kableExtra for HTML output - use coef_map to control exact order including random effects
-  modelsummary(
-    list(
-      `H1a: Sleep Quality` = model.h1a,
-      `H1b: Sleep Duration` = model.h1b,
-      `H1c: Wellbeing` = model.h1c,
-      `H1d: Daytime Sleepiness` = model.h1d
-    ),
-    fmt = 2,
-    estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
-    statistic = NULL,
-    gof_omit = "AIC|BIC|Log|RMSE|R2",
-    coef_map = c(
-      "ln_monthly_avg_minutes_played" = "Daily LN gaming (monthly)",
-      "ln_biweekly_avg_minutes_played" = "Daily LN gaming (biweekly)",
-      "age_scaled" = "Age (scaled)",
-      "bmi_scaled" = "BMI (scaled)",
-      "SES_index_scaled" = "SES (scaled)",
-      "regionUS" = "Region: US",
-      "isWeekend" = "Day: Weekend",
-      "SD (Intercept pid)" = "SD (Intercept | Participant)",
-      "SD (ln_monthly_avg_minutes_played pid)" = "SD (LN gaming | Participant)",
-      "Cor (Intercept~ln_monthly_avg_minutes_played pid)" = "Cor (Intercept ~ LN gaming | Participant)",
-      "SD (ln_biweekly_avg_minutes_played pid)" = "SD (LN gaming | Participant)",
-      "Cor (Intercept~ln_biweekly_avg_minutes_played pid)" = "Cor (Intercept ~ LN gaming | Participant)",
-      "SD (Observations)" = "SD (Residual)",
-      "SD (Intercept gender)" = "SD (Intercept | Gender)"
-    ),
-    notes = c("* p < 0.05, ** p < 0.01, *** p < 0.001",
-              "LN = late-night. Confidence intervals shown in brackets."),
-    title = "H1: Effects of Late-Night Gaming on Sleep and Wellbeing"
-  )
-} else {
-  # Use simpler format for PDF and DOCX - use coef_map to control exact order including random effects
-  modelsummary(
-    list(
-      `H1a: Sleep Quality` = model.h1a,
-      `H1b: Sleep Duration` = model.h1b,
-      `H1c: Wellbeing` = model.h1c,
-      `H1d: Daytime Sleepiness` = model.h1d
-    ),
-    fmt = 2,
-    estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
-    statistic = NULL,
-    gof_omit = "AIC|BIC|Log|RMSE|R2",
-    coef_map = c(
-      "ln_monthly_avg_minutes_played" = "Daily LN gaming (monthly)",
-      "ln_biweekly_avg_minutes_played" = "Daily LN gaming (biweekly)",
-      "age_scaled" = "Age (scaled)",
-      "bmi_scaled" = "BMI (scaled)",
-      "SES_index_scaled" = "SES (scaled)",
-      "regionUS" = "Region: US",
-      "isWeekend" = "Day: Weekend",
-      "SD (Intercept pid)" = "SD (Intercept | Participant)",
-      "SD (ln_monthly_avg_minutes_played pid)" = "SD (LN gaming | Participant)",
-      "Cor (Intercept~ln_monthly_avg_minutes_played pid)" = "Cor (Intercept ~ LN gaming | Participant)",
-      "SD (ln_biweekly_avg_minutes_played pid)" = "SD (LN gaming | Participant)",
-      "Cor (Intercept~ln_biweekly_avg_minutes_played pid)" = "Cor (Intercept ~ LN gaming | Participant)",
-      "SD (Observations)" = "SD (Residual)",
-      "SD (Intercept gender)" = "SD (Intercept | Gender)"
-    ),
-    notes = c("* p < 0.05, ** p < 0.01, *** p < 0.001",
-              "LN = late-night. Confidence intervals shown in brackets."),
-    title = "H1: Effects of Late-Night Gaming on Sleep and Wellbeing"
-  )
 }
 ```
 
@@ -1248,90 +1132,62 @@ Multilevel ordinal regression whereby the interaction between monthly average mi
 Model syntax: `psqi_6 ~ ln_monthly_avg_minutes_played * msf_sc_centered + age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend + (1 | pid)`
 
 ```{r}
-#| label: h2a
-#| code-summary: "Fit H2a model"
+#| label: fit-h2-models
+#| code-summary: "Fit H2 models for both outcome versions"
 #| eval: !expr eval_h2
+#| results: asis
 
-# Prepare data with ordinal psqi_06 (already numeric: 0-3)
-gamingMonthly_h2a <- gamingMonthly |>
-  mutate(
-    psqi_6_ord = factor(psqi_06,
-                       levels = c(0, 1, 2, 3),
-                       labels = c("Very good", "Fairly good", "Fairly bad", "Very bad"),
-                       ordered = TRUE)
-  ) |>
-  filter(!is.na(psqi_6_ord))
+h2_models <- list()
 
-# Fit cumulative link mixed model with increased tolerance and iterations
-# Gender as random intercept causes complete failure to converge
-# Using only pid random intercept
-model.h2a <- clmm(psqi_6_ord ~ ln_monthly_avg_minutes_played * msf_sc_centered +
-                    age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
-                    (1 | pid),
-                  data = gamingMonthly_h2a,
-                  control = clmm.control(maxIter = 1000, gradTol = 1e-4))
+fit_h2_models <- function(inputs, version_label) {
+  gamingMonthly <- inputs$gamingMonthly
+  gamingBiweekly <- inputs$gamingBiweekly
 
-# Save the model
-saveRDS(model.h2a, "output/models/model_h2a.rds")
-```
+  gamingMonthly_h2a <- gamingMonthly |>
+    mutate(
+      psqi_6_ord = factor(psqi_06,
+                          levels = c(0, 1, 2, 3),
+                          labels = c("Very good", "Fairly good", "Fairly bad", "Very bad"),
+                          ordered = TRUE)
+    ) |>
+    filter(!is.na(psqi_6_ord))
 
-## H2b: The negative association between late-night gaming and sleep duration is more pronounced among evening chronotypes.
+  model.h2a <- clmm(psqi_6_ord ~ ln_monthly_avg_minutes_played * msf_sc_centered +
+                      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+                      (1 | pid),
+                    data = gamingMonthly_h2a,
+                    control = clmm.control(maxIter = 1000, gradTol = 1e-4))
 
-Multilevel linear regression whereby the interaction between monthly average minutes played and chronotype (MSFsc; MCTQ) predicts total hours of sleep, controlling for age, BMI, SES index, region, gender, and whether playtime falls on a weekend, with a random intercept and slope for participants and a random intercept for gender.
+  model.h2b <- lmer(total_hours_sleep ~ ln_monthly_avg_minutes_played * msf_sc_centered + (1  | pid) +
+                      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend + (1 | gender),
+                    data = gamingMonthly)
 
-Model syntax: `total_hours_sleep ~ ln_monthly_avg_minutes_played * msf_sc_centered + age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend + (1 + ln_monthly_avg_minutes_played | pid) + (1 | gender)`
+  model.h2c <- lmer(wemwbs ~ ln_biweekly_avg_minutes_played * msf_sc_centered + (1 | pid) +
+                      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend + (1 | gender),
+                    data = gamingBiweekly)
 
-```{r}
-#| label: h2b
-#| code-summary: "Fit H2b model"
-#| eval: !expr eval_h2
+  model.h2d <- lmer(epsTotal ~ ln_monthly_avg_minutes_played * msf_sc_centered + (1  | pid) +
+                      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend + (1 | gender),
+                    data = gamingMonthly)
 
-# Fit the model
-model.h2b <- lmer(total_hours_sleep ~ ln_monthly_avg_minutes_played * msf_sc_centered + (1  | pid) +
-                    age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend + (1 | gender),
-                  data = gamingMonthly)
+  saveRDS(model.h2a, glue("output/models/{version_label}_model_h2a.rds"))
+  saveRDS(model.h2b, glue("output/models/{version_label}_model_h2b.rds"))
+  saveRDS(model.h2c, glue("output/models/{version_label}_model_h2c.rds"))
+  saveRDS(model.h2d, glue("output/models/{version_label}_model_h2d.rds"))
 
-# Save the model
-saveRDS(model.h2b, "output/models/model_h2b.rds")
-```
+  list(
+    `H2a: Sleep Quality` = model.h2a,
+    `H2b: Sleep Duration` = model.h2b,
+    `H2c: Wellbeing` = model.h2c,
+    `H2d: Daytime Sleepiness` = model.h2d
+  )
+}
 
-### H2c: The negative association between late-night gaming and well-being is more pronounced among evening chronotypes.
-
-Multilevel linear regression whereby the interaction between biweekly average minutes played and chronotype (MSFsc; MCTQ) predicts wellbeing (WEMWBS), controlling for age, BMI, SES index, region, gender, and whether playtime falls on a weekend, with a random intercept for participants and a random intercept for gender.
-
-Model syntax: `wemwbs ~ ln_biweekly_avg_minutes_played * msf_sc_centered + age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend + (1 | pid) + (1 | gender)`
-
-```{r}
-#| label: h2c
-#| code-summary: "Fit H2c model"
-#| eval: !expr eval_h2
-
-# Fit the model
-model.h2c <- lmer(wemwbs ~ ln_biweekly_avg_minutes_played * msf_sc_centered + (1 | pid) +
-                    age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend + (1 | gender),
-                  data = gamingBiweekly)
-
-# Save the model
-saveRDS(model.h2c, "output/models/model_h2c.rds")
-```
-
-### H2d: The negative association between late-night gaming and daytime sleepiness is more pronounced among evening chronotypes.
-
-Multilevel linear regression whereby the interaction between monthly average minutes played and chronotype (MSFsc; MCTQ) predicts daytime sleepiness (Epworth Sleepiness Scale), controlling for age, BMI, SES index, region, gender, and whether playtime falls on a weekend, with a random intercept and slope for participants and a random intercept for gender.
-
-Model syntax: `epsTotal ~ ln_monthly_avg_minutes_played * msf_sc_centered + age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend + (1 + ln_monthly_avg_minutes_played | pid) + (1 | gender)`
-
-```{r}
-#| label: h2d
-#| code-summary: "Fit H2d model"
-#| eval: !expr eval_h2
-
-model.h2d <- lmer(epsTotal ~ ln_monthly_avg_minutes_played * msf_sc_centered + (1  | pid) +
-                    age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend + (1 | gender),
-                  data = gamingMonthly)
-
-# Save the model
-saveRDS(model.h2d, "output/models/model_h2d.rds")
+if (eval_h2) {
+  for (ver in names(gaming_inputs)) {
+    h2_models[[ver]] <- fit_h2_models(gaming_inputs[[ver]], ver)
+  }
+}
 ```
 
 :::: {.place arguments='top, scope: "parent", float: true'}
@@ -1350,70 +1206,56 @@ library(kableExtra)
 is_html <- knitr::is_html_output()
 is_latex <- knitr::is_latex_output()
 
-if (is_html) {
-  # Use kableExtra for HTML output - use coef_map to control exact order including random effects
-  modelsummary(
-    list(
-      `H2a: Sleep Quality` = model.h2a,
-      `H2b: Sleep Duration` = model.h2b,
-      `H2c: Wellbeing` = model.h2c,
-      `H2d: Daytime Sleepiness` = model.h2d
-    ),
-    fmt = 2,
-    estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
-    statistic = NULL,
-    gof_omit = "AIC|BIC|Log|RMSE|R2",
-    coef_map = c(
-      "ln_monthly_avg_minutes_played" = "Daily LN gaming (monthly)",
-      "ln_biweekly_avg_minutes_played" = "Daily LN gaming (biweekly)",
-      "msf_sc_centered" = "Chronotype (centered)",
-      "ln_monthly_avg_minutes_played:msf_sc_centered" = "LN gaming × Chronotype (monthly)",
-      "ln_biweekly_avg_minutes_played:msf_sc_centered" = "LN gaming × Chronotype (biweekly)",
-      "age_scaled" = "Age (scaled)",
-      "bmi_scaled" = "BMI (scaled)",
-      "SES_index_scaled" = "SES (scaled)",
-      "regionUS" = "Region: US",
-      "isWeekend" = "Day: Weekend",
-      "SD (Intercept pid)" = "SD (Intercept | Participant)",
-      "SD (Intercept gender)" = "SD (Intercept | Gender)",
-      "SD (Observations)" = "SD (Residual)"
-    ),
-    notes = c("* p < 0.05, ** p < 0.01, *** p < 0.001",
-              "LN = late-night. Confidence intervals shown in brackets."),
-    title = "H2: Chronotype Moderation of Late-Night Gaming Effects"
-  )
-} else {
-  # Use simpler format for PDF and DOCX - use coef_map to control exact order including random effects
-  modelsummary(
-    list(
-      `H2a: Sleep Quality` = model.h2a,
-      `H2b: Sleep Duration` = model.h2b,
-      `H2c: Wellbeing` = model.h2c,
-      `H2d: Daytime Sleepiness` = model.h2d
-    ),
-    fmt = 2,
-    estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
-    statistic = NULL,
-    gof_omit = "AIC|BIC|Log|RMSE|R2",
-    coef_map = c(
-      "ln_monthly_avg_minutes_played" = "Daily LN gaming (monthly)",
-      "ln_biweekly_avg_minutes_played" = "Daily LN gaming (biweekly)",
-      "msf_sc_centered" = "Chronotype (centered)",
-      "ln_monthly_avg_minutes_played:msf_sc_centered" = "LN gaming × Chronotype (monthly)",
-      "ln_biweekly_avg_minutes_played:msf_sc_centered" = "LN gaming × Chronotype (biweekly)",
-      "age_scaled" = "Age (scaled)",
-      "bmi_scaled" = "BMI (scaled)",
-      "SES_index_scaled" = "SES (scaled)",
-      "regionUS" = "Region: US",
-      "isWeekend" = "Day: Weekend",
-      "SD (Intercept pid)" = "SD (Intercept | Participant)",
-      "SD (Intercept gender)" = "SD (Intercept | Gender)",
-      "SD (Observations)" = "SD (Residual)"
-    ),
-    notes = c("* p < 0.05, ** p < 0.01, *** p < 0.001",
-              "LN = late-night. Confidence intervals shown in brackets."),
-    title = "H2: Chronotype Moderation of Late-Night Gaming Effects"
-  )
+coef_map_h2 <- c(
+  "ln_monthly_avg_minutes_played" = "Daily LN gaming (monthly)",
+  "ln_biweekly_avg_minutes_played" = "Daily LN gaming (biweekly)",
+  "msf_sc_centered" = "Chronotype (centered)",
+  "ln_monthly_avg_minutes_played:msf_sc_centered" = "LN gaming × Chronotype (monthly)",
+  "ln_biweekly_avg_minutes_played:msf_sc_centered" = "LN gaming × Chronotype (biweekly)",
+  "age_scaled" = "Age (scaled)",
+  "bmi_scaled" = "BMI (scaled)",
+  "SES_index_scaled" = "SES (scaled)",
+  "regionUS" = "Region: US",
+  "isWeekend" = "Day: Weekend",
+  "SD (Intercept pid)" = "SD (Intercept | Participant)",
+  "SD (Intercept gender)" = "SD (Intercept | Gender)",
+  "SD (Observations)" = "SD (Residual)"
+)
+
+main_version <- "imputed"
+supp_versions <- setdiff(names(h2_models), main_version)
+
+cat("#### H2 summary (Imputed data)\n")
+modelsummary(
+  h2_models[[main_version]],
+  fmt = 2,
+  estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
+  statistic = NULL,
+  gof_omit = "AIC|BIC|Log|RMSE|R2",
+  coef_map = coef_map_h2,
+  notes = c("* p < 0.05, ** p < 0.01, *** p < 0.001",
+            "LN = late-night. Confidence intervals shown in brackets."),
+  title = "H2: Chronotype Moderation of Late-Night Gaming Effects (Imputed data)"
+)
+
+if (length(supp_versions) > 0) {
+  dir.create("output/supplement", showWarnings = FALSE, recursive = TRUE)
+  for (ver in supp_versions) {
+    supp_path <- glue("output/supplement/h2_{ver}_summary.html")
+    modelsummary(
+      h2_models[[ver]],
+      fmt = 2,
+      estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
+      statistic = NULL,
+      gof_omit = "AIC|BIC|Log|RMSE|R2",
+      coef_map = coef_map_h2,
+      notes = c("* p < 0.05, ** p < 0.01, *** p < 0.001",
+                "LN = late-night. Confidence intervals shown in brackets."),
+      title = glue("H2: Chronotype Moderation of Late-Night Gaming Effects ({stringr::str_to_title(ver)} data)"),
+      output = supp_path
+    )
+  }
+
 }
 ```
 
@@ -1432,3 +1274,55 @@ Our findings from a sample of adult gamers revealed patterns consistent with pri
 #show: appendix.with()
 ```
 # Appendix content here
+
+## Appendix: Complete-Case Regression Tables
+
+The tables below reproduce the H1 and H2 regression summaries using the original (non-imputed) outcome variables. They correspond to the complete-case analyses referenced in the main text and serve as a sensitivity check alongside the imputed results.
+
+### H1 Sensitivity (Original Outcomes)
+
+```{r}
+#| label: appendix-h1-original
+#| echo: false
+#| results: asis
+
+if (eval_h1 && "original" %in% names(h1_models)) {
+  modelsummary(
+    h1_models[["original"]],
+    fmt = 2,
+    estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
+    statistic = NULL,
+    gof_omit = "AIC|BIC|Log|RMSE|R2",
+    coef_map = coef_map_h1,
+    notes = c("* p < 0.05, ** p < 0.01, *** p < 0.001",
+              "LN = late-night. Confidence intervals shown in brackets."),
+    title = "Appendix H1: Effects of Late-Night Gaming (Original Outcomes)"
+  )
+} else {
+  cat("Complete-case H1 models were not estimated (no original outcome version available).\n")
+}
+```
+
+### H2 Sensitivity (Original Outcomes)
+
+```{r}
+#| label: appendix-h2-original
+#| echo: false
+#| results: asis
+
+if (eval_h2 && "original" %in% names(h2_models)) {
+  modelsummary(
+    h2_models[["original"]],
+    fmt = 2,
+    estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
+    statistic = NULL,
+    gof_omit = "AIC|BIC|Log|RMSE|R2",
+    coef_map = coef_map_h2,
+    notes = c("* p < 0.05, ** p < 0.01, *** p < 0.001",
+              "LN = late-night. Confidence intervals shown in brackets."),
+    title = "Appendix H2: Chronotype Moderation (Original Outcomes)"
+  )
+} else {
+  cat("Complete-case H2 models were not estimated (no original outcome version available).\n")
+}
+```

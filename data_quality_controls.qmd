@@ -38,7 +38,6 @@ source("preprocess_data.R")
 # Load all processed data files
 gaming_sessions <- read_csv("data/processed/gaming_sessions.csv.gz", show_col_types = FALSE)
 selfreport <- read_csv("data/processed/selfreport.csv.gz", show_col_types = FALSE)
-panel_clean <- read_csv("data/processed/panel_clean.csv.gz", show_col_types = FALSE)
 intake_clean <- read_csv("data/processed/intake_clean.csv.gz", show_col_types = FALSE)
 
 # Load raw survey data for self-reported playtime
@@ -47,7 +46,6 @@ survey_biweekly <- read_csv("data/survey_biweekly.csv.gz", show_col_types = FALS
 cat("Data loaded successfully:\n")
 cat("- Gaming sessions:", nrow(gaming_sessions), "records\n")
 cat("- Self-report:", nrow(selfreport), "records\n")
-cat("- Panel clean:", nrow(panel_clean), "records\n")
 cat("- Intake:", nrow(intake_clean), "records\n")
 ```
 
@@ -402,8 +400,8 @@ dqc3_mctq <- survey_wave1 |>
   ) |>
   select(pid, msw, msf, sjl, sjl_hours)
 
-# Get ESS (daytime sleepiness) from panel data - use wave 1 or average across waves
-ess_data <- panel_clean |>
+# Get ESS (daytime sleepiness) from selfreport data - use wave 1 or average across waves
+ess_data <- selfreport |>
   filter(wave %in% c(2, 4, 6)) |>  # ESS measured at these waves (same as PSQI)
   group_by(pid) |>
   summarise(epsTotal = mean(epsTotal, na.rm = TRUE), .groups = "drop") |>
@@ -488,7 +486,7 @@ Note: Lower PSQI scores indicate better sleep quality (0 = "Very good", 3 = "Ver
 # PSQI sleep quality is item 6 (psqi_06): 0=Very good, 1=Fairly good, 2=Fairly bad, 3=Very bad
 # WEMWBS is the wellbeing total score
 
-dqc4_data <- panel_clean |>
+dqc4_data <- selfreport |>
   filter(wave %in% c(2, 4, 6)) |>  # PSQI and WEMWBS measured at these waves
   select(pid, wave, psqi_comp1_quality, wemwbs) |>
   filter(!is.na(psqi_comp1_quality), !is.na(wemwbs)) |>

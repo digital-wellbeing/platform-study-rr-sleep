@@ -15,6 +15,12 @@ library(tidyverse)
 library(lubridate)
 library(mctq)  # For proper MCTQ chronotype calculations
 library(questionnaires)  # For PSQI computation
+library(glue)
+
+# Source imputation helpers without auto-running the pipeline
+Sys.setenv(RUN_IMPUTATION_ON_SOURCE = "0")
+source("imputation.R")
+Sys.setenv(RUN_IMPUTATION_ON_SOURCE = "1")
 
 # Function to rename PSQI columns to match Questionnaires package format
 # Converts open-play format to standard PSQI naming convention
@@ -943,8 +949,13 @@ create_selfreport <- function(panel_path, intake_processed, valid_participants) 
       pid, wave,
       # Outcomes
       psqi_global, total_hours_sleep, epsTotal, wemwbs,
-      # PSQI components (needed for H2a model)
+      # PSQI components (all 7 for demographics table + item 6 for H2a)
       psqi_06,  # Numeric version: 0=Very good, 1=Fairly good, 2=Fairly bad, 3=Very bad
+      psqi_comp1_quality, psqi_comp2_latency, psqi_comp3_duration,
+      psqi_comp4_efficiency, psqi_comp5_problems, psqi_comp6_medication,
+      psqi_comp7_tired,
+      # MCTQ (for chronotype baseline in demographics)
+      mctq_fd_alarm_clock_used,
       # Moderator
       msf_sc_numeric, msf_sc_centered,
       # Covariates
@@ -952,8 +963,7 @@ create_selfreport <- function(panel_path, intake_processed, valid_participants) 
     ) %>%
     filter(!is.na(wave)) %>%  # Only include waves with data
     # Now join the date from raw panel
-    left_join(panel_raw, by = c("pid", "wave")) %>%
-    filter(!is.na(date))  # Only keep records with valid dates
+    left_join(panel_raw, by = c("pid", "wave"))
 
   message(sprintf("Created %d self-report records from %d participants",
                   nrow(selfreport), n_distinct(selfreport$pid)))
@@ -989,19 +999,58 @@ preprocess_all_data <- function() {
   # Save processed data
   message("\nSaving processed data...")
   dir.create("data/processed", showWarnings = FALSE, recursive = TRUE)
-  write_csv(panel_processed, "data/processed/panel_clean.csv.gz")
   write_csv(intake_processed, "data/processed/intake_clean.csv.gz")
   write_csv(gaming_sessions, "data/processed/gaming_sessions.csv.gz")
-  write_csv(selfreport, "data/processed/selfreport.csv.gz")
+
+  selfreport_raw_path <- "data/processed/selfreport_raw.csv.gz"
+  write_csv(selfreport, selfreport_raw_path)
+  message(glue("  - Wrote raw self-report data to {selfreport_raw_path}"))
+
+  message("\nRunning multiple imputation pipeline for self-report outcomes...")
+  imp <- run_imputation(
+    input_path = selfreport_raw_path,
+    output_path = "data/processed/selfreport_imputed.rds",
+    n_imputations = N_IMPUTATIONS,
+    n_iterations = N_ITERATIONS,
+    create_diagnostics_flag = TRUE,
+    parallel_method = "chunked",
+    drop_wemwbs_w1_missing_flag = TRUE
+  )
+
+  message("Aggregating imputed values (mean across imputations) for convenience...")
+  imputed_long <- load_imputed_long("data/processed/selfreport_imputed_long.rds")
+  imputed_summary <- imputed_long %>%
+    group_by(pid, wave) %>%
+    summarise(
+      across(
+        all_of(VARS_TO_IMPUTE),
+        ~if (all(is.na(.x))) NA_real_ else mean(.x, na.rm = TRUE)
+      ),
+      .groups = "drop"
+    )
+
+  selfreport_with_versions <- selfreport %>%
+    rename_with(
+      ~paste0(.x, "_original"),
+      all_of(VARS_TO_IMPUTE)
+    ) %>%
+    left_join(
+      imputed_summary %>%
+        rename_with(~paste0(.x, "_imputed"), all_of(VARS_TO_IMPUTE)),
+      by = c("pid", "wave")
+    )
+
+  write_csv(selfreport_with_versions, "data/processed/selfreport.csv.gz")
+  message("  - selfreport.csv.gz now includes *_original and *_imputed columns")
 
   message("\nData preprocessing complete!")
   message("Processed files saved to data/processed/:")
-  message("  - panel_clean.csv.gz")
   message("  - intake_clean.csv.gz")
   message("  - gaming_sessions.csv.gz (session-level data with late-night enrichment)")
-  message("  - selfreport.csv.gz")
-  message("\nNote: Gaming exposure (14-day and 28-day windows) should be")
-  message("      calculated in the qmd relative to each self-report date")
+  message("  - selfreport_raw.csv.gz (pre-imputation)")
+  message("  - selfreport_imputed.rds / selfreport_imputed_long.rds (mids + stacked long)")
+  message("  - selfreport.csv.gz (with *_original and *_imputed outcome columns)")
+  message("\nDiagnostics available under output/imputation/.")
 }
 
 # Run preprocessing if script is sourced
