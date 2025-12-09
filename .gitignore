@@ -33,3 +33,10 @@ data/*
 *.pdf
 *.woff
 *.tex
+
+.*/
+R/*
+
+*cache*
+**/cache/**
+**/*cache*/
