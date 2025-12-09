@@ -7,7 +7,6 @@
 *.docx
 *.doc
 *.txt
-*.csv
 *.xlsx
 *.xls
 *.xlsm
@@ -18,13 +17,6 @@ data/*
 
 *.js
 *.css
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.svg
-*.ico
-*.webp
 *.mp4
 *.mp3
 *.wav
