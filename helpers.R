@@ -275,63 +275,6 @@ load_h1_models_from_disk <- function(version_label) {
   lapply(paths, readRDS)
 }
 
-#' Fit H1 models for all hypotheses
-#'
-#' @param inputs List with gamingMonthly and gamingBiweekly datasets
-#' @param version_label Version label (e.g., "imputed", "completecase")
-#' @return Named list of fitted models
-fit_h1_models <- function(inputs, version_label) {
-  gamingMonthly <- inputs$gamingMonthly |>
-    enforce_monthly_wave_subset()
-  gamingBiweekly <- inputs$gamingBiweekly
-
-  gamingMonthly <- gamingMonthly |>
-    mutate(
-      # Round imputed values to nearest integer (since they're averaged across imputations)
-      psqi_comp1_quality_rounded = round(psqi_comp1_quality),
-      psqi_6_ord = factor(psqi_comp1_quality_rounded,
-                          levels = c(0, 1, 2, 3),
-                          labels = c("Very good", "Fairly good", "Fairly bad", "Very bad"),
-                          ordered = TRUE)
-    ) |>
-    filter(!is.na(psqi_6_ord))
-
-  model.h1a <- clmm(psqi_6_ord ~ ln_monthly_avg_minutes_played +
-                      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
-                      (1 | pid),
-                    data = gamingMonthly)
-
-  model.h1b <- lmer(total_hours_sleep ~ ln_monthly_avg_minutes_played +
-                      age_scaled + bmi_scaled + SES_index_scaled + region + gender + isWeekend +
-                      (1 | pid),
-                    data = gamingMonthly,
-                    control = lmerControl(optimizer = "bobyqa"))
-
-  model.h1c <- lmer(wemwbs ~ ln_biweekly_avg_minutes_played +
-                      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
-                      (1 | pid) + (1 | gender),
-                    data = gamingBiweekly,
-                    control = lmerControl(optimizer = "bobyqa"))
-
-  model.h1d <- lmer(epsTotal ~ ln_monthly_avg_minutes_played +
-                      age_scaled + bmi_scaled + SES_index_scaled + region + gender + isWeekend +
-                      (1 | pid) + (1 | gender),
-                    data = gamingMonthly,
-                    control = lmerControl(optimizer = "bobyqa"))
-
-  saveRDS(model.h1a, glue("output/models/{version_label}_model_h1a.rds"))
-  saveRDS(model.h1b, glue("output/models/{version_label}_model_h1b.rds"))
-  saveRDS(model.h1c, glue("output/models/{version_label}_model_h1c.rds"))
-  saveRDS(model.h1d, glue("output/models/{version_label}_model_h1d.rds"))
-
-  list(
-    `H1a: Sleep Quality` = model.h1a,
-    `H1b: Sleep Duration` = model.h1b,
-    `H1c: Wellbeing` = model.h1c,
-    `H1d: Daytime Sleepiness` = model.h1d
-  )
-}
-
 # ==============================================================================
 # H2 Model Functions
 # ==============================================================================
@@ -422,68 +365,40 @@ load_h2_models_from_disk <- function(version_label) {
   lapply(paths, readRDS)
 }
 
-#' Fit H2 models for all hypotheses
+# ==============================================================================
+# Goodness-of-Fit Statistics Functions
+# ==============================================================================
+
+#' Calculate ICC values for a list of models using performance::icc()
 #'
-#' @param inputs List with gamingMonthly and gamingBiweekly datasets
-#' @param version_label Version label (e.g., "imputed", "completecase")
-#' @return Named list of fitted models or NULL if insufficient data
-fit_h2_models <- function(inputs, version_label) {
-  gamingMonthly <- inputs$gamingMonthly |>
-    enforce_monthly_wave_subset()
-  gamingBiweekly <- inputs$gamingBiweekly
+#' @param models Named list of fitted models
+#' @return Data frame formatted for use with modelsummary's add_rows parameter
+get_icc_rows <- function(models) {
+  icc_values <- lapply(models, function(model) {
+    tryCatch({
+      icc_result <- performance::icc(model)
+      # Extract adjusted ICC if available, otherwise use ICC_conditional
+      if (!is.null(icc_result$ICC_adjusted)) {
+        sprintf("%.2f", icc_result$ICC_adjusted)
+      } else if (!is.null(icc_result$ICC_conditional)) {
+        sprintf("%.2f", icc_result$ICC_conditional)
+      } else {
+        NA_character_
+      }
+    }, error = function(e) {
+      NA_character_
+    })
+  })
 
-  # Filter for complete cases needed for H2 models
-  gamingMonthly_complete <- gamingMonthly |>
-    filter(!is.na(msf_sc_centered), !is.na(total_hours_sleep), !is.na(epsTotal))
+  # Create a data frame in the format modelsummary expects
+  icc_df <- data.frame(
+    term = "ICC",
+    stringsAsFactors = FALSE
+  )
 
-  gamingBiweekly_complete <- gamingBiweekly |>
-    filter(!is.na(msf_sc_centered), !is.na(wemwbs))
-
-  # Check if we have sufficient data (need at least 50 observations and variation in factors)
-  if (nrow(gamingMonthly_complete) < 50 || nrow(gamingBiweekly_complete) < 50) {
-    message(sprintf("Skipping H2 models for %s version: insufficient complete cases (monthly: %d, biweekly: %d)",
-                    version_label, nrow(gamingMonthly_complete), nrow(gamingBiweekly_complete)))
-    return(NULL)
+  for (i in seq_along(models)) {
+    icc_df[[names(models)[i]]] <- icc_values[[i]]
   }
 
-  gamingMonthly_h2 <- gamingMonthly |>
-    mutate(
-      # Round imputed values to nearest integer (since they're averaged across imputations)
-      psqi_comp1_quality_rounded = round(psqi_comp1_quality),
-      psqi_6_ord = factor(psqi_comp1_quality_rounded,
-                          levels = c(0, 1, 2, 3),
-                          labels = c("Very good", "Fairly good", "Fairly bad", "Very bad"),
-                          ordered = TRUE)
-    ) |>
-    filter(!is.na(psqi_6_ord), !is.na(msf_sc_centered))
-
-  model.h2a <- clmm(psqi_6_ord ~ ln_monthly_avg_minutes_played * msf_sc_centered +
-                      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
-                      (1 | pid),
-                    data = gamingMonthly_h2,
-                    control = clmm.control(maxIter = 1000, gradTol = 1e-4))
-
-  model.h2b <- lmer(total_hours_sleep ~ ln_monthly_avg_minutes_played * msf_sc_centered + (1  | pid) +
-                      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend + (1 | gender),
-                    data = gamingMonthly_complete)
-
-  model.h2c <- lmer(wemwbs ~ ln_biweekly_avg_minutes_played * msf_sc_centered + (1 | pid) +
-                      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend + (1 | gender),
-                    data = gamingBiweekly_complete)
-
-  model.h2d <- lmer(epsTotal ~ ln_monthly_avg_minutes_played * msf_sc_centered + (1  | pid) +
-                      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend + (1 | gender),
-                    data = gamingMonthly_complete)
-
-  saveRDS(model.h2a, glue("output/models/{version_label}_model_h2a.rds"))
-  saveRDS(model.h2b, glue("output/models/{version_label}_model_h2b.rds"))
-  saveRDS(model.h2c, glue("output/models/{version_label}_model_h2c.rds"))
-  saveRDS(model.h2d, glue("output/models/{version_label}_model_h2d.rds"))
-
-  list(
-    `H2a: Sleep Quality` = model.h2a,
-    `H2b: Sleep Duration` = model.h2b,
-    `H2c: Wellbeing` = model.h2c,
-    `H2d: Daytime Sleepiness` = model.h2d
-  )
+  icc_df
 }

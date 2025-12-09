@@ -988,6 +988,8 @@ h1d_ln_minutes <- get_h1_effect(
 
 Under these implemented models, the late-night gaming term in the sleep-quality model (H1a) is estimated as `r h1a_ln_minutes`, indicating that each additional minute of average late-night play is associated with a small change in the odds of reporting poorer sleep quality. The corresponding effects are `r h1b_ln_minutes` for sleep duration (H1b), suggesting little systematic association between late-night gaming and self-reported sleep hours, `r h1c_ln_minutes` for wellbeing (H1c), indicating minimal change in SWEMWBS scores with greater late-night play, and `r h1d_ln_minutes` for daytime sleepiness (H1d), again suggesting negligible variation in Epworth scores as a function of late-night gaming. All estimates are computed using the `parameters` package from the easystats ecosystem [@easystats]. These models additionally adjust for age, BMI, SES index, region, gender, and weekend versus weekday timing, and they use rolling 14- and 28-day windows of late-night play anchored to each survey date. Full coefficient estimates, confidence intervals, and variance components are reported in the H1 regression summary table, to which we refer for all remaining parameters.
 
+
+
 ```{r}
 #| label: fit-h1-models
 #| code-summary: "Fit H1 models for both outcome versions"
@@ -999,9 +1001,69 @@ if (!dir.exists("output/models")) {
   dir.create("output/models", recursive = TRUE)
 }
 
+fit_h1_models_inline <- function(inputs, version_label) {
+  gamingMonthly <- inputs$gamingMonthly |>
+    enforce_monthly_wave_subset() |>
+    mutate(
+      psqi_comp1_quality_rounded = round(psqi_comp1_quality),
+      psqi_6_ord = factor(
+        psqi_comp1_quality_rounded,
+        levels = c(0, 1, 2, 3),
+        labels = c("Very good", "Fairly good", "Fairly bad", "Very bad"),
+        ordered = TRUE
+      )
+    ) |>
+    filter(!is.na(psqi_6_ord))
+
+  gamingBiweekly <- inputs$gamingBiweekly
+
+  model.h1a <- clmm(
+    psqi_6_ord ~ ln_monthly_avg_minutes_played +
+      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+      (1 | pid),
+    data = gamingMonthly
+  )
+
+  model.h1b <- lmer(
+    total_hours_sleep ~ ln_monthly_avg_minutes_played +
+      age_scaled + bmi_scaled + SES_index_scaled + region + gender + isWeekend +
+      (1 | pid),
+    data = gamingMonthly,
+    control = lmerControl(optimizer = "bobyqa")
+  )
+
+  model.h1c <- lmer(
+    wemwbs ~ ln_biweekly_avg_minutes_played +
+      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+      (1 | pid) + (1 | gender),
+    data = gamingBiweekly,
+    control = lmerControl(optimizer = "bobyqa")
+  )
+
+  model.h1d <- lmer(
+    epsTotal ~ ln_monthly_avg_minutes_played +
+      age_scaled + bmi_scaled + SES_index_scaled + region + gender + isWeekend +
+      (1 | pid) + (1 | gender),
+    data = gamingMonthly,
+    control = lmerControl(optimizer = "bobyqa")
+  )
+
+  saveRDS(model.h1a, glue("output/models/{version_label}_model_h1a.rds"))
+  saveRDS(model.h1b, glue("output/models/{version_label}_model_h1b.rds"))
+  saveRDS(model.h1c, glue("output/models/{version_label}_model_h1c.rds"))
+  saveRDS(model.h1d, glue("output/models/{version_label}_model_h1d.rds"))
+
+  list(
+    `H1a: Sleep Quality` = model.h1a,
+    `H1b: Sleep Duration` = model.h1b,
+    `H1c: Wellbeing` = model.h1c,
+    `H1d: Daytime Sleepiness` = model.h1d
+  )
+}
+
 if (eval_h1) {
   for (ver in names(gaming_inputs)) {
-    h1_models[[ver]] <- fit_h1_models(gaming_inputs[[ver]], ver)
+    h1_models[[ver]] <- fit_h1_models_inline(gaming_inputs[[ver]], ver)
   }
 } else {
   for (ver in names(gaming_inputs)) {
@@ -1052,13 +1114,15 @@ supp_versions <- setdiff(names(h1_models), main_version)
 
 modelsummary(
     h1_models[[main_version]],
-    fmt = 2,
+    fmt = fmt_sprintf("%.2f"),
     estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
     statistic = NULL,
-    gof_omit = "AIC|BIC|Log|RMSE|R2",
+    gof_omit = "AIC|BIC|Log|RMSE|R2|ICC",
     coef_map = coef_map_h1,
+    add_rows = get_icc_rows(h1_models[[main_version]]),
     notes = c("+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
-              "LN = late-night. Confidence intervals shown in brackets."),
+              "LN = late-night. Confidence intervals shown in brackets.",
+              "ICC = Intraclass Correlation Coefficient (adjusted)."),
     title = "H1: Effects of Late-Night Gaming on Sleep and Wellbeing (Imputed data)",
   )
 
@@ -1069,13 +1133,15 @@ if (length(supp_versions) > 0) {
     supp_path <- glue("output/supplement/h1_{ver}_summary.html")
     modelsummary(
       h1_models[[ver]],
-      fmt = 2,
+      fmt = fmt_sprintf("%.2f"),
       estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
       statistic = NULL,
-      gof_omit = "AIC|BIC|Log|RMSE|R2",
+      gof_omit = "AIC|BIC|Log|RMSE|R2|ICC",
       coef_map = coef_map_h1,
+      add_rows = get_icc_rows(h1_models[[ver]]),
       notes = c("+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
-                "LN = late-night. Confidence intervals shown in brackets."),
+                "LN = late-night. Confidence intervals shown in brackets.",
+                "ICC = Intraclass Correlation Coefficient (adjusted)."),
       title = glue("H1: Effects of Late-Night Gaming on Sleep and Wellbeing ({stringr::str_to_title(ver)} data)"),
       output = supp_path
     )
@@ -1085,9 +1151,138 @@ if (length(supp_versions) > 0) {
 
 ::::
 
+```{r}
+#| label: fig-latenight-sleepquality-exceedance
+#| fig-cap: "Predicted probability of poor sleep quality as a function of late-night gaming. The line shows the probability of reporting poor sleep quality (Fairly bad or Very bad) at minute-level resolution from 0 to 90 minutes of average daily late-night gaming. The ribbon represents 95% confidence intervals. Vertical reference lines show the median, mean, 75th percentile, and 90th percentile of the sample distribution. The marginal density plot (top panel) shows the distribution of late-night gaming in the sample. Model predictions are derived from the H1a ordinal mixed-effects model adjusting for age, BMI, SES, region, gender, and weekday vs. weekend, with covariates held at their means/reference levels."
+#| fig-width: 9
+#| fig-height: 6
+#| code-summary: "Probability of poor sleep quality by late-night gaming"
+
+library(ordinal)
+library(emmeans)
+library(patchwork)
+
+# Load the fitted H1a model
+h1a_model <- readRDS("output/models/imputed_model_h1a.rds")
+
+# Use minute-level granularity from 0 to 90 minutes
+ln_sequence <- seq(0, 90, by = 1)
+
+# Keep x-axis ticks at 30-minute intervals
+ln_bins <- c(0, 30, 60, 90)
+
+# Calculate distribution statistics for reference lines
+ln_stats <- gamingMonthly |>
+  filter(!is.na(ln_monthly_avg_minutes_played)) |>
+  pull(ln_monthly_avg_minutes_played) |>
+  {\(x) list(
+    mean = mean(x),
+    median = median(x),
+    p75 = quantile(x, 0.75),
+    p90 = quantile(x, 0.90)
+  )}()
+
+# Get exceedance probabilities using emmeans
+# mode = "exc.prob" computes P(Y > cut) for each threshold
+emm_spec <- emmeans(
+  h1a_model,
+  ~ ln_monthly_avg_minutes_played | cut,
+  at = list(ln_monthly_avg_minutes_played = ln_sequence),
+  mode = "exc.prob"
+)
+
+# Convert to dataframe
+emm_df <- as.data.frame(emm_spec)
+
+# Prepare for plotting
+# Filter to only P(Y > Fairly good) = "2|3" - probability of poor sleep (Fairly bad or Very bad)
+plot_data <- emm_df |>
+  filter(as.character(cut) == "2|3")
+
+# Prepare raw data for marginal distribution
+marginal_data <- gamingMonthly |>
+  filter(!is.na(ln_monthly_avg_minutes_played)) |>
+  select(ln_monthly_avg_minutes_played)
+
+# Create distribution panel (top)
+p_dist <- ggplot(marginal_data, aes(x = ln_monthly_avg_minutes_played)) +
+  geom_density(fill = "gray70", color = "gray50", alpha = 0.6) +
+  # Add reference lines
+  geom_vline(xintercept = ln_stats$median, linetype = "dotted",
+             color = "gray40", linewidth = 0.5) +
+  geom_vline(xintercept = ln_stats$mean, linetype = "dashed",
+             color = "gray40", linewidth = 0.5) +
+  geom_vline(xintercept = ln_stats$p75, linetype = "dotted",
+             color = "gray40", linewidth = 0.5) +
+  geom_vline(xintercept = ln_stats$p90, linetype = "dashed",
+             color = "gray40", linewidth = 0.5) +
+  scale_x_continuous(
+    breaks = ln_bins,
+    labels = paste0(ln_bins, " min"),
+    limits = c(0, 90)
+  ) +
+  labs(y = "Density", x = NULL) +
+  theme_minimal(base_size = 11) +
+  theme(
+    panel.grid.minor = element_blank(),
+    axis.text.x = element_blank(),
+    axis.title.x = element_blank(),
+    plot.margin = margin(5, 5, 0, 5)
+  )
+
+# Create main plot with distribution reference lines
+p_main <- ggplot(plot_data, aes(x = ln_monthly_avg_minutes_played, y = exc.prob)) +
+  # Add vertical reference lines for distribution statistics
+  geom_vline(xintercept = ln_stats$median, linetype = "dotted",
+             color = "gray40", linewidth = 0.5) +
+  geom_vline(xintercept = ln_stats$mean, linetype = "dashed",
+             color = "gray40", linewidth = 0.5) +
+  geom_vline(xintercept = ln_stats$p75, linetype = "dotted",
+             color = "gray40", linewidth = 0.5) +
+  geom_vline(xintercept = ln_stats$p90, linetype = "dashed",
+             color = "gray40", linewidth = 0.5) +
+  # Add annotations for reference lines
+  annotate("text", x = ln_stats$median, y = 0.11,
+           label = "Median", angle = 90, vjust = -0.5, size = 3, color = "gray40") +
+  annotate("text", x = ln_stats$mean, y = 0.11,
+           label = "Mean", angle = 90, vjust = -0.5, size = 3, color = "gray40") +
+  annotate("text", x = ln_stats$p75, y = 0.11,
+           label = "75th %ile", angle = 90, vjust = -0.5, size = 3, color = "gray40") +
+  annotate("text", x = ln_stats$p90, y = 0.11,
+           label = "90th %ile", angle = 90, vjust = -0.5, size = 3, color = "gray40") +
+  # Exceedance probability ribbons and lines
+  geom_ribbon(aes(ymin = asymp.LCL, ymax = asymp.UCL),
+              alpha = 0.4, fill = "#f46d43",
+              color = "#f46d43", linewidth = 0.3, linetype = "dashed") +
+  geom_line(linewidth = 1.5, color = "#d62828") +
+  scale_x_continuous(
+    breaks = ln_bins,
+    labels = paste0(ln_bins, " min"),
+    limits = c(0, 90)
+  ) +
+  scale_y_continuous(labels = scales::percent_format(), limits = c(0, 0.12)) +
+  labs(
+    x = "Average Daily Late-Night Gaming",
+    y = "Probability of Poor Sleep Quality"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    panel.grid.minor = element_blank(),
+    axis.text.x = element_text(angle = 0, hjust = 0.5),
+    plot.margin = margin(0, 5, 5, 5)
+  )
+
+# Combine plots using patchwork
+(p_dist / p_main) +
+  plot_layout(heights = c(1, 3)) +
+  plot_annotation(
+    title = "Probability of Poor Sleep Quality by Late-Night Gaming"
+  )
+```
+
 ## H2
 
-The preregistration in the Stage 1 protocol [@ballou2024psychological] also specified four moderation models in which raw monthly or biweekly late-night minutes interacted with chronotype (mean sleep-on-free days corrected for sleep debt on weekdays) to predict the same four outcomes (H2a–H2d), again with random intercepts and random slopes for late-night gaming by participant and a random intercept for gender in the linear mixed models. In the analytical sample, median chronotype (`msf_sc_numeric`) was `r sprintf("%.1f", stats::median(master_data$msf_sc, na.rm = TRUE))` hours with an interquartile range of `r sprintf("%.1f", stats::IQR(master_data$msf_sc, na.rm = TRUE))` hours. When transferred to the Open Play data, the preregistered moderation structure proved too demanding: the combination of highly skewed late-night exposure, strong collinearity between chronotype and late-night play, and the cumulative link mixed model for ordinal sleep quality led to non-convergence and nearly singular variance–covariance matrices, particularly for H2a.
+The preregistration in the Stage 1 protocol [@ballou2024psychological] also specified four moderation models in which raw monthly or biweekly late-night minutes interacted with chronotype (mean sleep-on-free days corrected for sleep debt on weekdays) to predict the same four outcomes (H2a–H2d), again with random intercepts and random slopes for late-night gaming by participant and a random intercept for gender in the linear mixed models. In the analytical sample, median chronotype was `r sprintf("%.1f", stats::median(master_data$msf_sc, na.rm = TRUE))` hours with an interquartile range of `r sprintf("%.1f", stats::IQR(master_data$msf_sc, na.rm = TRUE))` hours. When transferred to the Open Play data, the preregistered moderation structure proved too demanding: the combination of highly skewed late-night exposure, strong collinearity between chronotype and late-night play, and the cumulative link mixed model for ordinal sleep quality led to non-convergence and nearly singular variance–covariance matrices, particularly for H2a.
 
 In the final models we therefore mean-centred chronotype (`msf_sc_centered`) and simplified the random-effects structures to random intercepts for participants (and for gender where supported), while keeping the interaction terms for all four outcomes. Relative to the preregistration, H2a drops the random slope on late-night minutes for participants and uses the centred chronotype term, H2b simplifies `(1 + monthly_avg_minutes_played | pid)` to `(1 | pid)` while retaining `(1 | gender)`, H2c already specified a random-intercept-only structure for participants and mainly deviates through the use of centred chronotype, and H2d mirrors H2b in simplifying the participant random effects from `(1 + monthly_avg_minutes_played | pid)` to `(1 | pid)` alongside the same chronotype centring. The ordinal H2a model still exhibits known identifiability issues for cumulative link mixed models with interactions, so its interaction term is interpreted cautiously and our substantive conclusions about moderation rely primarily on the linear mixed-effects models (H2b–H2d). As with H1, the full pattern of main and interaction effects, along with random-effect estimates, is presented in the H2 regression summary table.
 
@@ -1168,9 +1363,90 @@ Although not part of our preregistered hypotheses, the main effect of late-night
 
 h2_models <- list()
 
+fit_h2_models_inline <- function(inputs, version_label) {
+  gamingMonthly <- inputs$gamingMonthly |>
+    enforce_monthly_wave_subset()
+
+  gamingBiweekly <- inputs$gamingBiweekly
+
+  gamingMonthly_complete <- gamingMonthly |>
+    filter(!is.na(msf_sc_centered), !is.na(total_hours_sleep), !is.na(epsTotal))
+
+  gamingBiweekly_complete <- gamingBiweekly |>
+    filter(!is.na(msf_sc_centered), !is.na(wemwbs))
+
+  if (nrow(gamingMonthly_complete) < 50 || nrow(gamingBiweekly_complete) < 50) {
+    message(
+      sprintf(
+        "Skipping H2 models for %s version: insufficient complete cases (monthly: %d, biweekly: %d)",
+        version_label,
+        nrow(gamingMonthly_complete),
+        nrow(gamingBiweekly_complete)
+      )
+    )
+    return(NULL)
+  }
+
+  gamingMonthly_h2 <- gamingMonthly |>
+    mutate(
+      psqi_comp1_quality_rounded = round(psqi_comp1_quality),
+      psqi_6_ord = factor(
+        psqi_comp1_quality_rounded,
+        levels = c(0, 1, 2, 3),
+        labels = c("Very good", "Fairly good", "Fairly bad", "Very bad"),
+        ordered = TRUE
+      )
+    ) |>
+    filter(!is.na(psqi_6_ord), !is.na(msf_sc_centered))
+
+  model.h2a <- clmm(
+    psqi_6_ord ~ ln_monthly_avg_minutes_played * msf_sc_centered +
+      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+      (1 | pid),
+    data = gamingMonthly_h2,
+    control = clmm.control(maxIter = 1000, gradTol = 1e-4)
+  )
+
+  model.h2b <- lmer(
+    total_hours_sleep ~ ln_monthly_avg_minutes_played * msf_sc_centered +
+      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+      (1 | pid) + (1 | gender),
+    data = gamingMonthly_complete
+  )
+
+  model.h2c <- lmer(
+    wemwbs ~ ln_biweekly_avg_minutes_played * msf_sc_centered +
+      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+      (1 | pid) + (1 | gender),
+    data = gamingBiweekly_complete
+  )
+
+  model.h2d <- lmer(
+    epsTotal ~ ln_monthly_avg_minutes_played * msf_sc_centered +
+      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+      (1 | pid) + (1 | gender),
+    data = gamingMonthly_complete
+  )
+
+  saveRDS(model.h2a, glue("output/models/{version_label}_model_h2a.rds"))
+  saveRDS(model.h2b, glue("output/models/{version_label}_model_h2b.rds"))
+  saveRDS(model.h2c, glue("output/models/{version_label}_model_h2c.rds"))
+  saveRDS(model.h2d, glue("output/models/{version_label}_model_h2d.rds"))
+
+  list(
+    `H2a: Sleep Quality` = model.h2a,
+    `H2b: Sleep Duration` = model.h2b,
+    `H2c: Wellbeing` = model.h2c,
+    `H2d: Daytime Sleepiness` = model.h2d
+  )
+}
+
 if (eval_h2) {
   for (ver in names(gaming_inputs)) {
-    h2_models[[ver]] <- fit_h2_models(gaming_inputs[[ver]], ver)
+    fitted_models <- fit_h2_models_inline(gaming_inputs[[ver]], ver)
+    if (!is.null(fitted_models)) {
+      h2_models[[ver]] <- fitted_models
+    }
   }
 } else {
   for (ver in names(gaming_inputs)) {
@@ -1217,13 +1493,15 @@ if (eval_h2) {
 
 modelsummary(
   h2_models[[main_version]],
-  fmt = 2,
+  fmt = fmt_sprintf("%.2f"),
   estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
   statistic = NULL,
-  gof_omit = "AIC|BIC|Log|RMSE|R2",
+  gof_omit = "AIC|BIC|Log|RMSE|R2|ICC",
   coef_map = coef_map_h2,
+  add_rows = get_icc_rows(h2_models[[main_version]]),
   notes = c("+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
-            "LN = late-night. Confidence intervals shown in brackets."),
+            "LN = late-night. Confidence intervals shown in brackets.",
+            "ICC = Intraclass Correlation Coefficient (adjusted)."),
   title = "H2: Chronotype Moderation of Late-Night Gaming Effects (Imputed data)"
 )
 
@@ -1235,13 +1513,15 @@ modelsummary(
         supp_path <- glue("output/supplement/h2_{ver}_summary.html")
         modelsummary(
           h2_models[[ver]],
-          fmt = 2,
+          fmt = fmt_sprintf("%.2f"),
           estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
           statistic = NULL,
-          gof_omit = "AIC|BIC|Log|RMSE|R2",
+          gof_omit = "AIC|BIC|Log|RMSE|R2|ICC",
           coef_map = coef_map_h2,
+          add_rows = get_icc_rows(h2_models[[ver]]),
           notes = c("+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
-                    "LN = late-night. Confidence intervals shown in brackets."),
+                    "LN = late-night. Confidence intervals shown in brackets.",
+                    "ICC = Intraclass Correlation Coefficient (adjusted)."),
           title = glue("H2: Chronotype Moderation of Late-Night Gaming Effects ({stringr::str_to_title(ver)} data)"),
           output = supp_path
         )
@@ -1256,6 +1536,18 @@ modelsummary(
 # Discussion
 
 Our findings from a sample of adult gamers revealed patterns consistent with prior research: while sleep duration remained relatively preserved (7.2 hours), sleep quality showed greater impairment, with 64% classified as poor sleepers. These patterns suggest that sleep quality and architecture may be more vulnerable to disruption than sleep duration in the context of regular gaming behavior.
+
+## Limitations
+
+First, our telemetry and survey instruments capture console and PC play but exclude mobile platforms. Gaming on smartphones and tablets forms a substantial share of late-night leisure, particularly in bed where devices are at arm’s reach and can bypass household curfews. Phones also double as tools for emotional regulation, relaxation, and boredom relief before sleep or when people wake up during the night, further increasing the odds that meaningful late-night gaming takes place on devices we do not observe. Any late-night gaming minutes that shifted to mobile therefore go unmeasured, likely biasing exposure downward and attenuating observed associations with sleep. Related activities on the same devices like short-form video viewing, doomscrolling, messaging are also missing, preventing us from disentangling gaming-specific effects from broader nocturnal screen engagement.
+
+Second, the analytic sample consists of early adults. This demographic is commercially important for platform gaming, yet the educational and developmental stakes that motivate policy debates revolve around children and adolescents. Younger players have different sleep physiology, earlier school start times, tighter parental controls, and distinct motivational profiles that could amplify or dampen the impact of late-night play. Our estimates should not be generalized to pediatric populations (or to older adults with different health burdens) without direct evidence.
+
+Third, recruitment relied on UK- and US-based majority Prolific panels, which may diverge markedly from the general gaming population for several reasons. Prolific users are self-selected online workers with reliable broadband, high digital literacy, and the patience for repeated surveys. Platform eligibility emphasizes UK/US residency, English fluency, and adherence to Prolific’s compliance checks, which excludes players in other linguistic, cultural, and regulatory contexts. Incentives attract habitual survey takers with flexible schedules, potentially underrepresenting shift workers, caregivers, or gamers with highly variable sleep routines. Community standards and attention checks may dissuade individuals engaged in more extreme, unregulated, or stigmatized gaming profiles from participating, while payment infrastructures and screening filters can limit participation from lower-income players, people without stable online payment methods, and those who distrust research platforms.
+
+Finally, although logged telemetry is widely recommended for media-effects research—and we did find that it is strongly correlated with self-reported video game play—it is not without limitations. Session-level records cannot distinguish between active engagement and idle time, and this ambiguity is especially pronounced for late-night gaming, where consoles or PCs might stay on while players drift off to sleep or attend to household chores. Such overestimation of exposure could mask true associations or produce spurious late-night “activity” that does not reflect cognitive arousal.
+
+Taken together, the lack of mobile telemetry, the age range of the sample, the geographic/panel constraints, and the inability to rule out idle device time mean that our findings speak most directly to digitally engaged young adults in the UK and US who play on major console and PC ecosystems. Extending the conclusions to other regions, life stages, device ecologies, or logging systems should await complementary data sources.
 
 # References
 
@@ -1281,13 +1573,15 @@ These models use only observations where the outcome variable was NOT imputed (c
 if ("completecase" %in% names(h1_models)) {
   modelsummary(
     h1_models[["completecase"]],
-    fmt = 2,
+    fmt = fmt_sprintf("%.2f"),
     estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
     statistic = NULL,
-    gof_omit = "AIC|BIC|Log|RMSE|R2",
+    gof_omit = "AIC|BIC|Log|RMSE|R2|ICC",
     coef_map = coef_map_h1,
+    add_rows = get_icc_rows(h1_models[["completecase"]]),
     notes = c("+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
-              "LN = late-night. Confidence intervals shown in brackets."),
+              "LN = late-night. Confidence intervals shown in brackets.",
+              "ICC = Intraclass Correlation Coefficient (adjusted)."),
     title = "Appendix H1: Effects of Late-Night Gaming (Complete-Case Analysis)"
   )
 } else {
@@ -1312,13 +1606,15 @@ These models use only observations where the outcome variable was NOT imputed (c
 if ("completecase" %in% names(h2_models)) {
   modelsummary(
     h2_models[["completecase"]],
-    fmt = 2,
+    fmt = fmt_sprintf("%.2f"),
     estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
     statistic = NULL,
-    gof_omit = "AIC|BIC|Log|RMSE|R2",
+    gof_omit = "AIC|BIC|Log|RMSE|R2|ICC",
     coef_map = coef_map_h2,
+    add_rows = get_icc_rows(h2_models[["completecase"]]),
     notes = c("+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
-              "LN = late-night. Confidence intervals shown in brackets."),
+              "LN = late-night. Confidence intervals shown in brackets.",
+              "ICC = Intraclass Correlation Coefficient (adjusted)."),
     title = "Appendix H2: Chronotype Moderation (Complete-Case Analysis)"
   )
 } else {
@@ -1332,7 +1628,7 @@ if ("completecase" %in% names(h2_models)) {
 
 ### Wave-Level Missingness (Pre-Imputation Data)
 
-We summarised the extent of missingness for the key self-report outcomes across each survey wave in the raw data before imputation.
+We summarised the extent of missingness for the key self-report outcomes across each survey wave in the raw data before imputation. The `Observations` column reports the number of participants in a wave who completed at least one of the listed measures; the percentages in each row are calculated relative to that wave-specific participant count.
 
 ```{r}
 #| label: appendix-wave-missingness
@@ -1346,16 +1642,28 @@ library(tinytable)
 missing_measures <- c("psqi_comp1_quality", "total_hours_sleep", "epsTotal", "wemwbs")
 missing_flags <- paste0(missing_measures, "_imputed_flag")
 
+wave_observations <- selfreport |>
+  filter(!is.na(wave)) |>
+  mutate(
+    has_any_measure = if_any(all_of(missing_measures), ~!is.na(.x))
+  ) |>
+  group_by(wave) |>
+  summarise(
+    Observations = dplyr::n_distinct(pid[has_any_measure]),
+    .groups = "drop"
+  )
+
 wave_missing_counts <- selfreport |>
   filter(!is.na(wave)) |>
   group_by(wave) |>
   summarise(
-    Observations = dplyr::n_distinct(pid),
     across(all_of(missing_flags), ~sum(.x, na.rm = TRUE)),
     .groups = "drop"
   ) |>
+  left_join(wave_observations, by = "wave") |>
   arrange(wave) |>
   mutate(
+    Observations = dplyr::coalesce(Observations, 0L),
     Wave = as.integer(wave)
   ) |>
   select(Wave, Observations, all_of(missing_flags)) |>
@@ -1420,7 +1728,7 @@ gamingMonthly_completecase <- gaming_inputs$completecase$gamingMonthly |>
 # Fit model with imputed data
 model_psqi_global_imputed <- lmer(
   psqi_global ~ ln_monthly_avg_minutes_played +
-    age_scaled + bmi_scaled + SES_index_scaled + region + gender + isWeekend +
+    age_scaled + bmi_scaled + SES_index_scaled + region  + isWeekend +
     (1 | pid) + (1 | gender),
   data = gamingMonthly_imputed,
   control = lmerControl(optimizer = "bobyqa")
@@ -1429,7 +1737,24 @@ model_psqi_global_imputed <- lmer(
 # Fit model with complete-case data (excluding imputed PSQI global observations)
 model_psqi_global_completecase <- lmer(
   psqi_global ~ ln_monthly_avg_minutes_played +
-    age_scaled + bmi_scaled + SES_index_scaled + region + gender + isWeekend +
+    age_scaled + bmi_scaled + SES_index_scaled + region  + isWeekend +
+    (1 | pid) + (1 | gender),
+  data = gamingMonthly_completecase,
+  control = lmerControl(optimizer = "bobyqa")
+)
+
+# Fit chronotype × playtime interaction models
+model_psqi_global_imputed_chrono <- lmer(
+  psqi_global ~ ln_monthly_avg_minutes_played * msf_sc_centered +
+    age_scaled + bmi_scaled + SES_index_scaled + region  + isWeekend +
+    (1 | pid) + (1 | gender),
+  data = gamingMonthly_imputed,
+  control = lmerControl(optimizer = "bobyqa")
+)
+
+model_psqi_global_completecase_chrono <- lmer(
+  psqi_global ~ ln_monthly_avg_minutes_played * msf_sc_centered +
+    age_scaled + bmi_scaled + SES_index_scaled + region  + isWeekend +
     (1 | pid) + (1 | gender),
   data = gamingMonthly_completecase,
   control = lmerControl(optimizer = "bobyqa")
@@ -1442,6 +1767,8 @@ psqi_label_lookup <- c(
   "age_scaled" = "Age (scaled)",
   "bmi_scaled" = "BMI (scaled)",
   "SES_index_scaled" = "SES (scaled)",
+  "msf_sc_centered" = "Chronotype (centered)",
+  "ln_monthly_avg_minutes_played:msf_sc_centered" = "LN gaming × Chronotype (monthly)",
   "isWeekend" = "Day: Weekend",
   "SD (Intercept pid)" = "SD (Intercept | Participant)",
   "SD (Intercept gender)" = "SD (Intercept | Gender)",
@@ -1455,6 +1782,11 @@ psqi_base_terms <- c(
   "SES_index_scaled"
 )
 
+psqi_moderator_terms <- c(
+  "msf_sc_centered",
+  "ln_monthly_avg_minutes_played:msf_sc_centered"
+)
+
 psqi_random_terms <- c(
   "SD (Intercept pid)",
   "SD (Intercept gender)",
@@ -1464,12 +1796,17 @@ psqi_random_terms <- c(
 psqi_base_map <- psqi_label_lookup[psqi_base_terms]
 psqi_base_map <- psqi_base_map[!is.na(psqi_base_map)]
 
+psqi_moderator_map <- psqi_label_lookup[psqi_moderator_terms]
+psqi_moderator_map <- psqi_moderator_map[!is.na(psqi_moderator_map)]
+
 psqi_random_map <- psqi_label_lookup[psqi_random_terms]
 psqi_random_map <- psqi_random_map[!is.na(psqi_random_map)]
 
 fixef_names <- unique(c(
   names(lme4::fixef(model_psqi_global_imputed)),
-  names(lme4::fixef(model_psqi_global_completecase))
+  names(lme4::fixef(model_psqi_global_completecase)),
+  names(lme4::fixef(model_psqi_global_imputed_chrono)),
+  names(lme4::fixef(model_psqi_global_completecase_chrono))
 ))
 fixef_names <- fixef_names[fixef_names != "(Intercept)"]
 
@@ -1494,6 +1831,7 @@ if ("isWeekend" %in% fixef_names) {
 
 coef_map_psqi_global <- c(
   psqi_base_map,
+  psqi_moderator_map,
   region_map,
   gender_map,
   weekend_term,
@@ -1501,22 +1839,35 @@ coef_map_psqi_global <- c(
 )
 coef_map_psqi_global <- coef_map_psqi_global[!is.na(coef_map_psqi_global)]
 
+psqi_models_list <- list(
+  "Playtime (Imputed)" = model_psqi_global_imputed,
+  "Chronotype × Playtime (Imputed)" = model_psqi_global_imputed_chrono,
+  "Playtime (Complete-Case)" = model_psqi_global_completecase,
+  "Chronotype × Playtime (Complete-Case)" = model_psqi_global_completecase_chrono
+)
+
+psqi_group_cols <- seq_along(psqi_models_list) + 1
+
 modelsummary(
-  list(
-    "PSQI Global (Imputed)" = model_psqi_global_imputed,
-    "PSQI Global (Complete-Case)" = model_psqi_global_completecase
-  ),
-  fmt = 2,
+  psqi_models_list,
+  fmt = fmt_sprintf("%.2f"),
   estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
   statistic = NULL,
-  gof_omit = "AIC|BIC|Log|RMSE|R2",
+  gof_omit = "AIC|BIC|Log|RMSE|R2|ICC",
   coef_map = coef_map_psqi_global,
+  add_rows = get_icc_rows(psqi_models_list),
   notes = c(
     "+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
     "PSQI global score range: 0-21 (higher = worse sleep quality)",
-    "Confidence intervals shown in brackets."
+    "Confidence intervals shown in brackets.",
+    "ICC = Intraclass Correlation Coefficient (adjusted)."
+  ),
+  output = "tinytable"
+) |>
+  group_tt(
+    j = list("PSQI Global" = psqi_group_cols),
+    part = "header"
   )
-)
 ```
 
 ```{=typst}
