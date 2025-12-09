@@ -37,7 +37,16 @@ jobs:
           r-version: '4.5.1'
           use-public-rspm: true
 
-      # Step 3: Install system dependencies
+      # Step 3: Cache R packages
+      - name: Cache R packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: ${{ runner.os }}-r-${{ hashFiles('**/manuscript.qmd', '**/helpers.R', '**/imputation.R', '**/preprocess_data.R') }}
+          restore-keys: |
+            ${{ runner.os }}-r-
+
+      # Step 4: Install system dependencies
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -57,48 +66,42 @@ jobs:
             libgeos-dev \
             libproj-dev
 
-      # Step 5: Setup R dependencies (uses binary packages from Posit PPM - FAST!)
-      - name: Setup R dependencies
-        uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          cache-version: 2
-          extra-packages: |
-            any::tidyverse
-            any::lme4
-            any::marginaleffects
-            any::glmmTMB
-            any::mice
-            any::ordinal
-            any::modelsummary
-            any::tinytable
-            any::lubridate
-            any::data.table
-            any::mctq
-            any::glue
-            any::parameters
-            any::performance
-            any::withr
-            any::report
-            any::ggdist
-            any::patchwork
-            any::ggpattern
-            any::zoo
-            any::future
-            any::future.apply
+      # Step 5: Install pacman package manager
+      - name: Install pacman
+        run: |
+          Rscript -e 'if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")'
 
-      # Step 6: Install questionnaires from r-universe
-      - name: Install questionnaires package
+      # Step 6: Install R packages (including from r-universe)
+      - name: Install R packages
         run: |
           Rscript -e '
+          # Configure repositories (LCBC-UiO r-universe + CRAN)
           options(repos = c(
             lcbcuio = "https://lcbc-uio.r-universe.dev",
             CRAN = "https://cloud.r-project.org"
           ))
-          if (!requireNamespace("questionnaires", quietly = TRUE)) {
-            install.packages("questionnaires")
+
+          # Use pak for faster parallel installation
+          if (!requireNamespace("pak", quietly = TRUE)) {
+            install.packages("pak")
           }
-          cat("✓ questionnaires package installed\n")
+
+          cat("Installing R packages via pak (parallel + binary)...\n")
+
+          # Install questionnaires from r-universe first
+          pak::pkg_install("questionnaires")
+
+          # Install all other packages in parallel
+          pak::pkg_install(c(
+            "tidyverse", "lme4", "marginaleffects", "glmmTMB", "mice", "ordinal",
+            "modelsummary", "tinytable", "lubridate", "data.table", "mctq", "glue",
+            "parameters", "performance", "withr", "report", "ggdist", "patchwork",
+            "ggpattern", "zoo", "future", "future.apply"
+          ))
+
+          cat("All R packages installed successfully!\n")
           '
+        shell: bash
 
       # Step 7: Setup Quarto
       - name: Setup Quarto
