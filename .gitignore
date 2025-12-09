@@ -1,10 +1,6 @@
 /.quarto/
 **/*.quarto_ipynb
 
-# Allow README and GitHub workflows
-!README.md
-!.github/
-
 *.md
 *.html
 *.pdf
@@ -32,6 +28,10 @@ data/*
 
 .*/
 R/*
+
+# Allow README and GitHub workflows (must come after broader patterns)
+!README.md
+!.github/
 
 *cache*
 **/cache/**

@@ -1,0 +1,185 @@
+name: Build and Deploy Manuscript
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+# Required for GitHub Pages deployment
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      # Step 2: Setup R
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.5.1'
+          use-public-rspm: true
+
+      # Step 3: Cache R packages
+      - name: Cache R packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: ${{ runner.os }}-r-${{ hashFiles('**/manuscript.qmd', '**/helpers.R', '**/imputation.R', '**/preprocess_data.R') }}
+          restore-keys: |
+            ${{ runner.os }}-r-
+
+      # Step 4: Install system dependencies
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libcurl4-openssl-dev \
+            libssl-dev \
+            libxml2-dev \
+            libfontconfig1-dev \
+            libharfbuzz-dev \
+            libfribidi-dev \
+            libfreetype6-dev \
+            libpng-dev \
+            libtiff5-dev \
+            libjpeg-dev
+
+      # Step 5: Install pacman package manager
+      - name: Install pacman
+        run: |
+          Rscript -e 'if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")'
+
+      # Step 6: Install R packages (including from r-universe)
+      - name: Install R packages
+        run: |
+          Rscript -e '
+          # Configure repositories (LCBC-UiO r-universe + CRAN)
+          options(repos = c(
+            lcbcuio = "https://lcbc-uio.r-universe.dev",
+            CRAN = "https://cloud.r-project.org"
+          ))
+
+          # Install questionnaires from r-universe first
+          if (!requireNamespace("questionnaires", quietly = TRUE)) {
+            cat("Installing questionnaires from LCBC-UiO r-universe...\n")
+            install.packages("questionnaires")
+          }
+
+          # Install all other packages via pacman
+          if (!requireNamespace("pacman", quietly = TRUE)) {
+            install.packages("pacman")
+          }
+
+          cat("Installing R packages via pacman...\n")
+          pacman::p_load(
+            tidyverse, lme4, marginaleffects, glmmTMB, mice, ordinal,
+            modelsummary, tinytable, lubridate, data.table, mctq, glue,
+            parameters, performance, withr, report, ggdist, patchwork,
+            ggpattern, zoo, future, future.apply
+          )
+
+          cat("All R packages installed successfully!\n")
+          '
+        shell: bash
+
+      # Step 7: Setup Quarto
+      - name: Setup Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          version: '1.8.25'
+
+      # Step 8: Verify Quarto freeze cache
+      - name: Verify freeze cache
+        run: |
+          if [ -d "_freeze" ]; then
+            echo "✓ Freeze cache found. Size:"
+            du -sh _freeze/
+            echo "Contents:"
+            ls -la _freeze/manuscript/execute-results/ || echo "No execute-results yet"
+          else
+            echo "⚠ Warning: No freeze cache directory found"
+          fi
+
+      # Step 9: Render manuscript to HTML only
+      - name: Render manuscript
+        run: |
+          echo "Rendering manuscript.qmd to HTML..."
+          quarto render manuscript.qmd --to html
+        env:
+          QUARTO_PRINT_STACK: "true"
+
+      # Step 10: Verify output
+      - name: Verify manuscript output
+        run: |
+          if [ -f "manuscript.html" ]; then
+            echo "✓ manuscript.html generated successfully"
+            ls -lh manuscript.html
+          else
+            echo "✗ ERROR: manuscript.html not found"
+            echo "Contents of current directory:"
+            ls -la
+            exit 1
+          fi
+
+      # Step 11: Create index.html redirect (for cleaner URLs)
+      - name: Create GitHub Pages index
+        if: github.ref == 'refs/heads/main'
+        run: |
+          cat > index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta http-equiv="refresh" content="0; url=./manuscript.html">
+            <title>Late-Night Gaming, Sleep and Wellbeing</title>
+            <meta name="description" content="Stage 1 Registered Report on late-night gaming and its effects on sleep and wellbeing">
+          </head>
+          <body>
+            <p>Redirecting to <a href="./manuscript.html">manuscript</a>...</p>
+          </body>
+          </html>
+          EOF
+          echo "✓ Created index.html redirect"
+
+      # Step 12: Setup GitHub Pages
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+        if: github.ref == 'refs/heads/main'
+
+      # Step 13: Upload artifact for GitHub Pages
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          path: '.'
+
+  # Deployment job (only runs on main branch)
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
