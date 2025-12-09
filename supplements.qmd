@@ -35,8 +35,8 @@ p_load(tidyverse, tinytable, lubridate, mctq)
 source("preprocess_data.R")
 
 # Load and process data
-data.intake <- process_intake("data/intake.csv.gz")
-data.panel <- process_panel("data/panel.csv.gz", data.intake)
+data.intake <- process_intake("data/survey_intake.csv.gz")
+data.panel <- process_panel("data/survey_biweekly.csv.gz", data.intake)
 ```
 
 ## Table S1: Pittsburgh Sleep Quality Index (PSQI) Components
@@ -493,7 +493,7 @@ library(patchwork)
 
 # Load RAW panel data (before validation rules are applied)
 # This ensures we see the true distribution of intervals before cleaning
-data.panel_raw <- read_csv("data/panel.csv.gz", show_col_types = FALSE)
+data.panel_raw <- read_csv("data/survey_biweekly.csv.gz", show_col_types = FALSE)
 
 # Calculate intervals between time points from RAW data
 mctq_intervals <- data.panel_raw |>
@@ -964,7 +964,7 @@ tt(other_measures,
 
 The Pittsburgh Sleep Quality Index assesses sleep quality over the past month through 19 self-rated questions across 7 components:
 
-1. **Subjective sleep quality** (psqi_06): Overall self-rating of sleep quality
+1. **Subjective sleep quality** (psqi_comp1_quality): Overall self-rating of sleep quality
 2. **Sleep latency** (psqi_02, psqi_05a): Time to fall asleep and frequency of trouble falling asleep
 3. **Sleep duration** (psqi_04): Hours of actual sleep per night  
 4. **Sleep efficiency** (psqi_01, psqi_03, psqi_04): Percentage of time in bed actually spent sleeping
@@ -994,6 +994,142 @@ The Munich ChronoType Questionnaire collects information about typical sleep-wak
 
 **Derived Measure:**
 - MSF~sc~ (msf_sc_numeric): Mid-sleep on free days corrected for sleep debt on work days, representing an individual's circadian phase/chronotype
+
+# Individual Regression Model Tables
+
+This section provides detailed output for each individual regression model. Combined summary tables are presented in the main manuscript.
+
+```{r}
+#| label: setup-models
+#| message: false
+#| warning: false
+
+# Load modelsummary for regression tables
+if (!require("modelsummary")) install.packages("modelsummary")
+library(modelsummary)
+
+# Load saved models
+model.h1a <- readRDS("output/models/model_h1a.rds")
+model.h1b <- readRDS("output/models/model_h1b.rds")
+model.h1c <- readRDS("output/models/model_h1c.rds")
+model.h1d <- readRDS("output/models/model_h1d.rds")
+model.h2a <- readRDS("output/models/model_h2a.rds")
+model.h2b <- readRDS("output/models/model_h2b.rds")
+model.h2c <- readRDS("output/models/model_h2c.rds")
+model.h2d <- readRDS("output/models/model_h2d.rds")
+```
+
+## Table S8: H1a - Sleep Quality Model
+
+```{r}
+#| label: tbl-h1a
+#| tbl-cap: "H1a: Late-night gaming predicting sleep quality (ordinal regression)"
+
+modelsummary(
+  list(`Model H1a` = model.h1a),
+  fmt = 2,
+  estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
+  statistic = NULL
+)
+```
+
+## Table S9: H1b - Sleep Duration Model
+
+```{r}
+#| label: tbl-h1b
+#| tbl-cap: "H1b: Late-night gaming predicting sleep duration (linear mixed model)"
+
+modelsummary(
+  list(`Model H1b` = model.h1b),
+  fmt = 2,
+  estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
+  statistic = NULL
+)
+```
+
+## Table S10: H1c - Wellbeing Model
+
+```{r}
+#| label: tbl-h1c
+#| tbl-cap: "H1c: Late-night gaming predicting wellbeing (linear mixed model)"
+
+modelsummary(
+  list(`Model H1c` = model.h1c),
+  fmt = 2,
+  estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
+  statistic = NULL
+)
+```
+
+## Table S11: H1d - Daytime Sleepiness Model
+
+```{r}
+#| label: tbl-h1d
+#| tbl-cap: "H1d: Late-night gaming predicting daytime sleepiness (linear mixed model)"
+
+modelsummary(
+  list(`Model H1d` = model.h1d),
+  fmt = 2,
+  estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
+  statistic = NULL
+)
+```
+
+## Table S12: H2a - Sleep Quality × Chronotype Model
+
+```{r}
+#| label: tbl-h2a
+#| tbl-cap: "H2a: Late-night gaming × chronotype predicting sleep quality (ordinal regression)"
+
+modelsummary(
+  list(`Model H2a` = model.h2a),
+  fmt = 2,
+  estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
+  statistic = NULL
+)
+```
+
+## Table S13: H2b - Sleep Duration × Chronotype Model
+
+```{r}
+#| label: tbl-h2b
+#| tbl-cap: "H2b: Late-night gaming × chronotype predicting sleep duration (linear mixed model)"
+
+modelsummary(
+  list(`Model H2b` = model.h2b),
+  fmt = 2,
+  estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
+  statistic = NULL
+)
+```
+
+## Table S14: H2c - Wellbeing × Chronotype Model
+
+```{r}
+#| label: tbl-h2c
+#| tbl-cap: "H2c: Late-night gaming × chronotype predicting wellbeing (linear mixed model)"
+
+modelsummary(
+  list(`Model H2c` = model.h2c),
+  fmt = 2,
+  estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
+  statistic = NULL
+)
+```
+
+## Table S15: H2d - Daytime Sleepiness × Chronotype Model
+
+```{r}
+#| label: tbl-h2d
+#| tbl-cap: "H2d: Late-night gaming × chronotype predicting daytime sleepiness (linear mixed model)"
+
+modelsummary(
+  list(`Model H2d` = model.h2d),
+  fmt = 2,
+  estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
+  statistic = NULL
+)
+```
 
 # References
 
