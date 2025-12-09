@@ -33,6 +33,10 @@ R/*
 !README.md
 !.github/
 
+# Allow docs folder for GitHub Pages
+!docs/
+!docs/**
+
 *cache*
 **/cache/**
 **/*cache*/
