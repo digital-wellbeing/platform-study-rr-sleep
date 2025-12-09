@@ -81,24 +81,23 @@ jobs:
             CRAN = "https://cloud.r-project.org"
           ))
 
+          # Use pak for faster parallel installation
+          if (!requireNamespace("pak", quietly = TRUE)) {
+            install.packages("pak")
+          }
+
+          cat("Installing R packages via pak (parallel + binary)...\n")
+
           # Install questionnaires from r-universe first
-          if (!requireNamespace("questionnaires", quietly = TRUE)) {
-            cat("Installing questionnaires from LCBC-UiO r-universe...\n")
-            install.packages("questionnaires")
-          }
+          pak::pkg_install("questionnaires")
 
-          # Install all other packages via pacman
-          if (!requireNamespace("pacman", quietly = TRUE)) {
-            install.packages("pacman")
-          }
-
-          cat("Installing R packages via pacman...\n")
-          pacman::p_load(
-            tidyverse, lme4, marginaleffects, glmmTMB, mice, ordinal,
-            modelsummary, tinytable, lubridate, data.table, mctq, glue,
-            parameters, performance, withr, report, ggdist, patchwork,
-            ggpattern, zoo, future, future.apply
-          )
+          # Install all other packages in parallel
+          pak::pkg_install(c(
+            "tidyverse", "lme4", "marginaleffects", "glmmTMB", "mice", "ordinal",
+            "modelsummary", "tinytable", "lubridate", "data.table", "mctq", "glue",
+            "parameters", "performance", "withr", "report", "ggdist", "patchwork",
+            "ggpattern", "zoo", "future", "future.apply"
+          ))
 
           cat("All R packages installed successfully!\n")
           '
