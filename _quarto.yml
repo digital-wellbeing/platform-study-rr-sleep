@@ -1,5 +1,6 @@
 project:
   title: "Quarto preprint"
+  output-dir: docs
 
 format:
   html:

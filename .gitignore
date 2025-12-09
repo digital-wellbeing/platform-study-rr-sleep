@@ -1,6 +1,10 @@
 /.quarto/
 **/*.quarto_ipynb
 
+# Allow README and GitHub workflows
+!README.md
+!.github/
+
 *.md
 *.html
 *.pdf
