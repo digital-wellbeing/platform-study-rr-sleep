@@ -93,7 +93,7 @@ jobs:
 
           # Install all other packages in parallel
           pak::pkg_install(c(
-            "tidyverse", "lme4", "marginaleffects", "glmmTMB", "mice", "ordinal",
+            "tidyverse", "lme4", "marginaleffects", "emmeans", "glmmTMB", "mice", "ordinal",
             "modelsummary", "tinytable", "litedown", "lubridate", "data.table", "mctq", "glue",
             "parameters", "performance", "withr", "report", "ggdist", "patchwork",
             "ggpattern", "zoo", "future", "future.apply"
