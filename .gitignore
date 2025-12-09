@@ -14,6 +14,9 @@
 *.xlsb
 /.luarc.json
 data/*
+# Allow processed data and survey data for CI
+!data/processed/
+!data/survey_*.csv.gz
 
 *.js
 *.css
