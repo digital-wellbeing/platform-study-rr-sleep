@@ -1092,8 +1092,8 @@ if (!length(h1_models)) {
 library(tinytable)
 
 coef_map_h1 <- c(
-  "ln_monthly_avg_minutes_played" = "Daily LN gaming (monthly)",
-  "ln_biweekly_avg_minutes_played" = "Daily LN gaming (biweekly)",
+  "ln_monthly_avg_minutes_played" = "Daily LN gaming (min/day, monthly)",
+  "ln_biweekly_avg_minutes_played" = "Daily LN gaming (min/day, biweekly)",
   "age_scaled" = "Age (scaled)",
   "bmi_scaled" = "BMI (scaled)",
   "SES_index_scaled" = "SES (scaled)",
@@ -1119,7 +1119,7 @@ modelsummary(
     statistic = NULL,
     gof_omit = "AIC|BIC|Log|RMSE|R2|ICC",
     coef_map = coef_map_h1,
-    add_rows = get_icc_rows(h1_models[[main_version]]),
+    add_rows = get_custom_rows(h1_models[[main_version]]),
     notes = c("+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
               "LN = late-night. Confidence intervals shown in brackets.",
               "ICC = Intraclass Correlation Coefficient (adjusted)."),
@@ -1138,7 +1138,7 @@ if (length(supp_versions) > 0) {
       statistic = NULL,
       gof_omit = "AIC|BIC|Log|RMSE|R2|ICC",
       coef_map = coef_map_h1,
-      add_rows = get_icc_rows(h1_models[[ver]]),
+      add_rows = get_custom_rows(h1_models[[ver]]),
       notes = c("+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
                 "LN = late-night. Confidence intervals shown in brackets.",
                 "ICC = Intraclass Correlation Coefficient (adjusted)."),
@@ -1262,8 +1262,8 @@ p_main <- ggplot(plot_data, aes(x = ln_monthly_avg_minutes_played, y = exc.prob)
   ) +
   scale_y_continuous(labels = scales::percent_format(), limits = c(0, 0.12)) +
   labs(
-    x = "Average Daily Late-Night Gaming",
-    y = "Probability of Poor Sleep Quality"
+    x = "Average Daily Late-Night Gaming (min/day)",
+    y = "Predicted probability of poor sleep quality"
   ) +
   theme_minimal(base_size = 11) +
   theme(
@@ -1473,8 +1473,8 @@ if (eval_h2) {
   library(tinytable)
 
   coef_map_h2 <- c(
-    "ln_monthly_avg_minutes_played" = "Daily LN gaming (monthly)",
-    "ln_biweekly_avg_minutes_played" = "Daily LN gaming (biweekly)",
+    "ln_monthly_avg_minutes_played" = "Daily LN gaming (min/day, monthly)",
+    "ln_biweekly_avg_minutes_played" = "Daily LN gaming (min/day, biweekly)",
     "msf_sc_centered" = "Chronotype (centered)",
     "ln_monthly_avg_minutes_played:msf_sc_centered" = "LN gaming × Chronotype (monthly)",
     "ln_biweekly_avg_minutes_played:msf_sc_centered" = "LN gaming × Chronotype (biweekly)",
@@ -1498,7 +1498,7 @@ modelsummary(
   statistic = NULL,
   gof_omit = "AIC|BIC|Log|RMSE|R2|ICC",
   coef_map = coef_map_h2,
-  add_rows = get_icc_rows(h2_models[[main_version]]),
+  add_rows = get_custom_rows(h2_models[[main_version]]),
   notes = c("+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
             "LN = late-night. Confidence intervals shown in brackets.",
             "ICC = Intraclass Correlation Coefficient (adjusted)."),
@@ -1518,7 +1518,7 @@ modelsummary(
           statistic = NULL,
           gof_omit = "AIC|BIC|Log|RMSE|R2|ICC",
           coef_map = coef_map_h2,
-          add_rows = get_icc_rows(h2_models[[ver]]),
+          add_rows = get_custom_rows(h2_models[[ver]]),
           notes = c("+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
                     "LN = late-night. Confidence intervals shown in brackets.",
                     "ICC = Intraclass Correlation Coefficient (adjusted)."),
@@ -1578,7 +1578,7 @@ if ("completecase" %in% names(h1_models)) {
     statistic = NULL,
     gof_omit = "AIC|BIC|Log|RMSE|R2|ICC",
     coef_map = coef_map_h1,
-    add_rows = get_icc_rows(h1_models[["completecase"]]),
+    add_rows = get_custom_rows(h1_models[["completecase"]]),
     notes = c("+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
               "LN = late-night. Confidence intervals shown in brackets.",
               "ICC = Intraclass Correlation Coefficient (adjusted)."),
@@ -1611,7 +1611,7 @@ if ("completecase" %in% names(h2_models)) {
     statistic = NULL,
     gof_omit = "AIC|BIC|Log|RMSE|R2|ICC",
     coef_map = coef_map_h2,
-    add_rows = get_icc_rows(h2_models[["completecase"]]),
+    add_rows = get_custom_rows(h2_models[["completecase"]]),
     notes = c("+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
               "LN = late-night. Confidence intervals shown in brackets.",
               "ICC = Intraclass Correlation Coefficient (adjusted)."),
@@ -1763,7 +1763,7 @@ model_psqi_global_completecase_chrono <- lmer(
 # Create comparison table
 # Match the row structure of the H1/H2 summaries for easier cross-referencing
 psqi_label_lookup <- c(
-  "ln_monthly_avg_minutes_played" = "Daily LN gaming (monthly)",
+  "ln_monthly_avg_minutes_played" = "Daily LN gaming (min/day, monthly)",
   "age_scaled" = "Age (scaled)",
   "bmi_scaled" = "BMI (scaled)",
   "SES_index_scaled" = "SES (scaled)",
@@ -1855,7 +1855,7 @@ modelsummary(
   statistic = NULL,
   gof_omit = "AIC|BIC|Log|RMSE|R2|ICC",
   coef_map = coef_map_psqi_global,
-  add_rows = get_icc_rows(psqi_models_list),
+  add_rows = get_custom_rows(psqi_models_list),
   notes = c(
     "+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
     "PSQI global score range: 0-21 (higher = worse sleep quality)",
