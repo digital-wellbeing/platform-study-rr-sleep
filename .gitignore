@@ -7,7 +7,6 @@
 *.docx
 *.doc
 *.txt
-*.csv
 *.xlsx
 *.xls
 *.xlsm
@@ -15,16 +14,12 @@
 *.xlsb
 /.luarc.json
 data/*
+# Allow processed data and survey data for CI
+!data/processed/
+!data/survey_*.csv.gz
 
 *.js
 *.css
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.svg
-*.ico
-*.webp
 *.mp4
 *.mp3
 *.wav
@@ -33,6 +28,23 @@ data/*
 *.pdf
 *.woff
 *.tex
+
+.*/
+R/*
+
+# Allow README and GitHub workflows (must come after broader patterns)
+!README.md
+!.github/
+
 *cache*
 **/cache/**
 **/*cache*/
+
+# renv - commit lockfile but not library
+renv/library/
+renv/local/
+renv/cellar/
+renv/lock/
+renv/python/
+renv/sandbox/
+renv/staging/
