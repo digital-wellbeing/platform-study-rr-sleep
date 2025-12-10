@@ -14,6 +14,9 @@
 *.xlsb
 /.luarc.json
 data/*
+# Allow processed data and survey data for CI
+!data/processed/
+!data/survey_*.csv.gz
 
 *.js
 *.css
@@ -29,6 +32,19 @@ data/*
 .*/
 R/*
 
+# Allow README and GitHub workflows (must come after broader patterns)
+!README.md
+!.github/
+
 *cache*
 **/cache/**
 **/*cache*/
+
+# renv - commit lockfile but not library
+renv/library/
+renv/local/
+renv/cellar/
+renv/lock/
+renv/python/
+renv/sandbox/
+renv/staging/
