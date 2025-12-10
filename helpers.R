@@ -402,3 +402,68 @@ get_icc_rows <- function(models) {
 
   icc_df
 }
+
+#' Get custom rows for regression tables (participant counts + ICC)
+#'
+#' @param models Named list of fitted models (lmer or clmm)
+#' @return Data frame with both participant counts and ICC rows, positioned at start of GOF section
+get_custom_rows <- function(models) {
+  # Initialize data frames for participant counts and ICC values
+  participant_df <- data.frame(
+    term = "N Participants",
+    stringsAsFactors = FALSE
+  )
+
+  icc_df <- data.frame(
+    term = "ICC",
+    stringsAsFactors = FALSE
+  )
+
+  # Extract values for each model
+  for (i in seq_along(models)) {
+    model <- models[[i]]
+    model_name <- names(models)[i]
+
+    # Extract N participants based on model type
+    n_part <- tryCatch({
+      if (inherits(model, "clmm")) {
+        # For ordinal::clmm models, use ranef() to get random effects
+        # ranef() returns a list with one data.frame per grouping factor
+        # Number of rows = number of groups (participants)
+        nrow(ranef(model)$pid)
+      } else if (inherits(model, "lmerMod")) {
+        # For lme4::lmer models, use ngrps() to get number of groups
+        lme4::ngrps(model, "pid")
+      } else {
+        NA_integer_
+      }
+    }, error = function(e) NA_integer_)
+
+    # Ensure n_part is a scalar before converting to character
+    participant_df[[model_name]] <- as.character(n_part[1])
+
+    # Extract ICC (reuse existing logic from get_icc_rows)
+    icc_value <- tryCatch({
+      icc_result <- performance::icc(model)
+      if (!is.null(icc_result$ICC_adjusted)) {
+        sprintf("%.2f", icc_result$ICC_adjusted)
+      } else if (!is.null(icc_result$ICC_conditional)) {
+        sprintf("%.2f", icc_result$ICC_conditional)
+      } else {
+        NA_character_
+      }
+    }, error = function(e) NA_character_)
+
+    # Ensure icc_value is a scalar
+    icc_df[[model_name]] <- as.character(icc_value[1])
+  }
+
+  # Combine rows: participant count first, then ICC
+  combined <- rbind(participant_df, icc_df)
+
+  # CRITICAL: Set position attribute to place at START of GOF section
+  # Without this, rows would appear at the bottom of the table
+  attr(combined, "position") <- "gof_start"
+
+  return(combined)
+}
