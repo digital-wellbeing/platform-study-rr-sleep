@@ -1,51 +1,93 @@
-name: Sync manuscript to Google Drive (trackdown)
+name: Sync manuscript to Google Docs
 
 on:
   push:
     branches: [main]
-    paths:
-      - 'manuscript.qmd'
+    paths: ['manuscript.qmd']
   workflow_dispatch:
 
 jobs:
-  trackdown:
+  sync:
     runs-on: ubuntu-latest
-
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up R
-        uses: r-lib/actions/setup-r@v2
+      - uses: r-lib/actions/setup-r@v2
         with:
-          use-public-rspm: true
+          r-version: '4.5.2'
 
-      - name: Install trackdown
-        run: Rscript -e 'install.packages("trackdown")'
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::googledrive
+            any::gargle
+            github::claudiozandonella/trackdown@develop
 
-      - name: Write service account credentials
+      - name: Write service account key
         env:
-          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
-        run: echo "$GOOGLE_SERVICE_ACCOUNT_JSON" > /tmp/service_account.json
+          TRACKDOWN_SA_KEY: ${{ secrets.TRACKDOWN_SA_KEY }}
+        run: echo "$TRACKDOWN_SA_KEY" > /tmp/sa-key.json
 
-      - name: Sync manuscript to Google Drive
+      - name: Sync to Google Docs
         run: |
-          Rscript -e '
-          gargle::credentials_service_account(
-            scopes = "https://www.googleapis.com/auth/drive",
-            path = "/tmp/service_account.json"
-          ) |> googledrive::drive_auth(token = _)
+          library(googledrive)
+          library(trackdown)
 
-          tryCatch(
-            trackdown::update_file(
-              file = "manuscript.qmd",
-              hide_code = TRUE
-            ),
-            error = function(e) {
-              message("update_file failed, trying upload_file: ", conditionMessage(e))
-              trackdown::upload_file(
-                file = "manuscript.qmd",
-                hide_code = TRUE
-              )
-            }
+          # Authenticate with service account
+          drive_auth(path = "/tmp/sa-key.json")
+          trackdown_auth(token = drive_token())
+
+          # Find the shared trackdown folder
+          shared_folder <- drive_find(
+            q = "name = 'trackdown' and mimeType = 'application/vnd.google-apps.folder' and not 'me' in owners"
           )
-          '
+          if (nrow(shared_folder) == 0) stop("Shared trackdown/ folder not found")
+
+          target_file <- drive_find(
+            q = paste0("'", shared_folder$id, "' in parents and name = 'sleep-manuscript'")
+          )
+
+          # Process the qmd file with trackdown (hide code, extract text)
+          file_info <- trackdown:::get_file_info("manuscript.qmd")
+          document <- readLines("manuscript.qmd")
+          hidden_doc <- trackdown:::hide_code(document, file_info)
+
+          # Write processed text to temp file
+          dir.create(".trackdown", showWarnings = FALSE)
+          temp_file <- file.path(".trackdown", "manuscript.qmd")
+          writeLines(hidden_doc, temp_file)
+
+          if (nrow(target_file) == 0) {
+            message("File not found — uploading for the first time...")
+            drive_upload(
+              media = temp_file,
+              path = as_id(shared_folder$id),
+              name = "sleep-manuscript",
+              type = "document"
+            )
+            message("Successfully created sleep-manuscript in Google Docs!")
+          } else {
+            message("Found file: ", target_file$name, " (", target_file$id, ")")
+            drive_update(
+              file = target_file,
+              media = temp_file
+            )
+            message("Successfully synced manuscript to Google Docs!")
+
+            # Run rich text formatting
+            tryCatch(
+              trackdown:::run_rich_text(
+                text = hidden_doc,
+                document_ID = target_file$id,
+                extension = "qmd"
+              ),
+              error = function(e) message("Rich text formatting skipped: ", e$message)
+            )
+          }
+        shell: Rscript {0}
+
+      - name: Clean up key
+        if: always()
+        run: rm -f /tmp/sa-key.json
