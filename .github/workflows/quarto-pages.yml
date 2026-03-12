@@ -43,21 +43,8 @@ jobs:
       - name: Prepare site directory
         run: |
           mkdir -p _site
-          cp manuscript.html _site/
-          cp -r manuscript_files _site/ 2>/dev/null || true
-          cat > _site/index.html << 'HEREDOC'
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="utf-8">
-            <meta http-equiv="refresh" content="0; url=./manuscript.html">
-            <title>Late-Night Gaming, Sleep and Wellbeing</title>
-          </head>
-          <body>
-            <p>Redirecting to <a href="./manuscript.html">manuscript</a>...</p>
-          </body>
-          </html>
-          HEREDOC
+          cp manuscript.html _site/index.html
+          cp -r manuscript_files _site/manuscript_files 2>/dev/null || true
 
       - name: Deploy to Netlify
         uses: nwtgck/actions-netlify@v3
