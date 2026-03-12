@@ -28,7 +28,8 @@
 *.tex
 
 .*/
-R/*
+# R/ scripts are tracked; only ignore untracked subdirectories if needed
+# R/*
 
 # Allow README and GitHub workflows (must come after broader patterns)
 !README.md
@@ -49,3 +50,6 @@ renv/staging/
 
 # Archive - old/unused files preserved in git history
 archive/
+
+# Local Netlify folder
+.netlify

@@ -986,7 +986,7 @@ selfreport <- selfreport_saved
 #| message: false
 #| warning: false
 
-covariate_vars <- c("age_scaled", "bmi_scaled", "SES_index_scaled", "region", "gender", "isWeekend")
+covariate_vars <- c("age_scaled", "bmi_scaled", "SES_index_scaled", "region", "isWeekend")
 
 covariate_data <- gaming_inputs$completecase$gamingMonthly |>
   dplyr::select(pid, all_of(covariate_vars))
@@ -1006,7 +1006,6 @@ covariate_missing_summary <- covariate_data |>
       bmi_scaled = "BMI",
       SES_index_scaled = "SES index",
       region = "Region",
-      gender = "Gender",
       isWeekend = "Weekend indicator"
     ),
     inline = if_else(
@@ -1030,14 +1029,14 @@ covariate_missing_inline <- setNames(
 )
 ```
 
-Missingness in the adjustment covariates was limited in the original (pre-imputation) analytical dataset: out of `r total_covariate_participants` participants, age was missing for `r covariate_missing_inline[['age_scaled']]`, BMI for `r covariate_missing_inline[['bmi_scaled']]`, SES index for `r covariate_missing_inline[['SES_index_scaled']]`, region for `r covariate_missing_inline[['region']]`, gender for `r covariate_missing_inline[['gender']]`, and the weekend/weekday indicator for `r covariate_missing_inline[['isWeekend']]`.
+Missingness in the adjustment covariates was limited in the original (pre-imputation) analytical dataset: out of `r total_covariate_participants` participants, age was missing for `r covariate_missing_inline[['age_scaled']]`, BMI for `r covariate_missing_inline[['bmi_scaled']]`, SES index for `r covariate_missing_inline[['SES_index_scaled']]`, region for `r covariate_missing_inline[['region']]`, and the weekend/weekday indicator for `r covariate_missing_inline[['isWeekend']]`.
 
 
 ## H1
 
-The preregistered analyses in the Stage 1 protocol [@ballou2024psychological] specified four multilevel models in which late-night gaming minutes, averaged over 28 days (monthly) or 14 days (biweekly), predicted sleep quality (H1a), sleep duration (H1b), wellbeing (H1c), and daytime sleepiness (H1d), with random intercepts and random slopes for the late-night gaming exposure by participant and an additional random intercept for gender in the linear models. When applying this specification to the Open Play data, the preregistered random-slope structures led to convergence problems and boundary estimates (near-zero variance components), particularly for the cumulative link mixed model. To obtain stable and interpretable estimates we simplified the random-effects structure to random intercepts for participants (and for gender where supported), and used the multiply imputed outcomes as our primary analytic dataset rather than the incomplete original outcomes.
+The preregistered analyses in the Stage 1 protocol [@ballou2024psychological] specified four multilevel models in which late-night gaming minutes, averaged over 28 days (monthly) or 14 days (biweekly), predicted sleep quality (H1a), sleep duration (H1b), wellbeing (H1c), and daytime sleepiness (H1d), with random intercepts and random slopes for the late-night gaming exposure by participant and an additional random intercept for gender in the linear models. When applying this specification to the Open Play data, the preregistered random-slope structures led to convergence problems and boundary estimates (near-zero variance components), particularly for the cumulative link mixed model. To obtain stable and interpretable estimates we simplified the random-effects structure to random intercepts for participants (and for gender where supported), dropped gender as a fixed-effect covariate, and used the multiply imputed outcomes as our primary analytic dataset rather than the incomplete original outcomes.
 
-More concretely, H1a replaces the preregistered random intercept–slope structure `(1 + monthly_avg_minutes_played | pid)` with a random intercept for participants `(1 | pid)`. For H1b, attempts to retain the preregistered random intercept for gender led to non-convergence and boundary estimates, so we instead included gender as a fixed effect and used a single random intercept for participants `(1 | pid)` while keeping the same 28-day late-night average exposure. H1c and H1d follow the same logic of dropping the preregistered random slopes for participants while preserving a random intercept for gender and the same fixed-effect adjustment set.
+More concretely, H1a replaces the preregistered random intercept–slope structure `(1 + monthly_avg_minutes_played | pid)` with a random intercept for participants `(1 | pid)`. For H1b, attempts to retain the preregistered random intercept for gender led to non-convergence and boundary estimates, so we used a single random intercept for participants `(1 | pid)` while keeping the same 28-day late-night average exposure. H1c and H1d follow the same logic of dropping the preregistered random slopes for participants while preserving a random intercept for gender and the same fixed-effect adjustment set (excluding gender as a fixed effect).
 
 ```{r}
 #| label: h1-main-effects
@@ -1105,7 +1104,7 @@ fit_h1_models_inline <- function(inputs, version_label) {
 
   model.h1b <- lmer(
     total_hours_sleep ~ ln_monthly_avg_minutes_played +
-      age_scaled + bmi_scaled + SES_index_scaled + region + gender + isWeekend +
+      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
       (1 | pid),
     data = gamingMonthly,
     control = lmerControl(optimizer = "bobyqa")
@@ -1121,7 +1120,7 @@ fit_h1_models_inline <- function(inputs, version_label) {
 
   model.h1d <- lmer(
     epsTotal ~ ln_monthly_avg_minutes_played +
-      age_scaled + bmi_scaled + SES_index_scaled + region + gender + isWeekend +
+      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
       (1 | pid) + (1 | gender),
     data = gamingMonthly,
     control = lmerControl(optimizer = "bobyqa")
@@ -1799,18 +1798,45 @@ diary_covariate_lookup <- data.intake |>
     ),
     emp_score = case_when(
       is.na(employment) ~ NA_real_,
-      str_detect(str_to_lower(employment), "full-time|full time|self-employed") ~ 4,
+      str_detect(str_to_lower(employment), "full-time|full time|self-employed|self employ|freelan|streamer|gig|military") ~ 4,
       str_detect(str_to_lower(employment), "part-time|part time") ~ 3,
       str_detect(str_to_lower(employment), "student") ~ 2,
       str_detect(str_to_lower(employment), "retired") ~ 2,
-      str_detect(str_to_lower(employment), "not currently employed|unemployed") ~ 1,
+      str_detect(str_to_lower(employment), "homemaker|stay-at-home|disabled|unable to work|caregiver|not currently employed|unemployed|prolific") ~ 1,
       TRUE ~ NA_real_
     ),
-    SES_index = edu_score + emp_score,
-    age_scaled = as.numeric(scale(age)),
-    bmi_scaled = as.numeric(scale(bmi)),
-    SES_index_scaled = as.numeric(scale(SES_index))
+    SES_index = edu_score + emp_score
   ) |>
+  select(pid, age, bmi, SES_index, region, gender)
+
+# Restrict to diary participants and scale age/bmi within this subsample
+# (scaling within diary sample avoids compressed covariate ranges that cause
+# numerical instability in CLMM when the diary subset differs from full intake)
+diary_all_pids <- unique(diary_survey$pid)
+diary_covariate_lookup <- diary_covariate_lookup |>
+  filter(pid %in% diary_all_pids) |>
+  mutate(
+    age_scaled = as.numeric(scale(age)),
+    bmi_scaled = as.numeric(scale(bmi))
+  ) |>
+  select(pid, age_scaled, bmi_scaled, SES_index, region, gender)
+
+# Impute missing SES_index for diary participants using MICE (PMM, m = 5)
+if (sum(is.na(diary_covariate_lookup$SES_index)) > 0) {
+  set.seed(42)
+  diary_ses_imp <- mice::mice(
+    diary_covariate_lookup |> select(SES_index, age_scaled, bmi_scaled, gender, region),
+    m = 5, method = "pmm", maxit = 10, seed = 42, printFlag = FALSE
+  )
+  diary_ses_complete <- mice::complete(diary_ses_imp, 1) |>
+    mutate(pid = diary_covariate_lookup$pid)
+  diary_covariate_lookup <- diary_covariate_lookup |>
+    select(-SES_index) |>
+    left_join(diary_ses_complete |> select(pid, SES_index), by = "pid")
+}
+
+diary_covariate_lookup <- diary_covariate_lookup |>
+  mutate(SES_index_scaled = as.numeric(scale(SES_index))) |>
   select(pid, age_scaled, bmi_scaled, SES_index_scaled, region, gender)
 
 # --- Assemble diary_long ---
@@ -1846,8 +1872,8 @@ diary_ocat <- diary_long |>
     ),
     sleep_quality_ord = factor(
       sleep_quality_num,
-      levels = 1:5,
-      labels = c("Very poor", "Poor", "Fair", "Good", "Very good"),
+      levels = 5:1,
+      labels = c("Very good", "Good", "Fair", "Poor", "Very poor"),
       ordered = TRUE
     ),
     is_weekend = factor(as.logical(is_weekend), levels = c(FALSE, TRUE)),
@@ -1860,8 +1886,13 @@ diary_ocat <- diary_long |>
   ) |>
   ungroup() |>
   mutate(
-    late_night_between = late_night_pid_mean - mean(late_night_pid_mean, na.rm = TRUE)
+    late_night_between = late_night_pid_mean - mean(late_night_pid_mean, na.rm = TRUE),
+    # Per-10-min scaling: effect per 10 additional minutes of late-night gaming
+    ln_within_10  = late_night_within / 10,
+    ln_between_10 = late_night_between / 10
   )
+
+diary_ocat_h2 <- diary_ocat |> filter(!is.na(chronotype_centered))
 
 diary_n_participants <- length(unique(diary_ocat$pid))
 diary_n_entries <- nrow(diary_ocat)
@@ -1878,30 +1909,35 @@ diary_n_entries <- nrow(diary_ocat)
 library(ordinal)
 
 # H1: Direct effects (CLMM with random intercept for participant)
-diary_h1_formula <- sleep_quality_ord ~ late_night_within + late_night_between +
-  age_scaled + bmi_scaled + SES_index_scaled + gender + is_weekend + (1 | pid)
+# Gender is excluded: (1|gender) with only 3 levels does not converge
+# Probit link used for convergence. Late-night gaming expressed per 10 minutes.
+# Positive coefficients = higher probability of worse sleep (levels=5:1 coding).
+diary_h1_formula <- sleep_quality_ord ~
+  ln_within_10 + ln_between_10 +
+  age_scaled + bmi_scaled + SES_index_scaled + is_weekend + (1 | pid)
 
-diary_model_h1 <- clmm(diary_h1_formula, data = diary_ocat, link = "logit", Hess = TRUE)
+diary_model_h1 <- clmm(diary_h1_formula, data = diary_ocat, link = "probit", Hess = TRUE,
+                        control = clmm.control(maxIter = 50000, gradTol = 0.5))
 saveRDS(diary_model_h1, "output/models/diary_model_h1_sleepquality.rds")
 
 # Spline comparison (df = 2:6) — use CLM (no RE) for speed; linearity check only
-diary_covariate_terms <- c("late_night_between", "age_scaled", "bmi_scaled",
-                           "SES_index_scaled", "gender", "is_weekend")
+diary_covariate_terms <- c("ln_between_10", "age_scaled", "bmi_scaled",
+                           "SES_index_scaled", "is_weekend")
 
 diary_spline_fits <- purrr::map(2:6, \(df) {
   f <- as.formula(paste(
     "sleep_quality_ord ~",
-    paste(c(sprintf("splines::ns(late_night_within, df = %d)", df),
+    paste(c(sprintf("splines::ns(ln_within_10, df = %d)", df),
             diary_covariate_terms), collapse = " + ")
   ))
-  mod <- clm(f, data = diary_ocat, link = "logit", Hess = TRUE)
+  mod <- clm(f, data = diary_ocat, link = "probit", Hess = TRUE)
   list(df = df, model = mod)
 })
 
 diary_clm_linear <- clm(
-  sleep_quality_ord ~ late_night_within + late_night_between +
-    age_scaled + bmi_scaled + SES_index_scaled + gender + is_weekend,
-  data = diary_ocat, link = "logit", Hess = TRUE
+  sleep_quality_ord ~ ln_within_10 + ln_between_10 +
+    age_scaled + bmi_scaled + SES_index_scaled + is_weekend,
+  data = diary_ocat, link = "probit", Hess = TRUE
 )
 
 diary_spline_compare <- tibble(
@@ -1927,14 +1963,21 @@ saveRDS(diary_spline_compare, "output/models/diary_spline_compare.rds")
 library(ordinal)
 
 # H2: Chronotype moderation — interaction on BOTH within and between
-diary_ocat_h2 <- diary_ocat |> filter(!is.na(chronotype_centered))
+# Probit link for convergence. Per-10min gaming × centered chronotype interaction.
+# Positive coefficients = higher probability of worse sleep (levels=5:1 coding).
 
 diary_h2_formula <- sleep_quality_ord ~
-  late_night_within * chronotype_centered +
-  late_night_between * chronotype_centered +
-  age_scaled + bmi_scaled + SES_index_scaled + gender + is_weekend + (1 | pid)
+  ln_within_10 * chronotype_centered +
+  ln_between_10 * chronotype_centered +
+  age_scaled + bmi_scaled + SES_index_scaled + is_weekend + (1 | pid)
 
-diary_model_h2 <- clmm(diary_h2_formula, data = diary_ocat_h2, link = "logit", Hess = TRUE)
+diary_model_h2 <- clmm(
+  diary_h2_formula,
+  data    = diary_ocat_h2,
+  link    = "probit",
+  Hess    = TRUE,
+  control = clmm.control(maxIter = 50000, gradTol = 0.5)
+)
 saveRDS(diary_model_h2, "output/models/diary_model_h2_sleepquality.rds")
 ```
 
@@ -1949,19 +1992,19 @@ saveRDS(diary_model_h2, "output/models/diary_model_h2_sleepquality.rds")
 diary_h1_path <- "output/models/diary_model_h1_sleepquality.rds"
 diary_h2_path <- "output/models/diary_model_h2_sleepquality.rds"
 
-# H1 effects (ORs)
-diary_h1_within <- get_h2_interaction(diary_h1_path, "late_night_within",
-                                       exponentiate = TRUE, label_if_exp = "OR")
-diary_h1_between <- get_h2_interaction(diary_h1_path, "late_night_between",
-                                        exponentiate = TRUE, label_if_exp = "OR")
+# H1 effects (per-10min, probit link — report b and SE, positive = worse sleep)
+diary_h1_within <- get_h2_interaction(diary_h1_path, "ln_within_10",
+                                       exponentiate = FALSE)
+diary_h1_between <- get_h2_interaction(diary_h1_path, "ln_between_10",
+                                        exponentiate = FALSE)
 
-# H2 effects (ORs)
+# H2 effects (per-10min × centered chronotype interaction, probit link)
 diary_h2_within_chrono <- get_h2_interaction(diary_h2_path,
-  "late_night_within:chronotype_centered", exponentiate = TRUE, label_if_exp = "OR")
+  "ln_within_10:chronotype_centered", exponentiate = FALSE)
 diary_h2_between_chrono <- get_h2_interaction(diary_h2_path,
-  "late_night_between:chronotype_centered", exponentiate = TRUE, label_if_exp = "OR")
+  "chronotype_centered:ln_between_10", exponentiate = FALSE)
 diary_h2_chrono_main <- get_h2_interaction(diary_h2_path,
-  "chronotype_centered", exponentiate = TRUE, label_if_exp = "OR")
+  "chronotype_centered", exponentiate = FALSE)
 
 # Spline comparison info
 diary_spline_compare_loaded <- if (file.exists("output/models/diary_spline_compare.rds")) {
@@ -1969,15 +2012,47 @@ diary_spline_compare_loaded <- if (file.exists("output/models/diary_spline_compa
 } else {
   NULL
 }
+
+# Extract raw numeric values for inline interpretation
+extract_clmm_est <- function(path, term, exponentiate = TRUE) {
+  if (!file.exists(path)) return(list(est = NA, ci_low = NA, ci_high = NA, p = NA))
+  m <- readRDS(path)
+  ct <- as.data.frame(coef(summary(m)))
+  ct$Parameter <- rownames(ct)
+  row <- ct[ct$Parameter == term, , drop = FALSE]
+  if (nrow(row) == 0) return(list(est = NA, ci_low = NA, ci_high = NA, p = NA))
+  est <- as.numeric(row[["Estimate"]])
+  se  <- as.numeric(row[["Std. Error"]])
+  p   <- suppressWarnings(as.numeric(row[["Pr(>|z|)"]]))
+  crit <- qnorm(0.975)
+  ci_low <- est - crit * se; ci_high <- est + crit * se
+  if (exponentiate) { est <- exp(est); ci_low <- exp(ci_low); ci_high <- exp(ci_high) }
+  list(est = est, ci_low = ci_low, ci_high = ci_high, p = p)
+}
+
+diary_h1_w <- extract_clmm_est(diary_h1_path, "ln_within_10", exponentiate = FALSE)
+diary_h1_b <- extract_clmm_est(diary_h1_path, "ln_between_10", exponentiate = FALSE)
+diary_h2_wc <- extract_clmm_est(diary_h2_path, "ln_within_10:chronotype_centered", exponentiate = FALSE)
+diary_h2_bc <- extract_clmm_est(diary_h2_path, "chronotype_centered:ln_between_10", exponentiate = FALSE)
+diary_h2_cm <- extract_clmm_est(diary_h2_path, "chronotype_centered", exponentiate = FALSE)
+
+# Helper for significance description
+sig_desc <- function(p) {
+  if (is.na(p)) return("not statistically significant")
+  if (p < .001) "statistically significant"
+  else if (p < .05) "statistically significant"
+  else if (p < .10) "marginally significant"
+  else "not statistically significant"
+}
 ```
 
-To complement the panel-level analyses, we examined daily diary reports of sleep quality as a function of late-night gaming in the preceding 24 hours. Sleep quality was recorded on a 5-level ordinal scale (Very poor, Poor, Fair, Good, Very good) in each diary entry. We fitted cumulative link mixed models (CLMM; `ordinal::clmm`) with random intercepts for participants to account for repeated measurements. To separate within-person fluctuations from between-person differences in late-night gaming, we decomposed the trimmed late-night gaming variable (capped at the 99th percentile) into a within-person component (daily deviation from the participant's own mean) and a between-person component (participant mean centered at the grand mean). The analytical diary sample comprised `r diary_n_participants` participants contributing `r format(diary_n_entries, big.mark = ",")` diary entries with valid sleep quality ratings. Covariates included age, BMI, SES (all scaled), gender, and a weekend indicator.
+To complement the panel-level analyses, we examined daily diary reports of sleep quality as a function of late-night gaming in the preceding 24 hours. Sleep quality was recorded on a 5-level ordinal scale (Very poor, Poor, Fair, Good, Very good) in each diary entry. We fitted cumulative link mixed models (CLMM; `ordinal::clmm`) with random intercepts for participants to account for repeated measurements. To separate within-person fluctuations from between-person differences in late-night gaming, we decomposed the trimmed late-night gaming variable (capped at the 99th percentile) into a within-person component (daily deviation from the participant's own mean) and a between-person component (participant mean centered at the grand mean). The analytical diary sample comprised `r diary_n_participants` participants contributing `r format(diary_n_entries, big.mark = ",")` diary entries with valid sleep quality ratings. Covariates included age, BMI, and SES (all scaled), plus a weekend indicator. These diary analyses are exploratory and were not formally pre-registered. Gender was initially considered as a random intercept but the random intercept for gender with only three levels did not converge; gender is therefore excluded from all diary models. A probit link was used (rather than logit) to ensure reliable convergence for both models. Late-night gaming is expressed in per-10-minute increments (i.e., the effect of each additional 10 minutes of late-night gaming) to aid interpretability while maintaining numerical stability. In the ordered factor coding, higher categories correspond to worse sleep quality (5 = "Very poor"), so positive coefficients indicate a higher probability of worse sleep. Covariates (age, BMI, SES) are scaled within the diary subsample. Missing SES values for diary participants with unrecognised employment categories (n = 23) were imputed via MICE (PMM, m = 5) using age, BMI, gender, and region as predictors, consistent with the panel-level missing-data strategy.
 
-For the direct-effects model (H1), the within-person effect of late-night gaming on sleep quality was `r diary_h1_within`, indicating that on days when a participant gamed more late at night than their own average, there was `r ifelse(grepl("OR = [01]\\.[0-9]", diary_h1_within), "a tendency toward", "little change in")` sleep quality. The between-person effect was `r diary_h1_between`, reflecting `r ifelse(grepl("OR = [01]\\.[0-9]", diary_h1_between), "lower", "similar")` sleep quality among participants who habitually gamed more at night.
+For the direct-effects model (H1), the within-person effect of late-night gaming on sleep quality was `r diary_h1_within` (probit coefficient per 10 additional minutes). On days when participants gamed more than their own average, the association with sleep quality was `r ifelse(!is.na(diary_h1_w$p), sig_desc(diary_h1_w$p), "significance not available")`. The between-person effect was `r diary_h1_between`, indicating that participants who habitually engaged in more late-night gaming tended to report `r ifelse(!is.na(diary_h1_b$est) && diary_h1_b$est > 0, "worse", "better")` sleep quality on average; this between-person effect was `r ifelse(!is.na(diary_h1_b$p), sig_desc(diary_h1_b$p), "of uncertain significance")`.
 `r if (!is.null(diary_spline_compare_loaded)) paste0("We compared the linear specification against natural spline alternatives (df = 2-6); the best-fitting spline (df = ", diary_spline_compare_loaded$df[1], ") had a \\u0394AIC of ", sprintf("%.1f", diary_spline_compare_loaded$AIC[1] - diary_spline_compare_loaded$linear_AIC[1]), " relative to the linear model, suggesting that the linear parameterization provided an adequate fit.")`
 Diary subsample characteristics are presented in @tbl-diary-demographics in the Appendix.
 
-For the chronotype moderation model (H2), the interaction between within-person late-night gaming and chronotype was `r diary_h2_within_chrono`, and the interaction between between-person late-night gaming and chronotype was `r diary_h2_between_chrono`. The main effect of chronotype was `r diary_h2_chrono_main`. Consistent with the panel-level H2 findings, there was little evidence that chronotype substantially moderated the association between late-night gaming and daily sleep quality at either the within- or between-person level.
+For the chronotype moderation model (H2), the interaction between within-person late-night gaming and chronotype was `r diary_h2_within_chrono`, and the interaction between between-person late-night gaming and chronotype was `r diary_h2_between_chrono`. The within-person interaction was `r ifelse(!is.na(diary_h2_wc$p), sig_desc(diary_h2_wc$p), "of uncertain significance")`, indicating that the day-to-day link between late-night gaming and sleep quality was `r ifelse(!is.na(diary_h2_wc$est) && diary_h2_wc$est > 0, "somewhat stronger for evening types (positive interaction)", "somewhat weaker for evening types")`. The between-person interaction was `r ifelse(!is.na(diary_h2_bc$p), sig_desc(diary_h2_bc$p), "of uncertain significance")`, suggesting that the trait-level association between habitual late-night gaming and sleep quality did not meaningfully vary across chronotypes. The main effect of chronotype was `r diary_h2_chrono_main`; a later chronotype was associated with `r ifelse(!is.na(diary_h2_cm$est) && diary_h2_cm$est > 0, "worse", "better")` sleep quality (this effect was `r ifelse(!is.na(diary_h2_cm$p), sig_desc(diary_h2_cm$p), "of uncertain significance")`). These diary-based findings are exploratory and should be interpreted with caution.
 
 ```{r}
 #| label: tbl-diary-h1h2
@@ -2005,29 +2080,23 @@ if (!is.null(diary_model_h1_loaded) && !is.null(diary_model_h2_loaded)) {
 
   # Build coef_map dynamically to handle gender/region factor levels
   diary_coef_map <- c(
-    "late_night_within" = "LN gaming within-person (min)",
-    "late_night_between" = "LN gaming between-person (min)",
-    "chronotype_centered" = "Chronotype (centered)",
-    "late_night_within:chronotype_centered" = "LN within x Chronotype",
-    "late_night_between:chronotype_centered" = "LN between x Chronotype",
-    "age_scaled" = "Age (scaled)",
-    "bmi_scaled" = "BMI (scaled)",
-    "SES_index_scaled" = "SES (scaled)"
+    "ln_within_10"          = "LN gaming within-person (per 10 min)",
+    "ln_between_10"         = "LN gaming between-person (per 10 min)",
+    "chronotype_centered"   = "Chronotype (h, centered)",
+    "ln_within_10:chronotype_centered"   = "LN within × Chronotype",
+    "chronotype_centered:ln_between_10"  = "LN between × Chronotype",
+    "age_scaled"            = "Age (scaled)",
+    "bmi_scaled"            = "BMI (scaled)",
+    "SES_index_scaled"      = "SES (scaled)"
   )
 
-  # Detect gender and region terms from both models
+  # Detect region terms from both models
   all_coef_names <- unique(c(
     names(coef(diary_model_h1_loaded)),
     names(coef(diary_model_h2_loaded))
   ))
-  threshold_pattern <- "^[0-9]|^Very poor|^Poor|^Fair|^Good"
+  threshold_pattern <- "^[0-9]|^Very poor|^Very good|^Poor|^Fair|^Good"
   non_threshold <- all_coef_names[!grepl(threshold_pattern, all_coef_names)]
-
-  gender_terms <- non_threshold[grepl("^gender", non_threshold)]
-  gender_map <- setNames(
-    paste0("Gender: ", gsub("^gender", "", gender_terms)),
-    gender_terms
-  )
 
   region_terms <- non_threshold[grepl("^region", non_threshold)]
   region_map <- setNames(
@@ -2042,7 +2111,7 @@ if (!is.null(diary_model_h1_loaded) && !is.null(diary_model_h2_loaded)) {
     weekend_map <- c("is_weekend" = "Day: Weekend")
   }
 
-  diary_coef_map <- c(diary_coef_map, gender_map, region_map, weekend_map)
+  diary_coef_map <- c(diary_coef_map, region_map, weekend_map)
 
   diary_models_combined <- list(
     "H1: Sleep Quality" = diary_model_h1_loaded,
@@ -2060,7 +2129,7 @@ if (!is.null(diary_model_h1_loaded) && !is.null(diary_model_h2_loaded)) {
     notes = c(
       "+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
       "LN = late-night. Confidence intervals shown in brackets.",
-      "Cumulative link mixed models (logit link, random intercept for participant) on 5-level ordinal sleep quality.",
+      "Cumulative link mixed models (random intercept for participant) on 5-level ordinal sleep quality (positive coefficients = higher probability of worse sleep). Both H1 and H2 use probit link (logit did not converge reliably for either model). Late-night gaming expressed per 10 minutes; chronotype in centered hours; age, BMI, SES scaled within the diary subsample.",
       "Within = daily deviation from person mean; Between = person mean - grand mean."
     ),
     output = "tinytable"
@@ -2353,12 +2422,6 @@ region_map <- setNames(
   region_terms
 )
 
-gender_terms <- fixef_names[str_detect(fixef_names, "^gender")]
-gender_map <- setNames(
-  paste0("Gender: ", str_replace_all(str_remove(gender_terms, "^gender"), "_", " ")),
-  gender_terms
-)
-
 weekend_term <- NULL
 if ("isWeekend" %in% fixef_names) {
   weekend_term <- setNames(psqi_label_lookup["isWeekend"], "isWeekend")
@@ -2370,7 +2433,6 @@ coef_map_psqi_global <- c(
   psqi_base_map,
   psqi_moderator_map,
   region_map,
-  gender_map,
   weekend_term,
   psqi_random_map
 )
