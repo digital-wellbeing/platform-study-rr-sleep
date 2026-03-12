@@ -1,0 +1,51 @@
+name: Sync manuscript to Google Drive (trackdown)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'manuscript.qmd'
+  workflow_dispatch:
+
+jobs:
+  trackdown:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - name: Install trackdown
+        run: Rscript -e 'install.packages("trackdown")'
+
+      - name: Write service account credentials
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+        run: echo "$GOOGLE_SERVICE_ACCOUNT_JSON" > /tmp/service_account.json
+
+      - name: Sync manuscript to Google Drive
+        run: |
+          Rscript -e '
+          gargle::credentials_service_account(
+            scopes = "https://www.googleapis.com/auth/drive",
+            path = "/tmp/service_account.json"
+          ) |> googledrive::drive_auth(token = _)
+
+          tryCatch(
+            trackdown::update_file(
+              file = "manuscript.qmd",
+              hide_code = TRUE
+            ),
+            error = function(e) {
+              message("update_file failed, trying upload_file: ", conditionMessage(e))
+              trackdown::upload_file(
+                file = "manuscript.qmd",
+                hide_code = TRUE
+              )
+            }
+          )
+          '
