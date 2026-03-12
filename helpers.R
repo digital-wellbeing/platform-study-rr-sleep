@@ -92,6 +92,12 @@ build_gaming_inputs <- function(selfreport_data) {
     rename(month = wave) |>
     arrange(as.integer(pid), month)
 
+  gamingBiweekly <- gamingBiweekly |>
+    mutate(ln_biweekly_avg_minutes_played_10 = ln_biweekly_avg_minutes_played / 10)
+
+  gamingMonthly <- gamingMonthly |>
+    mutate(ln_monthly_avg_minutes_played_10 = ln_monthly_avg_minutes_played / 10)
+
   list(
     gamingBiweekly = gamingBiweekly,
     gamingMonthly = gamingMonthly
