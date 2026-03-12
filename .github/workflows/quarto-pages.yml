@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-deploy:
+  render:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -58,6 +58,23 @@ jobs:
           mkdir -p _site
           cp manuscript.html _site/index.html
           cp -r manuscript_files _site/manuscript_files 2>/dev/null || true
+
+      - name: Upload site artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: _site
+          retention-days: 1
+
+  deploy:
+    needs: render
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download site artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: _site
 
       - name: Deploy to Netlify
         uses: nwtgck/actions-netlify@v3
