@@ -1235,13 +1235,12 @@ if (length(supp_versions) > 0) {
 
 ```{r}
 #| label: fig-latenight-sleepquality-exceedance
-#| fig-cap: "Predicted probability of poor sleep quality as a function of late-night gaming. The line shows the probability of reporting poor sleep quality (Fairly bad or Very bad) at minute-level resolution from 0 to 90 minutes of average daily late-night gaming. The ribbon represents 95% confidence intervals. Vertical reference lines show the median, mean, 75th percentile, and 90th percentile of the sample distribution. The marginal density plot (top panel) shows the distribution of late-night gaming in the sample. Model predictions are derived from the H1a ordinal mixed-effects model adjusting for age, BMI, SES, region, gender, and weekday vs. weekend, with covariates held at their means/reference levels."
+#| fig-cap: "Predicted probability of poor sleep quality as a function of late-night gaming. The line shows the marginal probability of reporting poor sleep quality (Fairly bad or Very bad) at minute-level resolution from 0 to 90 minutes of average daily late-night gaming. The ribbon represents 95% confidence intervals derived from the gaming coefficient SE. Vertical reference lines show the median, mean, 75th percentile, and 90th percentile of the sample distribution. The marginal density plot (top panel) shows the distribution of late-night gaming in the sample. Predictions are population-average probabilities (marginalised over the participant random intercept) derived from the H1a probit CLMM, with other covariates held at their reference/mean values."
 #| fig-width: 9
 #| fig-height: 6
 #| code-summary: "Probability of poor sleep quality by late-night gaming"
 
 library(ordinal)
-library(emmeans)
 library(patchwork)
 
 # Load the fitted H1a model
@@ -1264,23 +1263,32 @@ ln_stats <- gamingMonthly |>
     p90 = quantile(x, 0.90)
   )}()
 
-# Get exceedance probabilities using emmeans
-# mode = "exc.prob" computes P(Y > cut) for each threshold
-emm_spec <- emmeans(
-  h1a_model,
-  ~ ln_monthly_avg_minutes_played_10 | cut,
-  at = list(ln_monthly_avg_minutes_played_10 = ln_sequence_10),
-  mode = "exc.prob"
+# Compute MARGINAL exceedance probabilities for the CLMM.
+# emmeans mode="exc.prob" gives CONDITIONAL predictions (random effect = 0),
+# which are near-zero when sigma_u is large. The correct marginal formula for a
+# probit random-intercept model is:
+#   P(Y > j | x) = 1 - Phi((alpha_j - eta(x)) / sqrt(1 + sigma_u^2))
+# where eta(x) = beta_gaming * x (other scaled covariates at mean = 0, reference levels).
+
+sigma_u   <- sqrt(h1a_model$ST$pid[1, 1])
+alpha_j   <- h1a_model$alpha["Fairly good|Fairly bad"]   # P(Fairly bad or Very bad)
+b_gaming  <- coef(h1a_model)["ln_monthly_avg_minutes_played_10"]
+se_gaming <- sqrt(vcov(h1a_model)[
+  "ln_monthly_avg_minutes_played_10",
+  "ln_monthly_avg_minutes_played_10"
+])
+denom <- sqrt(1 + sigma_u^2)
+
+lp    <- b_gaming * ln_sequence_10
+lp_lo <- (b_gaming - 1.96 * se_gaming) * ln_sequence_10
+lp_hi <- (b_gaming + 1.96 * se_gaming) * ln_sequence_10
+
+plot_data <- tibble(
+  ln_monthly_avg_minutes_played = ln_sequence_10 * 10,
+  exc.prob  = pnorm((alpha_j - lp)    / denom, lower.tail = FALSE),
+  asymp.LCL = pnorm((alpha_j - lp_lo) / denom, lower.tail = FALSE),
+  asymp.UCL = pnorm((alpha_j - lp_hi) / denom, lower.tail = FALSE)
 )
-
-# Convert to dataframe and scale back to original minutes for display
-emm_df <- as.data.frame(emm_spec) |>
-  mutate(ln_monthly_avg_minutes_played = ln_monthly_avg_minutes_played_10 * 10)
-
-# Prepare for plotting
-# Filter to only P(Y > Fairly good) = "2|3" - probability of poor sleep (Fairly bad or Very bad)
-plot_data <- emm_df |>
-  filter(as.character(cut) == "2|3")
 
 # Prepare raw data for marginal distribution
 marginal_data <- gamingMonthly |>
@@ -1325,13 +1333,13 @@ p_main <- ggplot(plot_data, aes(x = ln_monthly_avg_minutes_played, y = exc.prob)
   geom_vline(xintercept = ln_stats$p90, linetype = "dashed",
              color = "gray40", linewidth = 0.5) +
   # Add annotations for reference lines
-  annotate("text", x = ln_stats$median, y = 0.11,
+  annotate("text", x = ln_stats$median, y = 0.175,
            label = "Median", angle = 90, vjust = -0.5, size = 3, color = "gray40") +
-  annotate("text", x = ln_stats$mean, y = 0.11,
+  annotate("text", x = ln_stats$mean, y = 0.175,
            label = "Mean", angle = 90, vjust = -0.5, size = 3, color = "gray40") +
-  annotate("text", x = ln_stats$p75, y = 0.11,
+  annotate("text", x = ln_stats$p75, y = 0.175,
            label = "75th %ile", angle = 90, vjust = -0.5, size = 3, color = "gray40") +
-  annotate("text", x = ln_stats$p90, y = 0.11,
+  annotate("text", x = ln_stats$p90, y = 0.175,
            label = "90th %ile", angle = 90, vjust = -0.5, size = 3, color = "gray40") +
   # Exceedance probability ribbons and lines
   geom_ribbon(aes(ymin = asymp.LCL, ymax = asymp.UCL),
@@ -1343,7 +1351,7 @@ p_main <- ggplot(plot_data, aes(x = ln_monthly_avg_minutes_played, y = exc.prob)
     labels = paste0(ln_bins, " min"),
     limits = c(0, 90)
   ) +
-  scale_y_continuous(labels = scales::percent_format(), limits = c(0, 0.12)) +
+  scale_y_continuous(labels = scales::percent_format(), limits = c(0, 0.20)) +
   labs(
     x = "Average Daily Late-Night Gaming (min/day)",
     y = "Predicted probability of poor sleep quality"
