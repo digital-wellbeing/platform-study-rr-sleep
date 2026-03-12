@@ -13,11 +13,8 @@
 *.xlsb
 *.xlsb
 /.luarc.json
-data/*
-# Allow processed data and survey data for CI
-!data/processed/
-# survey data is downloaded via Makefile, don't track
-# !data/survey_*.csv.gz
+# Data files are committed directly (private repo)
+# data/*
 
 *.js
 *.css
