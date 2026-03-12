@@ -65,7 +65,7 @@ jobs:
               media = temp_file,
               path = as_id(shared_folder$id),
               name = "sleep-manuscript",
-              type = "document"
+              type = "application/vnd.google-apps.document"
             )
             message("Successfully created sleep-manuscript in Google Docs!")
           } else {
