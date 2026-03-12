@@ -2072,7 +2072,7 @@ For the chronotype moderation model (H2), the interaction between within-person 
 
 ```{r}
 #| label: fig-diary-sleepquality
-#| fig-cap: "Predicted probability of poor sleep quality as a function of average late-night gaming (diary study, between-person effect). The line shows the probability of reporting poor sleep quality (Poor or Very poor on the 5-level ordinal scale) across the range of participants' average daily late-night gaming, centered at the grand mean. The ribbon represents 95% confidence intervals. Vertical reference lines mark the median (dotted), mean (dashed), 75th percentile (dotted), and 90th percentile (dashed) of the sample distribution. The marginal density plot (top panel) shows the distribution of between-person late-night gaming. Predictions are derived from the diary H1 CLMM (random intercept for participant, probit link) adjusting for age, BMI, SES, and weekday vs. weekend, with the within-person component held at zero (i.e., at the participant's own mean)."
+#| fig-cap: "Predicted probability of poor sleep quality as a function of average late-night gaming (diary study, between-person effect). The line shows the marginal probability of reporting poor sleep quality (Poor or Very poor on the 5-level ordinal scale) across the range of participants' average daily late-night gaming, centered at the grand mean. The ribbon represents 95% confidence intervals derived from the between-person gaming coefficient SE. Vertical reference lines mark the median (dotted), mean (dashed), 75th percentile (dotted), and 90th percentile (dashed) of the sample distribution. The marginal density plot (top panel) shows the distribution of between-person late-night gaming. Predictions are population-average probabilities (marginalised over the participant random intercept) derived from the diary H1 probit CLMM, with the within-person component held at zero and other covariates at their reference/mean values."
 #| fig-width: 9
 #| fig-height: 6
 #| code-summary: "Diary: probability of poor sleep quality by between-person late-night gaming"
@@ -2082,7 +2082,6 @@ For the chronotype moderation model (H2), the interaction between within-person 
 
 if (file.exists("output/models/diary_model_h1_sleepquality.rds")) {
   library(ordinal)
-  library(emmeans)
   library(patchwork)
 
   diary_h1_fig <- readRDS("output/models/diary_model_h1_sleepquality.rds")
@@ -2090,15 +2089,29 @@ if (file.exists("output/models/diary_model_h1_sleepquality.rds")) {
   # Prediction grid (per-10-min units: -6 to 9 = -60 to 90 min)
   ln_seq <- seq(-6, 9, by = 0.1)
 
-  # Between-person exceedance (within held at person mean = 0)
-  emm_between <- emmeans(
-    diary_h1_fig, ~ ln_between_10 | cut,
-    at = list(ln_between_10 = ln_seq, ln_within_10 = 0),
-    mode = "exc.prob"
+  # MARGINAL exceedance probability — same method as panel Figure 2.
+  # emmeans mode="exc.prob" gives conditional predictions (RE = 0), which
+  # underestimate when sigma_u is non-trivial. Correct marginal formula for a
+  # probit random-intercept CLMM:
+  #   P(Y > j | x) = 1 - Phi((alpha_j - eta(x)) / sqrt(1 + sigma_u^2))
+  # where eta(x) = b_between * x_between (within held at 0, scaled covariates at mean = 0).
+
+  sigma_u_d   <- sqrt(diary_h1_fig$ST$pid[1, 1])
+  alpha_j_d   <- diary_h1_fig$alpha["Fair|Poor"]   # P(Poor or Very poor) = P(Y > "Fair")
+  b_between   <- coef(diary_h1_fig)["ln_between_10"]
+  se_between  <- sqrt(vcov(diary_h1_fig)["ln_between_10", "ln_between_10"])
+  denom_d     <- sqrt(1 + sigma_u_d^2)
+
+  lp_d    <- b_between * ln_seq
+  lp_d_lo <- (b_between - 1.96 * se_between) * ln_seq
+  lp_d_hi <- (b_between + 1.96 * se_between) * ln_seq
+
+  df_between <- tibble(
+    gaming_min = ln_seq * 10,
+    exc.prob  = pnorm((alpha_j_d - lp_d)    / denom_d, lower.tail = FALSE),
+    asymp.LCL = pnorm((alpha_j_d - lp_d_lo) / denom_d, lower.tail = FALSE),
+    asymp.UCL = pnorm((alpha_j_d - lp_d_hi) / denom_d, lower.tail = FALSE)
   )
-  df_between <- as.data.frame(emm_between) |>
-    mutate(gaming_min = ln_between_10 * 10) |>
-    filter(as.character(cut) == "3|4")  # P(Poor or Very poor) = P(Y > "Fair")
 
   x_range  <- c(-60, 90)
   x_breaks <- seq(-60, 90, by = 30)
