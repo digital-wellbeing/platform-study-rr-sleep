@@ -184,6 +184,16 @@ hours_to_hhmm <- function(h) {
   sprintf("%02d:%02d", hrs, mins)
 }
 
+#' Recode sleep quality from text labels to ordered integer
+#'
+#' @param x Character vector of sleep quality labels
+#' @return Integer vector (1 = Very poor, ..., 5 = Very good)
+recode_sleep_quality <- function(x) {
+  lvls <- c("Very poor", "Poor", "Fair", "Good", "Very good")
+  out <- factor(x, levels = lvls, ordered = TRUE)
+  as.integer(out)
+}
+
 # ==============================================================================
 # H1 Model Functions
 # ==============================================================================
@@ -292,6 +302,51 @@ get_h2_interaction <- function(path, term, exponentiate = FALSE, label_if_exp = 
     return("estimate unavailable")
   }
   m <- readRDS(path)
+
+  if (inherits(m, "clm")) {
+    coef_table <- as.data.frame(coef(summary(m)))
+    coef_table$Parameter <- rownames(coef_table)
+    row <- coef_table[coef_table$Parameter == term, , drop = FALSE]
+
+    if (nrow(row) == 0) {
+      return("estimate unavailable")
+    }
+
+    est <- as.numeric(row[["Estimate"]])
+    se <- as.numeric(row[["Std. Error"]])
+    p_val <- suppressWarnings(as.numeric(row[["Pr(>|z|)"]]))
+
+    if (!is.finite(est) || !is.finite(se)) {
+      return("estimate unavailable")
+    }
+
+    crit <- stats::qnorm(0.975)
+    ci_low <- est - crit * se
+    ci_high <- est + crit * se
+
+    if (isTRUE(exponentiate)) {
+      est <- exp(est)
+      ci_low <- exp(ci_low)
+      ci_high <- exp(ci_high)
+    }
+
+    p_txt <- if (is.na(p_val)) {
+      ""
+    } else if (p_val < 0.001) {
+      "p < .001"
+    } else {
+      sprintf("p = %.3f", p_val)
+    }
+
+    label <- if (isTRUE(exponentiate)) label_if_exp else label_if_b
+
+    if (nzchar(p_txt)) {
+      return(sprintf("%s = %.2f, 95%% CI [%.2f, %.2f], %s", label, est, ci_low, ci_high, p_txt))
+    }
+
+    return(sprintf("%s = %.2f, 95%% CI [%.2f, %.2f]", label, est, ci_low, ci_high))
+  }
+
   mp <- parameters::model_parameters(m, exponentiate = exponentiate)
   row <- mp[mp$Parameter == term, , drop = FALSE]
   if (nrow(row) == 0) {
@@ -427,12 +482,17 @@ get_custom_rows <- function(models) {
     # Extract N participants based on model type
     n_part <- tryCatch({
       if (inherits(model, "clmm")) {
-        # For ordinal::clmm models, use ranef() to get random effects
-        # ranef() returns a list with one data.frame per grouping factor
-        # Number of rows = number of groups (participants)
         nrow(ranef(model)$pid)
+      } else if (inherits(model, "clm")) {
+        stored <- attr(model, "n_participants_pid", exact = TRUE)
+        if (!is.null(stored)) {
+          stored
+        } else if (!is.null(model$model) && "pid" %in% names(model$model)) {
+          length(unique(model$model$pid))
+        } else {
+          NA_integer_
+        }
       } else if (inherits(model, "lmerMod")) {
-        # For lme4::lmer models, use ngrps() to get number of groups
         lme4::ngrps(model, "pid")
       } else {
         NA_integer_
