@@ -441,7 +441,59 @@ Prior to hypothesis testing, we conducted three positive data quality controls (
 
 ## Sample Demographics
 
-Participants were included in the analytical sample if they passed a three-step filter: (1) completed at least one valid outcome measure (SWEMWBS, PSQI, or ESS) across any wave, (2) had valid timezone data (either self-reported or imputed for UK participants), and (3) contributed at least one valid gaming session during the study period. This filtering approach ensured that all included participants had the necessary data to test our hypotheses about late-night gaming and its effects on sleep and wellbeing outcomes. The analytical sample therefore includes all participants who met these criteria, and the table below presents the demographic composition of this sample along key covariates.
+```{r}
+#| label: sample-attrition
+#| echo: false
+#| message: false
+#| warning: false
+
+library(lubridate)
+
+# Load raw panel data to reconstruct filter steps
+panel_raw_attrition <- read_csv("data/raw/survey_biweekly.csv.gz", show_col_types = FALSE) |>
+  mutate(date = as_datetime(date))
+
+n_signed_up <- nrow(data.intake)
+n_completed_survey <- n_distinct(panel_raw_attrition$pid)
+
+# Step 1: Valid outcome at wave 1
+step1_pids <- panel_raw_attrition |>
+  filter(wave == 1) |>
+  filter(
+    (!is.na(wemwbs_1) | !is.na(wemwbs_2) | !is.na(wemwbs_3) |
+     !is.na(wemwbs_4) | !is.na(wemwbs_5) | !is.na(wemwbs_6) | !is.na(wemwbs_7)) |
+    (!is.na(psqi_bedtime_hour) | !is.na(psqi_sleep_latency_min) |
+     !is.na(psqi_overall_quality) | !is.na(psqi_daytime_enthusiasm)) |
+    (!is.na(eps_reading) | !is.na(eps_tv) | !is.na(eps_public) |
+     !is.na(eps_passenger) | !is.na(eps_afternoon) | !is.na(eps_talking) |
+     !is.na(eps_lunch) | !is.na(eps_car))
+  ) |>
+  distinct(pid) |>
+  pull(pid)
+n_step1 <- length(step1_pids)
+n_excluded_step1 <- n_completed_survey - n_step1
+
+# Step 2: Valid timezone
+tz_pids <- data.intake |>
+  filter(!is.na(local_timezone) | country == "UK") |>
+  pull(pid) |>
+  unique()
+step2_pids <- intersect(step1_pids, tz_pids)
+n_step2 <- length(step2_pids)
+n_excluded_step2 <- n_step1 - n_step2
+
+# Step 3: Valid gaming session (from processed gaming data, which applies quality filters)
+gaming_pids <- read_csv("data/processed/gaming_sessions.csv.gz", show_col_types = FALSE) |>
+  distinct(pid) |>
+  pull(pid)
+step3_pids <- intersect(step2_pids, gaming_pids)
+n_step3 <- length(step3_pids)
+n_excluded_step3 <- n_step2 - n_step3
+
+n_analytical <- n_step3
+```
+
+Of `r format(n_signed_up, big.mark = ",")` participants who signed up for the study, `r format(n_completed_survey, big.mark = ",")` completed at least one biweekly panel survey. The analytical sample was derived from these participants by applying a three-step filter. First, participants were required to have at least one valid outcome measure (SWEMWBS, PSQI, or ESS) at wave 1, which excluded `r n_excluded_step1` participants (*n* = `r format(n_step1, big.mark = ",")`). Second, participants needed valid timezone data (either self-reported or imputed for UK participants) to accurately classify late-night gaming sessions, which excluded a further `r n_excluded_step2` participants (*n* = `r format(n_step2, big.mark = ",")`). Third, participants were required to have contributed at least one valid gaming session during the study period, which excluded `r n_excluded_step3` additional participants, yielding a final analytical sample of *N* = `r format(n_analytical, big.mark = ",")`. @tbl-demographics presents the demographic composition of both the total survey sample and the analytical sample.
 
 ```{r}
 #| label: tbl-demographics
@@ -457,8 +509,30 @@ library(lubridate)
 
 # ===== STEP 1: Define samples =====
 # Total sample: all participants who completed at least one panel survey
+# Process raw panel data through the same pipeline as preprocessing
+# Source preprocess_data.R for compute_psqi, compute_eps_total, etc.
+# Use local env + save/restore wd to avoid side effects
+Sys.setenv(SKIP_PREPROCESS_ON_SOURCE = "1")
+local({
+  saved_wd <- getwd()
+  on.exit(setwd(saved_wd))
+  source(file.path(here::here(), "preprocess_data.R"), local = FALSE)
+})
+Sys.setenv(SKIP_PREPROCESS_ON_SOURCE = "0")
+
 panel_raw <- read_csv("data/raw/survey_biweekly.csv.gz", show_col_types = FALSE)
 total_sample <- unique(panel_raw$pid)
+
+# NOTE: 108 panel pids have no intake record — see GitHub issue #3
+pids_missing_intake <- setdiff(total_sample, unique(data.intake$pid))
+
+# Process outcomes and chronotype for ALL survey participants
+panel_processed <- panel_raw |>
+  compute_psqi() |>
+  compute_eps_total() |>
+  compute_wemwbs() |>
+  compute_mctq_msf_sc() |>
+  mutate(pid = as.character(pid))
 
 # Analytical sample: participants who passed the 3-step filter
 # (valid outcome at wave 1 + timezone + gaming session)
@@ -521,9 +595,8 @@ compute_outcomes <- function(pids, data) {
     )
 }
 
-# For total sample, use selfreport_saved (imputed, all valid pids) where available
-# Participants in total_sample but not in selfreport_saved will have NA outcomes
-outcomes_total <- compute_outcomes(total_sample, selfreport_saved)
+# Compute outcomes from processed panel data (total) and selfreport (analytical)
+outcomes_total <- compute_outcomes(total_sample, panel_processed)
 outcomes_analytical <- compute_outcomes(analytical_sample, selfreport)
 
 # Chronotype from wave 1 (baseline)
@@ -534,13 +607,13 @@ compute_chronotype <- function(pids, data) {
     mutate(no_alarm_free = no_alarm_free == "No")
 }
 
-chrono_total <- compute_chronotype(total_sample, selfreport_saved)
+chrono_total <- compute_chronotype(total_sample, panel_processed)
 chrono_analytical <- compute_chronotype(analytical_sample, selfreport)
 
 # ===== STEP 4: Join all data sources =====
 assemble_master <- function(pids, gaming, outcomes, chronotype) {
-  data.intake |>
-    filter(pid %in% pids) |>
+  tibble(pid = pids) |>
+    left_join(data.intake, by = "pid") |>
     left_join(gaming, by = "pid") |>
     left_join(outcomes, by = "pid") |>
     left_join(chronotype, by = "pid") |>
@@ -617,7 +690,7 @@ msf_iqr_tot <- IQR(master_data_total$msf_sc, na.rm = TRUE)
 msf_med_ana <- median(master_data$msf_sc, na.rm = TRUE)
 msf_iqr_ana <- IQR(master_data$msf_sc, na.rm = TRUE)
 summary_rows <- bind_rows(summary_rows,
-  tibble(Characteristic = "    MCTQ-MSF~sc~ (HH:MM)†",
+  tibble(Characteristic = "    MCTQ-MSF~sc~ (HH:MM)^1^",
          Total = sprintf("%s (%s)", hours_to_hhmm(msf_med_tot), hours_to_hhmm(msf_iqr_tot)),
          Analytical = sprintf("%s (%s)", hours_to_hhmm(msf_med_ana), hours_to_hhmm(msf_iqr_ana))))
 
@@ -626,9 +699,9 @@ summary_rows <- bind_rows(summary_rows,
   tibble(Characteristic = "**C. Gaming**", Total = "", Analytical = ""))
 
 summary_rows <- bind_rows(summary_rows,
-  add_median_iqr("avg_daily_total_gaming", "Gaming (min/day)†", 1))
+  add_median_iqr("avg_daily_total_gaming", "Gaming (min/day)^1^", 1))
 summary_rows <- bind_rows(summary_rows,
-  add_median_iqr("avg_daily_ln_gaming", "LN gaming (min/day)†", 1))
+  add_median_iqr("avg_daily_ln_gaming", "LN gaming (min/day)^1^", 1))
 summary_rows <- bind_rows(summary_rows,
   add_continuous("pct_nights_ln_gaming", "% nights LN gaming", 1))
 
@@ -676,7 +749,7 @@ nested_rows <- which(str_detect(summary_rows$Characteristic, "^        "))
 tbl <- summary_rows |>
   tt(
     caption = "Sample Characteristics",
-    notes = "Values are M (SD) unless noted. †Mdn (IQR). LN = late-night."
+    notes = "Values are M (SD) unless noted. ^1^ Mdn (IQR). LN = late-night."
   ) |>
   format_tt(j = 1, markdown = TRUE) |>
   style_tt(j = 1, align = "l") |>
@@ -1804,15 +1877,14 @@ diary_n_entries <- nrow(diary_ocat)
 
 library(ordinal)
 
-# H1: Direct effects (linear CLM)
+# H1: Direct effects (CLMM with random intercept for participant)
 diary_h1_formula <- sleep_quality_ord ~ late_night_within + late_night_between +
-  age_scaled + bmi_scaled + SES_index_scaled + gender + is_weekend
+  age_scaled + bmi_scaled + SES_index_scaled + gender + is_weekend + (1 | pid)
 
-diary_model_h1 <- clm(diary_h1_formula, data = diary_ocat, link = "logit", Hess = TRUE)
-attr(diary_model_h1, "n_participants_pid") <- length(unique(diary_ocat$pid))
+diary_model_h1 <- clmm(diary_h1_formula, data = diary_ocat, link = "logit", Hess = TRUE)
 saveRDS(diary_model_h1, "output/models/diary_model_h1_sleepquality.rds")
 
-# Spline comparison (df = 2:6)
+# Spline comparison (df = 2:6) — use CLM (no RE) for speed; linearity check only
 diary_covariate_terms <- c("late_night_between", "age_scaled", "bmi_scaled",
                            "SES_index_scaled", "gender", "is_weekend")
 
@@ -1826,12 +1898,18 @@ diary_spline_fits <- purrr::map(2:6, \(df) {
   list(df = df, model = mod)
 })
 
+diary_clm_linear <- clm(
+  sleep_quality_ord ~ late_night_within + late_night_between +
+    age_scaled + bmi_scaled + SES_index_scaled + gender + is_weekend,
+  data = diary_ocat, link = "logit", Hess = TRUE
+)
+
 diary_spline_compare <- tibble(
   df = purrr::map_int(diary_spline_fits, "df"),
   AIC = purrr::map_dbl(diary_spline_fits, \(x) AIC(x$model))
 ) |> arrange(AIC) |> mutate(deltaAIC = AIC - min(AIC))
 
-diary_linear_aic <- AIC(diary_model_h1)
+diary_linear_aic <- AIC(diary_clm_linear)
 diary_best_spline_aic <- diary_spline_compare$AIC[1]
 
 diary_spline_compare$linear_AIC <- diary_linear_aic
@@ -1854,10 +1932,9 @@ diary_ocat_h2 <- diary_ocat |> filter(!is.na(chronotype_centered))
 diary_h2_formula <- sleep_quality_ord ~
   late_night_within * chronotype_centered +
   late_night_between * chronotype_centered +
-  age_scaled + bmi_scaled + SES_index_scaled + gender + is_weekend
+  age_scaled + bmi_scaled + SES_index_scaled + gender + is_weekend + (1 | pid)
 
-diary_model_h2 <- clm(diary_h2_formula, data = diary_ocat_h2, link = "logit", Hess = TRUE)
-attr(diary_model_h2, "n_participants_pid") <- length(unique(diary_ocat_h2$pid))
+diary_model_h2 <- clmm(diary_h2_formula, data = diary_ocat_h2, link = "logit", Hess = TRUE)
 saveRDS(diary_model_h2, "output/models/diary_model_h2_sleepquality.rds")
 ```
 
@@ -1894,7 +1971,7 @@ diary_spline_compare_loaded <- if (file.exists("output/models/diary_spline_compa
 }
 ```
 
-To complement the panel-level analyses, we examined daily diary reports of sleep quality as a function of late-night gaming in the preceding 24 hours. Sleep quality was recorded on a 5-level ordinal scale (Very poor, Poor, Fair, Good, Very good) in each diary entry. Because participants provided varying numbers of diary entries and the ordinal cumulative link mixed model (CLMM) encountered convergence difficulties, we fitted cumulative link models (CLM; `ordinal::clm`) without random effects. To separate within-person fluctuations from between-person differences in late-night gaming, we decomposed the trimmed late-night gaming variable (capped at the 99th percentile) into a within-person component (daily deviation from the participant's own mean) and a between-person component (participant mean centered at the grand mean). The analytical diary sample comprised `r diary_n_participants` participants contributing `r format(diary_n_entries, big.mark = ",")` diary entries with valid sleep quality ratings. Covariates included age, BMI, SES (all scaled), gender, and a weekend indicator.
+To complement the panel-level analyses, we examined daily diary reports of sleep quality as a function of late-night gaming in the preceding 24 hours. Sleep quality was recorded on a 5-level ordinal scale (Very poor, Poor, Fair, Good, Very good) in each diary entry. We fitted cumulative link mixed models (CLMM; `ordinal::clmm`) with random intercepts for participants to account for repeated measurements. To separate within-person fluctuations from between-person differences in late-night gaming, we decomposed the trimmed late-night gaming variable (capped at the 99th percentile) into a within-person component (daily deviation from the participant's own mean) and a between-person component (participant mean centered at the grand mean). The analytical diary sample comprised `r diary_n_participants` participants contributing `r format(diary_n_entries, big.mark = ",")` diary entries with valid sleep quality ratings. Covariates included age, BMI, SES (all scaled), gender, and a weekend indicator.
 
 For the direct-effects model (H1), the within-person effect of late-night gaming on sleep quality was `r diary_h1_within`, indicating that on days when a participant gamed more late at night than their own average, there was `r ifelse(grepl("OR = [01]\\.[0-9]", diary_h1_within), "a tendency toward", "little change in")` sleep quality. The between-person effect was `r diary_h1_between`, reflecting `r ifelse(grepl("OR = [01]\\.[0-9]", diary_h1_between), "lower", "similar")` sleep quality among participants who habitually gamed more at night.
 `r if (!is.null(diary_spline_compare_loaded)) paste0("We compared the linear specification against natural spline alternatives (df = 2-6); the best-fitting spline (df = ", diary_spline_compare_loaded$df[1], ") had a \\u0394AIC of ", sprintf("%.1f", diary_spline_compare_loaded$AIC[1] - diary_spline_compare_loaded$linear_AIC[1]), " relative to the linear model, suggesting that the linear parameterization provided an adequate fit.")`
@@ -1983,7 +2060,7 @@ if (!is.null(diary_model_h1_loaded) && !is.null(diary_model_h2_loaded)) {
     notes = c(
       "+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
       "LN = late-night. Confidence intervals shown in brackets.",
-      "Cumulative link models (logit link) on 5-level ordinal sleep quality.",
+      "Cumulative link mixed models (logit link, random intercept for participant) on 5-level ordinal sleep quality.",
       "Within = daily deviation from person mean; Between = person mean - grand mean."
     ),
     output = "tinytable"

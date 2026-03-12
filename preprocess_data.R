@@ -607,10 +607,13 @@ process_gaming_data <- function(panel_path, intake_processed) {
 
   message(sprintf("Calculated day 0 for %d participants", nrow(day_zero)))
 
-  # Identify participants with at least one valid outcome measure
+  # Identify participants with at least one valid outcome measure at wave 1
   # Outcome measures: WEMWBS (wellbeing), PSQI duration/quality, ESS (sleepiness)
-  # open-play column names
+  # Requiring wave 1 ensures a baseline observation for imputation.
+  # Since analyses are run separately per outcome, a participant only needs
+  # one of the four outcomes at baseline to contribute to at least one model.
   outcome_check <- data.panel.raw %>%
+    filter(wave == 1) %>%
     mutate(
       # Check if any WEMWBS items are non-missing
       has_wemwbs = !is.na(wemwbs_1) | !is.na(wemwbs_2) | !is.na(wemwbs_3) |
@@ -635,9 +638,9 @@ process_gaming_data <- function(panel_path, intake_processed) {
   n_with_outcomes <- length(valid_participants_outcomes)
   n_without_outcomes <- nrow(day_zero) - n_with_outcomes
 
-  message(sprintf("\n=== STEP 1: Outcome Measure Filter ==="))
-  message(sprintf("Participants with valid outcome data: %d", n_with_outcomes))
-  message(sprintf("Participants WITHOUT outcome data: %d (excluded)", n_without_outcomes))
+  message(sprintf("\n=== STEP 1: Outcome Measure Filter (wave 1) ==="))
+  message(sprintf("Participants with valid outcome data at wave 1: %d", n_with_outcomes))
+  message(sprintf("Participants WITHOUT outcome data at wave 1: %d (excluded)", n_without_outcomes))
 
   # Load timezone data from intake
   timezone_data <- intake_processed %>%
@@ -739,7 +742,7 @@ process_gaming_data <- function(panel_path, intake_processed) {
   message("Loading gaming data...")
 
   # Nintendo
-  data.nin.std <- read_csv("data/nintendo.csv.gz", show_col_types = FALSE) %>%
+  data.nin.std <- read_csv("data/raw/nintendo.csv.gz", show_col_types = FALSE) %>%
     rename(sessionStart = session_start, sessionEnd = session_end) %>%
     mutate(
       date = as_date(sessionStart),
@@ -755,7 +758,7 @@ process_gaming_data <- function(panel_path, intake_processed) {
     )
 
   # Xbox
-  data.xbox.std <- read_csv("data/xbox.csv.gz", show_col_types = FALSE) %>%
+  data.xbox.std <- read_csv("data/raw/xbox.csv.gz", show_col_types = FALSE) %>%
     rename(sessionStart = session_start, sessionEnd = session_end) %>%
     mutate(
       date = as_date(sessionStart),
@@ -771,7 +774,7 @@ process_gaming_data <- function(panel_path, intake_processed) {
     )
 
   # Steam (open-play uses approximate_session_start/end and has minutes column)
-  data.steam.std <- read_csv("data/steam.csv.gz", show_col_types = FALSE) %>%
+  data.steam.std <- read_csv("data/raw/steam.csv.gz", show_col_types = FALSE) %>%
     rename(sessionStart = approximate_session_start, sessionEnd = approximate_session_end) %>%
     mutate(
       date = as_date(sessionStart),
@@ -979,15 +982,15 @@ create_selfreport <- function(panel_path, intake_processed, valid_participants) 
 preprocess_all_data <- function() {
   # Process intake
   message("Processing intake data...")
-  intake_processed <- process_intake("data/survey_intake.csv.gz")
+  intake_processed <- process_intake("data/raw/survey_intake.csv.gz")
 
   # Process panel
   message("Processing panel data...")
-  panel_processed <- process_panel("data/survey_biweekly.csv.gz", intake_processed)
+  panel_processed <- process_panel("data/raw/survey_biweekly.csv.gz", intake_processed)
 
   # Process gaming data (returns both gaming data and valid participants list)
   message("Processing gaming data...")
-  gaming_result <- process_gaming_data("data/survey_biweekly.csv.gz", intake_processed)
+  gaming_result <- process_gaming_data("data/raw/survey_biweekly.csv.gz", intake_processed)
   gaming_data <- gaming_result$gaming_data
   valid_participants <- gaming_result$valid_participants
 
@@ -997,7 +1000,7 @@ preprocess_all_data <- function() {
 
   # Create self-report data (filtered to valid participants only)
   message("\nCreating self-report data...")
-  selfreport <- create_selfreport("data/survey_biweekly.csv.gz", intake_processed, valid_participants)
+  selfreport <- create_selfreport("data/raw/survey_biweekly.csv.gz", intake_processed, valid_participants)
 
   # Save processed data
   message("\nSaving processed data...")
@@ -1016,18 +1019,7 @@ preprocess_all_data <- function() {
   source("imputation.R")
   Sys.setenv(RUN_IMPUTATION_ON_SOURCE = "1")  # Reset
 
-  # Drop participants missing WEMWBS at wave 1 (insufficient predictors)
-  dropped_pids <- selfreport %>%
-    filter(wave == 1, is.na(wemwbs)) %>%
-    distinct(pid) %>%
-    pull(pid)
-
-  if (length(dropped_pids) > 0) {
-    selfreport <- selfreport %>% filter(!pid %in% dropped_pids)
-    message(sprintf("  - Dropped %d participants lacking WEMWBS at wave 1", length(dropped_pids)))
-  }
-
-  # Expand to full wave grid (1,577 × 6 waves = 9,462 rows)
+  # Expand to full wave grid
   selfreport_expanded <- expand_to_all_waves(selfreport, waves = c(1, 2, 3, 4, 5, 6))
   message(sprintf("  - Expanded to %d rows (%d participants × 6 waves)",
                   nrow(selfreport_expanded), n_distinct(selfreport_expanded$pid)))

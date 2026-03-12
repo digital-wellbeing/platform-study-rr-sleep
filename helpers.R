@@ -320,7 +320,7 @@ get_h2_interaction <- function(path, term, exponentiate = FALSE, label_if_exp = 
   }
   m <- readRDS(path)
 
-  if (inherits(m, "clm")) {
+  if (inherits(m, "clm") || inherits(m, "clmm")) {
     coef_table <- as.data.frame(coef(summary(m)))
     coef_table$Parameter <- rownames(coef_table)
     row <- coef_table[coef_table$Parameter == term, , drop = FALSE]
