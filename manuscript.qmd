@@ -2063,10 +2063,10 @@ For the chronotype moderation model (H2), the interaction between within-person 
 
 ```{r}
 #| label: fig-diary-sleepquality
-#| fig-cap: "Predicted probability of poor sleep quality as a function of late-night gaming (diary study). The left column shows the within-person effect (daily deviation from a participant's own mean late-night gaming); the right column shows the between-person effect (participant mean centered at the grand mean). Top panels show the marginal distribution of each gaming component; bottom panels show the predicted probability of reporting poor sleep (Poor or Very poor on the 5-level ordinal scale). Ribbons represent 95% confidence intervals. Vertical reference lines mark the median (dotted), mean (dashed), 75th percentile (dotted), and 90th percentile (dashed) of the sample distribution. Predictions are derived from the diary H1 CLMM (random intercept for participant, probit link) adjusting for age, BMI, SES, and weekday vs. weekend, with the complementary gaming component held at its grand mean (zero)."
-#| fig-width: 11
+#| fig-cap: "Predicted probability of poor sleep quality as a function of average late-night gaming (diary study, between-person effect). The line shows the probability of reporting poor sleep quality (Poor or Very poor on the 5-level ordinal scale) across the range of participants' average daily late-night gaming, centered at the grand mean. The ribbon represents 95% confidence intervals. Vertical reference lines mark the median (dotted), mean (dashed), 75th percentile (dotted), and 90th percentile (dashed) of the sample distribution. The marginal density plot (top panel) shows the distribution of between-person late-night gaming. Predictions are derived from the diary H1 CLMM (random intercept for participant, probit link) adjusting for age, BMI, SES, and weekday vs. weekend, with the within-person component held at zero (i.e., at the participant's own mean)."
+#| fig-width: 9
 #| fig-height: 6
-#| code-summary: "Diary: probability of poor sleep quality by within- and between-person late-night gaming"
+#| code-summary: "Diary: probability of poor sleep quality by between-person late-night gaming"
 #| echo: false
 #| message: false
 #| warning: false
@@ -2078,18 +2078,8 @@ if (file.exists("output/models/diary_model_h1_sleepquality.rds")) {
 
   diary_h1_fig <- readRDS("output/models/diary_model_h1_sleepquality.rds")
 
-  # Prediction grids (per-10-min units: -6 to 9 = -60 to 90 min)
+  # Prediction grid (per-10-min units: -6 to 9 = -60 to 90 min)
   ln_seq <- seq(-6, 9, by = 0.1)
-
-  # Within-person exceedance (between held at grand mean = 0)
-  emm_within <- emmeans(
-    diary_h1_fig, ~ ln_within_10 | cut,
-    at = list(ln_within_10 = ln_seq, ln_between_10 = 0),
-    mode = "exc.prob"
-  )
-  df_within <- as.data.frame(emm_within) |>
-    mutate(gaming_min = ln_within_10 * 10) |>
-    filter(as.character(cut) == "3|4")  # P(Poor or Very poor) = P(Y > "Fair")
 
   # Between-person exceedance (within held at person mean = 0)
   emm_between <- emmeans(
@@ -2104,83 +2094,62 @@ if (file.exists("output/models/diary_model_h1_sleepquality.rds")) {
   x_range  <- c(-60, 90)
   x_breaks <- seq(-60, 90, by = 30)
 
-  # Distribution summary stats (in minutes)
-  get_dist_stats <- function(vals) {
-    list(
-      mean   = mean(vals, na.rm = TRUE),
-      median = median(vals, na.rm = TRUE),
-      p75    = quantile(vals, 0.75, na.rm = TRUE),
-      p90    = quantile(vals, 0.90, na.rm = TRUE)
+  between_stats <- list(
+    mean   = mean(diary_ocat$late_night_between, na.rm = TRUE),
+    median = median(diary_ocat$late_night_between, na.rm = TRUE),
+    p75    = quantile(diary_ocat$late_night_between, 0.75, na.rm = TRUE),
+    p90    = quantile(diary_ocat$late_night_between, 0.90, na.rm = TRUE)
+  )
+
+  p_dist <- ggplot(
+    data.frame(x = diary_ocat$late_night_between[!is.na(diary_ocat$late_night_between)]),
+    aes(x = x)
+  ) +
+    geom_density(fill = "gray70", color = "gray50", alpha = 0.6) +
+    geom_vline(xintercept = between_stats$median, linetype = "dotted", color = "gray40", linewidth = 0.5) +
+    geom_vline(xintercept = between_stats$mean,   linetype = "dashed",  color = "gray40", linewidth = 0.5) +
+    geom_vline(xintercept = between_stats$p75,    linetype = "dotted", color = "gray40", linewidth = 0.5) +
+    geom_vline(xintercept = between_stats$p90,    linetype = "dashed",  color = "gray40", linewidth = 0.5) +
+    scale_x_continuous(breaks = x_breaks, labels = paste0(x_breaks, " min"), limits = x_range) +
+    labs(y = "Density", x = NULL) +
+    theme_minimal(base_size = 11) +
+    theme(
+      panel.grid.minor = element_blank(),
+      axis.text.x      = element_blank(),
+      axis.title.x     = element_blank(),
+      plot.margin      = margin(5, 5, 0, 5)
     )
-  }
-  within_stats  <- get_dist_stats(diary_ocat$late_night_within)
-  between_stats <- get_dist_stats(diary_ocat$late_night_between)
 
-  # Helper: density distribution panel
-  make_density_panel <- function(vals, stats, x_range, x_breaks, title_label) {
-    ggplot(data.frame(x = vals[!is.na(vals)]), aes(x = x)) +
-      geom_density(fill = "gray70", color = "gray50", alpha = 0.6) +
-      geom_vline(xintercept = stats$median, linetype = "dotted", color = "gray40", linewidth = 0.5) +
-      geom_vline(xintercept = stats$mean,   linetype = "dashed",  color = "gray40", linewidth = 0.5) +
-      geom_vline(xintercept = stats$p75,    linetype = "dotted", color = "gray40", linewidth = 0.5) +
-      geom_vline(xintercept = stats$p90,    linetype = "dashed",  color = "gray40", linewidth = 0.5) +
-      scale_x_continuous(breaks = x_breaks, labels = paste0(x_breaks, " min"), limits = x_range) +
-      labs(title = title_label, y = "Density", x = NULL) +
-      theme_minimal(base_size = 11) +
-      theme(
-        panel.grid.minor  = element_blank(),
-        axis.text.x       = element_blank(),
-        axis.title.x      = element_blank(),
-        plot.margin       = margin(5, 5, 0, 5)
-      )
-  }
+  y_top <- max(df_between$asymp.UCL, na.rm = TRUE)
+  y_ann <- y_top * 0.88
 
-  # Helper: exceedance probability panel
-  make_exceedance_panel <- function(df, stats, x_range, x_breaks, x_label) {
-    y_top <- max(df$asymp.UCL, na.rm = TRUE)
-    y_ann <- y_top * 0.88
+  p_main <- ggplot(df_between, aes(x = gaming_min, y = exc.prob)) +
+    geom_vline(xintercept = between_stats$median, linetype = "dotted", color = "gray40", linewidth = 0.5) +
+    geom_vline(xintercept = between_stats$mean,   linetype = "dashed",  color = "gray40", linewidth = 0.5) +
+    geom_vline(xintercept = between_stats$p75,    linetype = "dotted", color = "gray40", linewidth = 0.5) +
+    geom_vline(xintercept = between_stats$p90,    linetype = "dashed",  color = "gray40", linewidth = 0.5) +
+    annotate("text", x = between_stats$median, y = y_ann, label = "Median",
+             angle = 90, vjust = -0.5, size = 3, color = "gray40") +
+    annotate("text", x = between_stats$mean,   y = y_ann, label = "Mean",
+             angle = 90, vjust = -0.5, size = 3, color = "gray40") +
+    annotate("text", x = between_stats$p75,    y = y_ann, label = "75th %ile",
+             angle = 90, vjust = -0.5, size = 3, color = "gray40") +
+    annotate("text", x = between_stats$p90,    y = y_ann, label = "90th %ile",
+             angle = 90, vjust = -0.5, size = 3, color = "gray40") +
+    geom_ribbon(aes(ymin = asymp.LCL, ymax = asymp.UCL),
+                alpha = 0.4, fill = "#f46d43", color = "#f46d43",
+                linewidth = 0.3, linetype = "dashed") +
+    geom_line(linewidth = 1.5, color = "#d62828") +
+    scale_x_continuous(breaks = x_breaks, labels = paste0(x_breaks, " min"), limits = x_range) +
+    scale_y_continuous(labels = scales::percent_format(), limits = c(0, y_top * 1.2)) +
+    labs(
+      x = "Average Daily Late-Night Gaming, Centered (min/day)",
+      y = "P(Poor or Very poor sleep)"
+    ) +
+    theme_minimal(base_size = 11) +
+    theme(panel.grid.minor = element_blank(), plot.margin = margin(0, 5, 5, 5))
 
-    ggplot(df, aes(x = gaming_min, y = exc.prob)) +
-      geom_vline(xintercept = stats$median, linetype = "dotted", color = "gray40", linewidth = 0.5) +
-      geom_vline(xintercept = stats$mean,   linetype = "dashed",  color = "gray40", linewidth = 0.5) +
-      geom_vline(xintercept = stats$p75,    linetype = "dotted", color = "gray40", linewidth = 0.5) +
-      geom_vline(xintercept = stats$p90,    linetype = "dashed",  color = "gray40", linewidth = 0.5) +
-      annotate("text", x = stats$median, y = y_ann, label = "Median",
-               angle = 90, vjust = -0.5, size = 3, color = "gray40") +
-      annotate("text", x = stats$mean,   y = y_ann, label = "Mean",
-               angle = 90, vjust = -0.5, size = 3, color = "gray40") +
-      annotate("text", x = stats$p75,    y = y_ann, label = "75th %ile",
-               angle = 90, vjust = -0.5, size = 3, color = "gray40") +
-      annotate("text", x = stats$p90,    y = y_ann, label = "90th %ile",
-               angle = 90, vjust = -0.5, size = 3, color = "gray40") +
-      geom_ribbon(aes(ymin = asymp.LCL, ymax = asymp.UCL),
-                  alpha = 0.4, fill = "#f46d43", color = "#f46d43",
-                  linewidth = 0.3, linetype = "dashed") +
-      geom_line(linewidth = 1.5, color = "#d62828") +
-      scale_x_continuous(breaks = x_breaks, labels = paste0(x_breaks, " min"), limits = x_range) +
-      scale_y_continuous(labels = scales::percent_format(), limits = c(0, y_top * 1.2)) +
-      labs(x = x_label, y = "P(Poor or Very poor sleep)") +
-      theme_minimal(base_size = 11) +
-      theme(panel.grid.minor = element_blank(), plot.margin = margin(0, 5, 5, 5))
-  }
-
-  p_within_dist  <- make_density_panel(
-    diary_ocat$late_night_within,  within_stats,  x_range, x_breaks, "Within-Person"
-  )
-  p_between_dist <- make_density_panel(
-    diary_ocat$late_night_between, between_stats, x_range, x_breaks, "Between-Person"
-  )
-  p_within_main  <- make_exceedance_panel(
-    df_within,  within_stats,  x_range, x_breaks,
-    "Within-Person LN Gaming Deviation (min/day)"
-  )
-  p_between_main <- make_exceedance_panel(
-    df_between, between_stats, x_range, x_breaks,
-    "Between-Person LN Gaming Deviation (min/day)"
-  )
-
-  (p_within_dist | p_between_dist) /
-    (p_within_main | p_between_main) +
+  (p_dist / p_main) +
     plot_layout(heights = c(1, 3)) +
     plot_annotation(
       title = "Diary: Probability of Poor Sleep Quality by Late-Night Gaming"
