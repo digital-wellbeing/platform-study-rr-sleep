@@ -1914,11 +1914,12 @@ library(ordinal)
 
 # H1: Direct effects (CLMM with random intercept for participant)
 # Gender is excluded: (1|gender) with only 3 levels does not converge
+# Region is excluded: all diary participants are US-only (no UK participants)
 # Probit link used for convergence. Late-night gaming expressed per 10 minutes.
 # Positive coefficients = higher probability of worse sleep (levels=5:1 coding).
 diary_h1_formula <- sleep_quality_ord ~
   ln_within_10 + ln_between_10 +
-  age_scaled + bmi_scaled + SES_index_scaled + region + is_weekend + (1 | pid)
+  age_scaled + bmi_scaled + SES_index_scaled + is_weekend + (1 | pid)
 
 diary_model_h1 <- clmm(diary_h1_formula, data = diary_ocat, link = "probit", Hess = TRUE,
                         control = clmm.control(maxIter = 50000, gradTol = 0.5))
@@ -2135,7 +2136,7 @@ if (!is.null(diary_model_h1_loaded) && !is.null(diary_model_h2_loaded)) {
     notes = c(
       "+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
       "LN = late-night. Confidence intervals shown in brackets.",
-      "Cumulative link mixed models (random intercept for participant) on 5-level ordinal sleep quality (positive coefficients = higher probability of worse sleep). Both H1 and H2 use probit link (logit did not converge reliably for either model). Late-night gaming expressed per 10 minutes; chronotype in centered hours; age, BMI, SES scaled within the diary subsample; region (UK/US) included for consistency with panel models.",
+      "Cumulative link mixed models (random intercept for participant) on 5-level ordinal sleep quality (positive coefficients = higher probability of worse sleep). Both H1 and H2 use probit link (logit did not converge reliably for either model). Late-night gaming expressed per 10 minutes; chronotype in centered hours; age, BMI, SES scaled within the diary subsample. Region excluded: all diary participants are US-only.",
       "Within = daily deviation from person mean; Between = person mean - grand mean."
     ),
     output = "tinytable"
