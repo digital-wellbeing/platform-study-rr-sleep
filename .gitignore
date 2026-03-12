@@ -16,7 +16,8 @@
 data/*
 # Allow processed data and survey data for CI
 !data/processed/
-!data/survey_*.csv.gz
+# survey data is downloaded via Makefile, don't track
+# !data/survey_*.csv.gz
 
 *.js
 *.css
@@ -48,3 +49,6 @@ renv/lock/
 renv/python/
 renv/sandbox/
 renv/staging/
+
+# Archive - old/unused files preserved in git history
+archive/
