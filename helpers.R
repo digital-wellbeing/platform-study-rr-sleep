@@ -109,13 +109,18 @@ build_gaming_inputs <- function(selfreport_data) {
 #' @param digits Number of decimal places (default: 1)
 #' @return Tibble with one row for the summary table
 add_continuous <- function(var_name, label, digits = 1) {
-  stats_total <- sprintf(paste0("%.", digits, "f (%.1f)"),
+  fmt <- paste0("%.", digits, "f (%.", digits, "f)")
+  stats_total <- sprintf(fmt,
+                        mean(master_data_total[[var_name]], na.rm = TRUE),
+                        sd(master_data_total[[var_name]], na.rm = TRUE))
+  stats_analytical <- sprintf(fmt,
                         mean(master_data[[var_name]], na.rm = TRUE),
                         sd(master_data[[var_name]], na.rm = TRUE))
 
   tibble(
     Characteristic = label,
-    Total = stats_total
+    Total = stats_total,
+    Analytical = stats_analytical
   )
 }
 
@@ -126,13 +131,19 @@ add_continuous <- function(var_name, label, digits = 1) {
 #' @param digits Number of decimal places (default: 1)
 #' @return Tibble with one row for the summary table
 add_median_iqr <- function(var_name, label, digits = 1) {
-  med_total <- median(master_data[[var_name]], na.rm = TRUE)
-  iqr_total <- IQR(master_data[[var_name]], na.rm = TRUE)
-  stats_total <- sprintf(paste0("%.", digits, "f (%.1f)"), med_total, iqr_total)
+  fmt <- paste0("%.", digits, "f (%.", digits, "f)")
+  med_tot <- median(master_data_total[[var_name]], na.rm = TRUE)
+  iqr_tot <- IQR(master_data_total[[var_name]], na.rm = TRUE)
+  stats_total <- sprintf(fmt, med_tot, iqr_tot)
+
+  med_ana <- median(master_data[[var_name]], na.rm = TRUE)
+  iqr_ana <- IQR(master_data[[var_name]], na.rm = TRUE)
+  stats_analytical <- sprintf(fmt, med_ana, iqr_ana)
 
   tibble(
     Characteristic = label,
-    Total = stats_total
+    Total = stats_total,
+    Analytical = stats_analytical
   )
 }
 
@@ -142,28 +153,34 @@ add_median_iqr <- function(var_name, label, digits = 1) {
 #' @param levels_order Optional vector specifying the order of levels
 #' @return Tibble with rows for each level of the categorical variable
 add_categorical <- function(var_name, levels_order = NULL) {
-  total_n <- nrow(master_data)
+  n_total <- nrow(master_data_total)
+  n_analytical <- nrow(master_data)
 
-  # Get counts by category
-  counts_total <- master_data |>
-    count(.data[[var_name]], name = "n_total")
+  counts_tot <- master_data_total |>
+    count(.data[[var_name]], name = "n_tot")
+  counts_ana <- master_data |>
+    count(.data[[var_name]], name = "n_ana")
 
-  # Order levels if specified
+  counts <- counts_tot |>
+    full_join(counts_ana, by = var_name) |>
+    mutate(n_tot = replace_na(n_tot, 0), n_ana = replace_na(n_ana, 0))
+
   if (!is.null(levels_order)) {
-    counts_total <- counts_total |>
+    counts <- counts |>
       filter(.data[[var_name]] %in% levels_order) |>
       arrange(match(.data[[var_name]], levels_order))
   }
 
-  # Build rows for each level
   rows <- list()
-  for (level in counts_total[[var_name]]) {
-    n_tot <- counts_total |> filter(.data[[var_name]] == level) |> pull(n_total)
-    pct_tot <- sprintf("%d (%.1f%%)", n_tot, 100 * n_tot / total_n)
+  for (level in counts[[var_name]]) {
+    row <- counts |> filter(.data[[var_name]] == level)
+    fmt_tot <- sprintf("%d (%.1f%%)", row$n_tot, 100 * row$n_tot / n_total)
+    fmt_ana <- sprintf("%d (%.1f%%)", row$n_ana, 100 * row$n_ana / n_analytical)
 
     rows[[length(rows) + 1]] <- tibble(
       Characteristic = paste0("    ", level),
-      Total = pct_tot
+      Total = fmt_tot,
+      Analytical = fmt_ana
     )
   }
 

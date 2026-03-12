@@ -521,9 +521,9 @@ compute_outcomes <- function(pids, data) {
     )
 }
 
-# Total sample: use raw panel data for outcomes (pre-filtering)
-panel_processed <- process_panel("data/raw/survey_biweekly.csv.gz", data.intake)
-outcomes_total <- compute_outcomes(total_sample, panel_processed)
+# For total sample, use selfreport_saved (imputed, all valid pids) where available
+# Participants in total_sample but not in selfreport_saved will have NA outcomes
+outcomes_total <- compute_outcomes(total_sample, selfreport_saved)
 outcomes_analytical <- compute_outcomes(analytical_sample, selfreport)
 
 # Chronotype from wave 1 (baseline)
@@ -534,7 +534,7 @@ compute_chronotype <- function(pids, data) {
     mutate(no_alarm_free = no_alarm_free == "No")
 }
 
-chrono_total <- compute_chronotype(total_sample, panel_processed)
+chrono_total <- compute_chronotype(total_sample, selfreport_saved)
 chrono_analytical <- compute_chronotype(analytical_sample, selfreport)
 
 # ===== STEP 4: Join all data sources =====
@@ -570,63 +570,60 @@ master_data_total <- assemble_master(total_sample, gaming_total, outcomes_total,
 master_data <- assemble_master(analytical_sample, gaming_analytical, outcomes_analytical, chrono_analytical)
 
 # ===== STEP 5: Build table rows =====
-# Initialize with 2 columns (simplified - no gaming category stratification)
 summary_rows <- tibble(
   Characteristic = character(),
-  Total = character()
+  Total = character(),
+  Analytical = character()
 )
 
 # === A. SOCIODEMOGRAPHICS & ANTHROPOMETRICS ===
 summary_rows <- bind_rows(summary_rows,
-  tibble(Characteristic = "**A. Sociodemographics**", Total = ""))
+  tibble(Characteristic = "**A. Sociodemographics**", Total = "", Analytical = ""))
 
-# Sample size
-total_n <- nrow(master_data)
 summary_rows <- bind_rows(summary_rows,
-  tibble(Characteristic = "N", Total = as.character(total_n)))
+  tibble(Characteristic = "N",
+         Total = as.character(nrow(master_data_total)),
+         Analytical = as.character(nrow(master_data))))
 
-# Age
 summary_rows <- bind_rows(summary_rows, add_continuous("age", "Age", 1))
 
-# Gender
 summary_rows <- bind_rows(summary_rows,
-  tibble(Characteristic = "Gender", Total = ""))
+  tibble(Characteristic = "Gender", Total = "", Analytical = ""))
 summary_rows <- bind_rows(summary_rows, add_categorical("gender_cat",
                                                         levels_order = c("Woman", "Man", "Other")))
 
-# Region
 summary_rows <- bind_rows(summary_rows,
-  tibble(Characteristic = "Region", Total = ""))
+  tibble(Characteristic = "Region", Total = "", Analytical = ""))
 summary_rows <- bind_rows(summary_rows, add_categorical("region"))
 
-# BMI
 summary_rows <- bind_rows(summary_rows, add_continuous("bmi", "BMI (kg/m²)", 1))
-
-# SES Index
 summary_rows <- bind_rows(summary_rows, add_continuous("SES_index", "SES index", 2))
 
 # === B. CHRONOTYPE ===
 summary_rows <- bind_rows(summary_rows,
-  tibble(Characteristic = "**B. Chronotype**", Total = ""))
+  tibble(Characteristic = "**B. Chronotype**", Total = "", Analytical = ""))
 
-# No alarm on free days (subsample for valid MSFsc)
-no_alarm_n <- sum(master_data$no_alarm_free, na.rm = TRUE)
-no_alarm_pct <- 100 * no_alarm_n / sum(!is.na(master_data$no_alarm_free))
+no_alarm_n_tot <- sum(master_data_total$no_alarm_free, na.rm = TRUE)
+no_alarm_pct_tot <- 100 * no_alarm_n_tot / sum(!is.na(master_data_total$no_alarm_free))
+no_alarm_n_ana <- sum(master_data$no_alarm_free, na.rm = TRUE)
+no_alarm_pct_ana <- 100 * no_alarm_n_ana / sum(!is.na(master_data$no_alarm_free))
 summary_rows <- bind_rows(summary_rows,
-  tibble(Characteristic = "No alarm on free days", 
-         Total = sprintf("%d (%.1f%%)", no_alarm_n, no_alarm_pct)))
+  tibble(Characteristic = "No alarm on free days",
+         Total = sprintf("%d (%.1f%%)", no_alarm_n_tot, no_alarm_pct_tot),
+         Analytical = sprintf("%d (%.1f%%)", no_alarm_n_ana, no_alarm_pct_ana)))
 
-# MSFsc in HH:MM format (nested under no alarm) - report median and IQR
-msf_median <- median(master_data$msf_sc, na.rm = TRUE)
-msf_iqr <- IQR(master_data$msf_sc, na.rm = TRUE)
-# Convert decimal hours to HH:MM
-msf_formatted <- sprintf("%s (%s)", hours_to_hhmm(msf_median), hours_to_hhmm(msf_iqr))
+msf_med_tot <- median(master_data_total$msf_sc, na.rm = TRUE)
+msf_iqr_tot <- IQR(master_data_total$msf_sc, na.rm = TRUE)
+msf_med_ana <- median(master_data$msf_sc, na.rm = TRUE)
+msf_iqr_ana <- IQR(master_data$msf_sc, na.rm = TRUE)
 summary_rows <- bind_rows(summary_rows,
-  tibble(Characteristic = "    MCTQ-MSF~sc~ (HH:MM)†", Total = msf_formatted))
+  tibble(Characteristic = "    MCTQ-MSF~sc~ (HH:MM)†",
+         Total = sprintf("%s (%s)", hours_to_hhmm(msf_med_tot), hours_to_hhmm(msf_iqr_tot)),
+         Analytical = sprintf("%s (%s)", hours_to_hhmm(msf_med_ana), hours_to_hhmm(msf_iqr_ana))))
 
 # === C. GAMING BEHAVIOUR ===
 summary_rows <- bind_rows(summary_rows,
-  tibble(Characteristic = "**C. Gaming**", Total = ""))
+  tibble(Characteristic = "**C. Gaming**", Total = "", Analytical = ""))
 
 summary_rows <- bind_rows(summary_rows,
   add_median_iqr("avg_daily_total_gaming", "Gaming (min/day)†", 1))
@@ -637,42 +634,40 @@ summary_rows <- bind_rows(summary_rows,
 
 # === D. SLEEP AND WELLBEING OUTCOMES ===
 summary_rows <- bind_rows(summary_rows,
-  tibble(Characteristic = "**D. Outcomes**", Total = ""))
+  tibble(Characteristic = "**D. Outcomes**", Total = "", Analytical = ""))
 
 summary_rows <- bind_rows(summary_rows,
   add_continuous("sleep_duration", "Sleep (h)", 1))
-
-# PSQI global with nested subscales
 summary_rows <- bind_rows(summary_rows,
   add_continuous("psqi_global", "PSQI global", 1))
-
-# PSQI subscales (nested)
 summary_rows <- bind_rows(summary_rows,
   add_continuous("psqi_comp1", "    Sleep quality", 1))
 
-# Poor sleep (PSQI > 5)
-poor_sleep_total <- sum(master_data$poor_sleep, na.rm = TRUE)
-poor_sleep_pct <- sprintf("%d (%.1f%%)", poor_sleep_total,
-                         100 * poor_sleep_total / sum(!is.na(master_data$poor_sleep)))
-
+poor_n_tot <- sum(master_data_total$poor_sleep, na.rm = TRUE)
+poor_n_ana <- sum(master_data$poor_sleep, na.rm = TRUE)
 summary_rows <- bind_rows(summary_rows,
-  tibble(Characteristic = "    Poor sleep (PSQI>5)", Total = poor_sleep_pct))
+  tibble(Characteristic = "    Poor sleep (PSQI>5)",
+         Total = sprintf("%d (%.1f%%)", poor_n_tot,
+                         100 * poor_n_tot / sum(!is.na(master_data_total$poor_sleep))),
+         Analytical = sprintf("%d (%.1f%%)", poor_n_ana,
+                              100 * poor_n_ana / sum(!is.na(master_data$poor_sleep)))))
 
 summary_rows <- bind_rows(summary_rows,
   add_continuous("ess_total", "ESS", 1))
 
-# Excessive daytime sleepiness (ESS > 10)
-excessive_sleepiness_total <- sum(master_data$ess_total > 10, na.rm = TRUE)
-excessive_sleepiness_pct <- sprintf("%d (%.1f%%)", excessive_sleepiness_total,
-                         100 * excessive_sleepiness_total / sum(!is.na(master_data$ess_total)))
+ess_n_tot <- sum(master_data_total$ess_total > 10, na.rm = TRUE)
+ess_n_ana <- sum(master_data$ess_total > 10, na.rm = TRUE)
 summary_rows <- bind_rows(summary_rows,
-  tibble(Characteristic = "    Excessive sleepiness (ESS>10)", Total = excessive_sleepiness_pct))
+  tibble(Characteristic = "    Excessive sleepiness (ESS>10)",
+         Total = sprintf("%d (%.1f%%)", ess_n_tot,
+                         100 * ess_n_tot / sum(!is.na(master_data_total$ess_total))),
+         Analytical = sprintf("%d (%.1f%%)", ess_n_ana,
+                              100 * ess_n_ana / sum(!is.na(master_data$ess_total)))))
 
 summary_rows <- bind_rows(summary_rows,
   add_continuous("wemwbs", "SWEMWBS", 1))
 
 # ===== STEP 6: Display table =====
-# Identify section headers, sub-items, and nested rows
 header_rows <- which(str_detect(summary_rows$Characteristic, "^\\*\\*"))
 sub_item_rows <- which(str_detect(summary_rows$Characteristic, "^    ") &
                        !str_detect(summary_rows$Characteristic, "^        "))
@@ -685,7 +680,7 @@ tbl <- summary_rows |>
   ) |>
   format_tt(j = 1, markdown = TRUE) |>
   style_tt(j = 1, align = "l") |>
-  style_tt(j = 2, align = "r") |>
+  style_tt(j = 2:3, align = "r") |>
   style_tt(i = header_rows, bold = TRUE) |>
   format_tt(i = header_rows, j = 1, fn = function(x) str_remove_all(x, "\\*\\*"))
 
@@ -1903,9 +1898,100 @@ To complement the panel-level analyses, we examined daily diary reports of sleep
 
 For the direct-effects model (H1), the within-person effect of late-night gaming on sleep quality was `r diary_h1_within`, indicating that on days when a participant gamed more late at night than their own average, there was `r ifelse(grepl("OR = [01]\\.[0-9]", diary_h1_within), "a tendency toward", "little change in")` sleep quality. The between-person effect was `r diary_h1_between`, reflecting `r ifelse(grepl("OR = [01]\\.[0-9]", diary_h1_between), "lower", "similar")` sleep quality among participants who habitually gamed more at night.
 `r if (!is.null(diary_spline_compare_loaded)) paste0("We compared the linear specification against natural spline alternatives (df = 2-6); the best-fitting spline (df = ", diary_spline_compare_loaded$df[1], ") had a \\u0394AIC of ", sprintf("%.1f", diary_spline_compare_loaded$AIC[1] - diary_spline_compare_loaded$linear_AIC[1]), " relative to the linear model, suggesting that the linear parameterization provided an adequate fit.")`
-Full regression coefficients are reported in @tbl-diary-h1h2 in the Appendix; diary subsample characteristics are presented in @tbl-diary-demographics.
+Diary subsample characteristics are presented in @tbl-diary-demographics in the Appendix.
 
 For the chronotype moderation model (H2), the interaction between within-person late-night gaming and chronotype was `r diary_h2_within_chrono`, and the interaction between between-person late-night gaming and chronotype was `r diary_h2_between_chrono`. The main effect of chronotype was `r diary_h2_chrono_main`. Consistent with the panel-level H2 findings, there was little evidence that chronotype substantially moderated the association between late-night gaming and daily sleep quality at either the within- or between-person level.
+
+```{r}
+#| label: tbl-diary-h1h2
+#| tbl-cap: "Diary CLM Regression Results: H1 (Direct Effects) and H2 (Chronotype Moderation) for Sleep Quality"
+#| echo: false
+#| message: false
+#| warning: false
+
+library(tinytable)
+library(modelsummary)
+
+diary_model_h1_loaded <- if (file.exists("output/models/diary_model_h1_sleepquality.rds")) {
+  readRDS("output/models/diary_model_h1_sleepquality.rds")
+} else {
+  NULL
+}
+
+diary_model_h2_loaded <- if (file.exists("output/models/diary_model_h2_sleepquality.rds")) {
+  readRDS("output/models/diary_model_h2_sleepquality.rds")
+} else {
+  NULL
+}
+
+if (!is.null(diary_model_h1_loaded) && !is.null(diary_model_h2_loaded)) {
+
+  # Build coef_map dynamically to handle gender/region factor levels
+  diary_coef_map <- c(
+    "late_night_within" = "LN gaming within-person (min)",
+    "late_night_between" = "LN gaming between-person (min)",
+    "chronotype_centered" = "Chronotype (centered)",
+    "late_night_within:chronotype_centered" = "LN within x Chronotype",
+    "late_night_between:chronotype_centered" = "LN between x Chronotype",
+    "age_scaled" = "Age (scaled)",
+    "bmi_scaled" = "BMI (scaled)",
+    "SES_index_scaled" = "SES (scaled)"
+  )
+
+  # Detect gender and region terms from both models
+  all_coef_names <- unique(c(
+    names(coef(diary_model_h1_loaded)),
+    names(coef(diary_model_h2_loaded))
+  ))
+  threshold_pattern <- "^[0-9]|^Very poor|^Poor|^Fair|^Good"
+  non_threshold <- all_coef_names[!grepl(threshold_pattern, all_coef_names)]
+
+  gender_terms <- non_threshold[grepl("^gender", non_threshold)]
+  gender_map <- setNames(
+    paste0("Gender: ", gsub("^gender", "", gender_terms)),
+    gender_terms
+  )
+
+  region_terms <- non_threshold[grepl("^region", non_threshold)]
+  region_map <- setNames(
+    paste0("Region: ", gsub("^region", "", region_terms)),
+    region_terms
+  )
+
+  weekend_map <- c()
+  if ("is_weekendTRUE" %in% non_threshold) {
+    weekend_map <- c("is_weekendTRUE" = "Day: Weekend")
+  } else if ("is_weekend" %in% non_threshold) {
+    weekend_map <- c("is_weekend" = "Day: Weekend")
+  }
+
+  diary_coef_map <- c(diary_coef_map, gender_map, region_map, weekend_map)
+
+  diary_models_combined <- list(
+    "H1: Sleep Quality" = diary_model_h1_loaded,
+    "H2: Chronotype Moderation" = diary_model_h2_loaded
+  )
+
+  modelsummary(
+    diary_models_combined,
+    fmt = fmt_sprintf("%.2f"),
+    estimate = "{estimate} [{conf.low}, {conf.high}]{stars}",
+    statistic = NULL,
+    gof_omit = "AIC|BIC|Log|RMSE|R2|ICC",
+    coef_map = diary_coef_map,
+    add_rows = get_custom_rows(diary_models_combined),
+    notes = c(
+      "+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
+      "LN = late-night. Confidence intervals shown in brackets.",
+      "Cumulative link models (logit link) on 5-level ordinal sleep quality.",
+      "Within = daily deviation from person mean; Between = person mean - grand mean."
+    ),
+    output = "tinytable"
+  )
+} else {
+  cat("Diary models not found. Render with `-P refit_diary:true` to generate them.")
+}
+```
 
 # Discussion
 
@@ -2292,51 +2378,68 @@ diary_person_analytical <- diary_ocat |>
     by = "pid"
   )
 
-# Temporarily assign to master_data for helper functions
+# Temporarily assign to master_data_total / master_data for helper functions
+master_data_total_saved <- if (exists("master_data_total")) master_data_total else NULL
 master_data_saved <- if (exists("master_data")) master_data else NULL
+master_data_total <- diary_person_total
+master_data <- diary_person_analytical
 
-diary_summary_rows <- tibble(Characteristic = character(), Total = character())
+diary_summary_rows <- tibble(Characteristic = character(), Total = character(), Analytical = character())
 
 # === A. Sociodemographics ===
 diary_summary_rows <- bind_rows(diary_summary_rows,
-  tibble(Characteristic = "**A. Sociodemographics**", Total = ""))
+  tibble(Characteristic = "**A. Sociodemographics**", Total = "", Analytical = ""))
 
 diary_summary_rows <- bind_rows(diary_summary_rows,
   tibble(Characteristic = "N participants",
-         Total = as.character(length(diary_analytical_pids))))
+         Total = as.character(length(diary_total_pids)),
+         Analytical = as.character(length(diary_analytical_pids))))
 
 diary_summary_rows <- bind_rows(diary_summary_rows,
   tibble(Characteristic = "N diary entries",
-         Total = as.character(nrow(diary_ocat))))
+         Total = as.character(nrow(diary_long)),
+         Analytical = as.character(nrow(diary_ocat))))
 
 diary_summary_rows <- bind_rows(diary_summary_rows,
   tibble(Characteristic = "    Diary entries per person (Mdn, IQR)",
          Total = sprintf("%.0f (%.0f)",
+           median(diary_person_total$n_diary_entries),
+           IQR(diary_person_total$n_diary_entries)),
+         Analytical = sprintf("%.0f (%.0f)",
            median(diary_person_analytical$n_diary_entries),
            IQR(diary_person_analytical$n_diary_entries))))
 
 # Use intake data for age (unscaled)
+diary_intake_total <- data.intake |> filter(pid %in% diary_total_pids)
 diary_intake_analytical <- data.intake |> filter(pid %in% diary_analytical_pids)
 
 diary_summary_rows <- bind_rows(diary_summary_rows,
   tibble(Characteristic = "Age",
          Total = sprintf("%.1f (%.1f)",
+           mean(as.numeric(diary_intake_total$age), na.rm = TRUE),
+           sd(as.numeric(diary_intake_total$age), na.rm = TRUE)),
+         Analytical = sprintf("%.1f (%.1f)",
            mean(as.numeric(diary_intake_analytical$age), na.rm = TRUE),
            sd(as.numeric(diary_intake_analytical$age), na.rm = TRUE))))
 
 # Gender
 diary_summary_rows <- bind_rows(diary_summary_rows,
-  tibble(Characteristic = "Gender", Total = ""))
+  tibble(Characteristic = "Gender", Total = "", Analytical = ""))
 
-master_data <- diary_person_analytical
-diary_gender_counts <- diary_person_analytical |>
+diary_gender_counts_total <- diary_person_total |>
+  count(gender, name = "n_tot") |> filter(!is.na(gender))
+diary_gender_counts_ana <- diary_person_analytical |>
   count(gender, name = "n_ana") |> filter(!is.na(gender))
+diary_gender_merged <- diary_gender_counts_total |>
+  full_join(diary_gender_counts_ana, by = "gender") |>
+  mutate(n_tot = replace_na(n_tot, 0), n_ana = replace_na(n_ana, 0))
 
-for (g in diary_gender_counts$gender) {
-  row <- diary_gender_counts |> filter(gender == g)
+for (g in diary_gender_merged$gender) {
+  row <- diary_gender_merged |> filter(gender == g)
   diary_summary_rows <- bind_rows(diary_summary_rows,
     tibble(Characteristic = paste0("    ", g),
-           Total = sprintf("%d (%.1f%%)", row$n_ana, 100 * row$n_ana / nrow(diary_person_analytical))))
+           Total = sprintf("%d (%.1f%%)", row$n_tot, 100 * row$n_tot / nrow(diary_person_total)),
+           Analytical = sprintf("%d (%.1f%%)", row$n_ana, 100 * row$n_ana / nrow(diary_person_analytical))))
 }
 
 # BMI and SES
@@ -2348,23 +2451,29 @@ diary_summary_rows <- bind_rows(diary_summary_rows,
 
 # === B. Chronotype ===
 diary_summary_rows <- bind_rows(diary_summary_rows,
-  tibble(Characteristic = "**B. Chronotype**", Total = ""))
+  tibble(Characteristic = "**B. Chronotype**", Total = "", Analytical = ""))
 
-no_alarm_n <- sum(master_data$no_alarm_free, na.rm = TRUE)
-no_alarm_pct <- 100 * no_alarm_n / sum(!is.na(master_data$no_alarm_free))
+no_alarm_n_tot <- sum(master_data_total$no_alarm_free, na.rm = TRUE)
+no_alarm_pct_tot <- 100 * no_alarm_n_tot / sum(!is.na(master_data_total$no_alarm_free))
+no_alarm_n_ana <- sum(master_data$no_alarm_free, na.rm = TRUE)
+no_alarm_pct_ana <- 100 * no_alarm_n_ana / sum(!is.na(master_data$no_alarm_free))
 diary_summary_rows <- bind_rows(diary_summary_rows,
   tibble(Characteristic = "No alarm on free days",
-         Total = sprintf("%d (%.1f%%)", no_alarm_n, no_alarm_pct)))
+         Total = sprintf("%d (%.1f%%)", no_alarm_n_tot, no_alarm_pct_tot),
+         Analytical = sprintf("%d (%.1f%%)", no_alarm_n_ana, no_alarm_pct_ana)))
 
-msf_med <- median(master_data$chronotype_hours, na.rm = TRUE)
-msf_iqr <- IQR(master_data$chronotype_hours, na.rm = TRUE)
+msf_med_tot <- median(master_data_total$chronotype_hours, na.rm = TRUE)
+msf_iqr_tot <- IQR(master_data_total$chronotype_hours, na.rm = TRUE)
+msf_med_ana <- median(master_data$chronotype_hours, na.rm = TRUE)
+msf_iqr_ana <- IQR(master_data$chronotype_hours, na.rm = TRUE)
 diary_summary_rows <- bind_rows(diary_summary_rows,
   tibble(Characteristic = "    MSF~sc~ (HH:MM)",
-         Total = sprintf("%s (%s)", hours_to_hhmm(msf_med), hours_to_hhmm(msf_iqr))))
+         Total = sprintf("%s (%s)", hours_to_hhmm(msf_med_tot), hours_to_hhmm(msf_iqr_tot)),
+         Analytical = sprintf("%s (%s)", hours_to_hhmm(msf_med_ana), hours_to_hhmm(msf_iqr_ana))))
 
 # === C. Gaming ===
 diary_summary_rows <- bind_rows(diary_summary_rows,
-  tibble(Characteristic = "**C. Gaming**", Total = ""))
+  tibble(Characteristic = "**C. Gaming**", Total = "", Analytical = ""))
 
 diary_summary_rows <- bind_rows(diary_summary_rows,
   add_median_iqr("ln_gaming_min_day", "LN gaming (min/day, Mdn, IQR)", 1))
@@ -2374,13 +2483,20 @@ diary_summary_rows <- bind_rows(diary_summary_rows,
 
 # === D. Outcomes ===
 diary_summary_rows <- bind_rows(diary_summary_rows,
-  tibble(Characteristic = "**D. Sleep Quality Distribution**", Total = ""))
+  tibble(Characteristic = "**D. Sleep Quality Distribution**", Total = "", Analytical = ""))
 
-# Sleep quality distribution from diary entries
-sq_dist <- diary_ocat |>
+# Sleep quality distribution from diary entries (not person-level)
+sq_dist_total <- diary_long |>
+  filter(!is.na(sleep_quality)) |>
+  count(sleep_quality, name = "n_tot")
+sq_dist_ana <- diary_ocat |>
   mutate(sleep_quality = as.character(sleep_quality_ord)) |>
-  count(sleep_quality, name = "n")
-sq_n <- sum(sq_dist$n)
+  count(sleep_quality, name = "n_ana")
+sq_dist <- sq_dist_total |>
+  full_join(sq_dist_ana, by = "sleep_quality") |>
+  mutate(n_tot = replace_na(n_tot, 0), n_ana = replace_na(n_ana, 0))
+sq_n_total <- sum(sq_dist$n_tot)
+sq_n_ana <- sum(sq_dist$n_ana)
 sq_order <- c("Very poor", "Poor", "Fair", "Good", "Very good")
 sq_dist <- sq_dist |> arrange(match(sleep_quality, sq_order))
 
@@ -2388,10 +2504,12 @@ for (sq in sq_dist$sleep_quality) {
   row <- sq_dist |> filter(sleep_quality == sq)
   diary_summary_rows <- bind_rows(diary_summary_rows,
     tibble(Characteristic = paste0("    ", sq),
-           Total = sprintf("%d (%.1f%%)", row$n, 100 * row$n / sq_n)))
+           Total = sprintf("%d (%.1f%%)", row$n_tot, 100 * row$n_tot / sq_n_total),
+           Analytical = sprintf("%d (%.1f%%)", row$n_ana, 100 * row$n_ana / sq_n_ana)))
 }
 
-# Restore master_data
+# Restore master_data_total / master_data
+if (!is.null(master_data_total_saved)) master_data_total <- master_data_total_saved
 if (!is.null(master_data_saved)) master_data <- master_data_saved
 
 # Display table
@@ -2406,7 +2524,7 @@ diary_tbl <- diary_summary_rows |>
   ) |>
   format_tt(j = 1, markdown = TRUE) |>
   style_tt(j = 1, align = "l") |>
-  style_tt(j = 2, align = "r") |>
+  style_tt(j = 2:3, align = "r") |>
   style_tt(i = diary_header_rows, bold = TRUE) |>
   format_tt(i = diary_header_rows, j = 1, fn = function(x) str_remove_all(x, "\\*\\*"))
 
@@ -2419,98 +2537,3 @@ if (length(diary_sub_item_rows) > 0) {
 diary_tbl
 ```
 
-```{=typst}
-#pagebreak()
-```
-
-```{r}
-#| label: tbl-diary-h1h2
-#| tbl-cap: "Diary CLM Regression Results: H1 (Direct Effects) and H2 (Chronotype Moderation) for Sleep Quality"
-#| echo: false
-#| message: false
-#| warning: false
-
-library(tinytable)
-library(modelsummary)
-
-diary_model_h1_loaded <- if (file.exists("output/models/diary_model_h1_sleepquality.rds")) {
-  readRDS("output/models/diary_model_h1_sleepquality.rds")
-} else {
-  NULL
-}
-
-diary_model_h2_loaded <- if (file.exists("output/models/diary_model_h2_sleepquality.rds")) {
-  readRDS("output/models/diary_model_h2_sleepquality.rds")
-} else {
-  NULL
-}
-
-if (!is.null(diary_model_h1_loaded) && !is.null(diary_model_h2_loaded)) {
-
-  # Build coef_map dynamically to handle gender/region factor levels
-  diary_coef_map <- c(
-    "late_night_within" = "LN gaming within-person (min)",
-    "late_night_between" = "LN gaming between-person (min)",
-    "chronotype_centered" = "Chronotype (centered)",
-    "late_night_within:chronotype_centered" = "LN within x Chronotype",
-    "late_night_between:chronotype_centered" = "LN between x Chronotype",
-    "age_scaled" = "Age (scaled)",
-    "bmi_scaled" = "BMI (scaled)",
-    "SES_index_scaled" = "SES (scaled)"
-  )
-
-  # Detect gender and region terms from both models
-  all_coef_names <- unique(c(
-    names(coef(diary_model_h1_loaded)),
-    names(coef(diary_model_h2_loaded))
-  ))
-  # Filter to non-threshold coefficients
-  threshold_pattern <- "^[0-9]|^Very poor|^Poor|^Fair|^Good"
-  non_threshold <- all_coef_names[!grepl(threshold_pattern, all_coef_names)]
-
-  gender_terms <- non_threshold[grepl("^gender", non_threshold)]
-  gender_map <- setNames(
-    paste0("Gender: ", gsub("^gender", "", gender_terms)),
-    gender_terms
-  )
-
-  region_terms <- non_threshold[grepl("^region", non_threshold)]
-  region_map <- setNames(
-    paste0("Region: ", gsub("^region", "", region_terms)),
-    region_terms
-  )
-
-  weekend_map <- c()
-  if ("is_weekendTRUE" %in% non_threshold) {
-    weekend_map <- c("is_weekendTRUE" = "Day: Weekend")
-  } else if ("is_weekend" %in% non_threshold) {
-    weekend_map <- c("is_weekend" = "Day: Weekend")
-  }
-
-  diary_coef_map <- c(diary_coef_map, gender_map, region_map, weekend_map)
-
-  diary_models_combined <- list(
-    "H1: Sleep Quality" = diary_model_h1_loaded,
-    "H2: Chronotype Moderation" = diary_model_h2_loaded
-  )
-
-  modelsummary(
-    diary_models_combined,
-    fmt = fmt_sprintf("%.2f"),
-    estimate = "{estimate} [{conf.low}, {conf.high}]{stars}",
-    statistic = NULL,
-    gof_omit = "AIC|BIC|Log|RMSE|R2|ICC",
-    coef_map = diary_coef_map,
-    add_rows = get_custom_rows(diary_models_combined),
-    notes = c(
-      "+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
-      "LN = late-night. Confidence intervals shown in brackets.",
-      "Cumulative link models (logit link) on 5-level ordinal sleep quality.",
-      "Within = daily deviation from person mean; Between = person mean - grand mean."
-    ),
-    output = "tinytable"
-  )
-} else {
-  cat("Diary models not found. Render with `-P refit_diary:true` to generate them.")
-}
-```
