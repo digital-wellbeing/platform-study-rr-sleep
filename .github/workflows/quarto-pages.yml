@@ -1,0 +1,69 @@
+name: Deploy Manuscript to Netlify
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.5.1'
+          use-public-rspm: true
+
+      - name: Install R dependencies
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::tidyverse, any::lme4, any::marginaleffects, any::emmeans,
+            any::glmmTMB, any::mice, any::ordinal, any::modelsummary,
+            any::tinytable, any::litedown, any::lubridate, any::data.table,
+            any::mctq, any::glue, any::parameters, any::performance,
+            any::withr, any::report, any::ggdist, any::patchwork,
+            any::ggpattern, any::zoo, any::future, any::future.apply,
+            github::lcbc-uio/questionnaires, any::ragg
+
+      - name: Setup Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          version: '1.8.25'
+
+      - name: Render HTML
+        run: quarto render manuscript.qmd --to html
+
+      - name: Prepare site directory
+        run: |
+          mkdir -p _site
+          cp manuscript.html _site/
+          cp -r manuscript_files _site/ 2>/dev/null || true
+          cat > _site/index.html << 'HEREDOC'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta http-equiv="refresh" content="0; url=./manuscript.html">
+            <title>Late-Night Gaming, Sleep and Wellbeing</title>
+          </head>
+          <body>
+            <p>Redirecting to <a href="./manuscript.html">manuscript</a>...</p>
+          </body>
+          </html>
+          HEREDOC
+
+      - name: Deploy to Netlify
+        uses: nwtgck/actions-netlify@v3
+        with:
+          publish-dir: '_site'
+          production-deploy: true
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
