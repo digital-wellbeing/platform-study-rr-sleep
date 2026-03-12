@@ -96,7 +96,7 @@ jobs:
             "tidyverse", "lme4", "marginaleffects", "emmeans", "glmmTMB", "mice", "ordinal",
             "modelsummary", "tinytable", "litedown", "lubridate", "data.table", "mctq", "glue",
             "parameters", "performance", "withr", "report", "ggdist", "patchwork",
-            "ggpattern", "zoo", "future", "future.apply"
+            "ggpattern", "zoo", "future", "future.apply", "here"
           ))
 
           cat("All R packages installed successfully!\n")
