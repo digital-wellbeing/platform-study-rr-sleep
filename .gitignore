@@ -28,8 +28,7 @@
 *.tex
 
 .*/
-# R/ scripts are tracked; only ignore untracked subdirectories if needed
-# R/*
+R/
 
 # Allow README and GitHub workflows (must come after broader patterns)
 !README.md
