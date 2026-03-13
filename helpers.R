@@ -550,3 +550,96 @@ get_custom_rows <- function(models) {
 
   return(combined)
 }
+
+# ==============================================================================
+# Custom tidy/glance methods for clmm (ordinal package)
+# Required for modelsummary to extract estimates with confidence intervals
+# ==============================================================================
+
+#' @export
+tidy.clmm <- function(x, conf.int = TRUE, conf.level = 0.95, ...) {
+  requireNamespace("ordinal", quietly = TRUE)
+
+  # Fixed effects (thresholds + betas)
+  coefs <- x$coefficients
+
+  # Try vcov(); fall back to manual Wald SEs from Hessian if not positive definite
+  vc <- tryCatch(vcov(x), error = function(e) NULL)
+  if (!is.null(vc)) {
+    vc_fixed <- vc[names(coefs), names(coefs), drop = FALSE]
+    se <- sqrt(diag(vc_fixed))
+  } else if (!is.null(x$Hessian)) {
+    # Hessian is negative log-likelihood; invert -H for variance-covariance
+    vc_full <- tryCatch(solve(-x$Hessian), error = function(e) {
+      tryCatch(MASS::ginv(-x$Hessian), error = function(e2) NULL)
+    })
+    if (!is.null(vc_full)) {
+      se_full <- sqrt(pmax(diag(vc_full), 0))
+      names(se_full) <- colnames(x$Hessian)
+      se <- se_full[names(coefs)]
+    } else {
+      se <- rep(NA_real_, length(coefs))
+    }
+  } else {
+    se <- rep(NA_real_, length(coefs))
+  }
+
+  z_val <- coefs / se
+  p_val <- 2 * pnorm(abs(z_val), lower.tail = FALSE)
+  crit <- qnorm(1 - (1 - conf.level) / 2)
+
+  fixed_df <- data.frame(
+    term = names(coefs),
+    estimate = unname(coefs),
+    std.error = unname(se),
+    statistic = unname(z_val),
+    p.value = unname(p_val),
+    conf.low = unname(coefs - crit * se),
+    conf.high = unname(coefs + crit * se),
+    conf.level = conf.level,
+    effect = "fixed",
+    group = "",
+    stringsAsFactors = FALSE
+  )
+
+  # Random effects (SD of random intercepts/slopes)
+  re_rows <- list()
+  for (grp_name in names(x$ST)) {
+    st_mat <- x$ST[[grp_name]]
+    sd_vals <- diag(st_mat)
+    re_names <- rownames(st_mat)
+    for (j in seq_along(sd_vals)) {
+      re_rows[[length(re_rows) + 1]] <- data.frame(
+        term = paste0("SD (", re_names[j], " ", grp_name, ")"),
+        estimate = sd_vals[j],
+        std.error = NA_real_,
+        statistic = NA_real_,
+        p.value = NA_real_,
+        conf.low = NA_real_,
+        conf.high = NA_real_,
+        conf.level = conf.level,
+        effect = "random",
+        group = grp_name,
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+
+  if (length(re_rows) > 0) {
+    re_df <- do.call(rbind, re_rows)
+    rbind(fixed_df, re_df)
+  } else {
+    fixed_df
+  }
+}
+
+#' @export
+glance.clmm <- function(x, ...) {
+  data.frame(
+    AIC = AIC(x),
+    BIC = BIC(x),
+    logLik = as.numeric(logLik(x)),
+    nobs = x$dims$nobs,
+    stringsAsFactors = FALSE
+  )
+}
