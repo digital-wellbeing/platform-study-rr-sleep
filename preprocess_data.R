@@ -1062,6 +1062,11 @@ preprocess_all_data <- function() {
     skip_preparation = TRUE  # Data is already prepared
   )
 
+  # NOTE: The averaged dataset (selfreport.csv.gz) is used for descriptive statistics
+
+  # and complete-case filtering only. For the primary imputed analyses, each model is
+  # fit separately on each of the 20 imputed datasets (selfreport_imputed_long.rds)
+  # and pooled via Rubin's rules in manuscript.qmd.
   message("Aggregating imputed values (mean across imputations) for convenience...")
   imputed_long <- load_imputed_long("data/processed/selfreport_imputed_long.rds")
 

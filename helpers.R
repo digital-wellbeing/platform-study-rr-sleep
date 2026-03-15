@@ -486,7 +486,8 @@ get_icc_rows <- function(models) {
 #' @param models Named list of fitted models (lmer or clmm)
 #' @return Data frame with both participant counts and ICC rows, positioned at start of GOF section
 get_custom_rows <- function(models) {
-  # Initialize data frames for participant counts and ICC values
+  # Initialize data frames for N obs, participant counts, and ICC values
+  nobs_df <- data.frame(term = "N Obs", stringsAsFactors = FALSE)
   participant_df <- data.frame(
     term = "N Participants",
     stringsAsFactors = FALSE
@@ -501,6 +502,20 @@ get_custom_rows <- function(models) {
   for (i in seq_along(models)) {
     model <- models[[i]]
     model_name <- names(models)[i]
+
+    # Extract N observations based on model type
+    n_obs <- tryCatch({
+      if (inherits(model, "clmm")) {
+        model$dims$nobs
+      } else if (inherits(model, "clm")) {
+        model$dims$nobs %||% nobs(model)
+      } else if (inherits(model, "lmerMod")) {
+        nobs(model)
+      } else {
+        NA_integer_
+      }
+    }, error = function(e) NA_integer_)
+    nobs_df[[model_name]] <- as.character(n_obs[1])
 
     # Extract N participants based on model type
     n_part <- tryCatch({
@@ -541,12 +556,8 @@ get_custom_rows <- function(models) {
     icc_df[[model_name]] <- as.character(icc_value[1])
   }
 
-  # Combine rows: participant count first, then ICC
-  combined <- rbind(participant_df, icc_df)
-
-  # CRITICAL: Set position attribute to place at START of GOF section
-  # Without this, rows would appear at the bottom of the table
-  attr(combined, "position") <- "gof_start"
+  # Combine rows: N obs, participant count, then ICC
+  combined <- rbind(nobs_df, participant_df, icc_df)
 
   return(combined)
 }
@@ -642,4 +653,237 @@ glance.clmm <- function(x, ...) {
     nobs = x$dims$nobs,
     stringsAsFactors = FALSE
   )
+}
+
+# ==============================================================================
+# Rubin's Rules Infrastructure for Multiple Imputation
+# ==============================================================================
+
+#' Fit a model on each imputed dataset and pool via Rubin's rules
+#'
+#' @param imputed_long Data frame with .imp column (1..m)
+#' @param prep_fn Function(data) -> data: prepares one imputed dataset for modelling
+#' @param fit_fn Function(data) -> fitted model
+#' @param parallel Logical, whether to use future_lapply (default: FALSE)
+#' @return List with fits, mira, pooled
+fit_on_imputations <- function(imputed_long, prep_fn, fit_fn, parallel = FALSE) {
+  imp_ids <- sort(unique(imputed_long$.imp))
+  m <- length(imp_ids)
+
+  fit_one <- function(i) {
+    d <- imputed_long[imputed_long$.imp == i, ]
+    d$.imp <- NULL
+    d <- prep_fn(d)
+    tryCatch(fit_fn(d), error = function(e) {
+      warning(sprintf("Imputation %d failed: %s", i, e$message))
+      NULL
+    })
+  }
+
+  if (parallel && requireNamespace("future.apply", quietly = TRUE)) {
+    fits <- future.apply::future_lapply(imp_ids, fit_one, future.seed = TRUE)
+  } else {
+    fits <- lapply(imp_ids, fit_one)
+  }
+
+  # Remove failed fits
+
+  ok <- !vapply(fits, is.null, logical(1))
+  if (sum(ok) == 0) stop("All imputation fits failed")
+  if (sum(ok) < m) warning(sprintf("%d of %d fits failed", m - sum(ok), m))
+  fits <- fits[ok]
+
+  mira <- mice::as.mira(fits)
+
+  # For clmm/clm models, mice::pool() cannot determine dfcom (complete-data
+  # residual df) from glance(), resulting in near-zero df and absurdly wide CIs.
+  # Fix: compute dfcom = nobs - n_fixed_params from the first fit.
+  is_ordinal <- inherits(fits[[1]], "clmm") || inherits(fits[[1]], "clm")
+  pool_args <- list(object = mira)
+  if (is_ordinal) {
+    nobs <- fits[[1]]$dims$nobs
+    n_pars <- length(coef(fits[[1]]))
+    pool_args$dfcom <- nobs - n_pars
+  }
+
+  pooled <- tryCatch(
+    do.call(mice::pool, pool_args),
+    error = function(e) {
+      warning("mice::pool() failed: ", e$message)
+      NULL
+    }
+  )
+
+  list(fits = fits, mira = mira, pooled = pooled)
+}
+
+#' Compute pooled vcov matrix via Rubin's formula
+#'
+#' T = Ubar + (1 + 1/m) * B
+#' where Ubar = mean of within-imputation vcov matrices,
+#' B = between-imputation variance of coefficient estimates
+#'
+#' @param fits List of fitted models (lmer or clmm)
+#' @return List with qbar (pooled coefficients) and vcov (pooled vcov matrix)
+pool_vcov <- function(fits) {
+  m <- length(fits)
+
+  # Extract coefficients and vcov from each fit
+  coef_list <- lapply(fits, function(f) {
+    if (inherits(f, "clmm") || inherits(f, "clm")) {
+      coef(f)
+    } else {
+      lme4::fixef(f)
+    }
+  })
+
+  vcov_list <- lapply(fits, function(f) {
+    as.matrix(vcov(f))
+  })
+
+  # Align on common parameter names (vcov may cover fewer params than coef for clmm)
+  pnames <- Reduce(intersect, c(
+    lapply(coef_list, names),
+    lapply(vcov_list, rownames)
+  ))
+
+  coef_list <- lapply(coef_list, function(x) x[pnames])
+  vcov_list <- lapply(vcov_list, function(x) x[pnames, pnames, drop = FALSE])
+
+  # Pooled point estimates: Qbar = mean across imputations
+  Q_mat <- do.call(rbind, coef_list)
+  qbar <- colMeans(Q_mat)
+
+  # Within-imputation variance: Ubar = mean of vcov matrices
+  Ubar <- Reduce("+", vcov_list) / m
+
+  # Between-imputation variance: B = var of coefficient estimates
+  B <- var(Q_mat)  # m x p covariance matrix
+
+  # Total variance: T = Ubar + (1 + 1/m) * B
+  total_vcov <- Ubar + (1 + 1/m) * B
+
+  list(qbar = qbar, vcov = total_vcov)
+}
+
+#' Extract and format a pooled effect from a Rubin's rules bundle
+#'
+#' @param bundle Output of fit_on_imputations() (must have $pooled)
+#' @param term Parameter name to extract
+#' @param exponentiate Logical, whether to exponentiate (default: FALSE)
+#' @param label_if_exp Label to use if exponentiated (default: "OR")
+#' @param label_if_b Label to use if not exponentiated (default: "b")
+#' @return Formatted string with estimate, CI, and p-value
+get_pooled_effect <- function(bundle, term, exponentiate = FALSE,
+                               label_if_exp = "OR", label_if_b = "b") {
+  if (is.null(bundle) || is.null(bundle$pooled)) {
+    return("estimate unavailable")
+  }
+
+  s <- summary(bundle$pooled, conf.int = TRUE)
+  row <- s[s$term == term, , drop = FALSE]
+
+  if (nrow(row) == 0) {
+    return("estimate unavailable")
+  }
+
+  est <- row$estimate
+  ci_low <- row$`2.5 %`
+  ci_high <- row$`97.5 %`
+  p_val <- row$p.value
+
+  if (isTRUE(exponentiate)) {
+    est <- exp(est)
+    ci_low <- exp(ci_low)
+    ci_high <- exp(ci_high)
+  }
+
+  label <- if (isTRUE(exponentiate)) label_if_exp else label_if_b
+
+  p_txt <- if (is.na(p_val)) {
+    ""
+  } else if (p_val < 0.001) {
+    "p < .001"
+  } else {
+    sprintf("p = %.3f", p_val)
+  }
+
+  if (nzchar(p_txt)) {
+    sprintf("%s = %.2f, 95%% CI [%.2f, %.2f], %s", label, est, ci_low, ci_high, p_txt)
+  } else {
+    sprintf("%s = %.2f, 95%% CI [%.2f, %.2f]", label, est, ci_low, ci_high)
+  }
+}
+
+#' Get custom rows (N participants, ICC) for pooled model tables
+#'
+#' @param model_bundles Named list of fit_on_imputations() bundles
+#' @return Data frame with participant counts and ICC rows
+get_custom_rows_pooled <- function(model_bundles) {
+  nobs_df <- data.frame(term = "N Obs", stringsAsFactors = FALSE)
+  participant_df <- data.frame(term = "N Participants", stringsAsFactors = FALSE)
+  icc_df <- data.frame(term = "ICC", stringsAsFactors = FALSE)
+
+  for (i in seq_along(model_bundles)) {
+    bundle <- model_bundles[[i]]
+    model_name <- names(model_bundles)[i]
+    first_fit <- bundle$fits[[1]]
+
+    # N observations from first fit (identical across imputations)
+    n_obs <- tryCatch({
+      if (inherits(first_fit, "clmm")) {
+        first_fit$dims$nobs
+      } else if (inherits(first_fit, "lmerMod")) {
+        nobs(first_fit)
+      } else {
+        NA_integer_
+      }
+    }, error = function(e) NA_integer_)
+    nobs_df[[model_name]] <- as.character(n_obs[1])
+
+    # N participants from first fit (identical across imputations)
+    n_part <- tryCatch({
+      if (inherits(first_fit, "clmm")) {
+        nrow(ranef(first_fit)$pid)
+      } else if (inherits(first_fit, "lmerMod")) {
+        lme4::ngrps(first_fit, "pid")
+      } else {
+        NA_integer_
+      }
+    }, error = function(e) NA_integer_)
+    participant_df[[model_name]] <- as.character(n_part[1])
+
+    # ICC: average across fits
+    icc_value <- tryCatch({
+      icc_vals <- vapply(bundle$fits, function(f) {
+        icc_result <- performance::icc(f)
+        if (!is.null(icc_result$ICC_adjusted)) {
+          icc_result$ICC_adjusted
+        } else if (!is.null(icc_result$ICC_conditional)) {
+          icc_result$ICC_conditional
+        } else {
+          NA_real_
+        }
+      }, numeric(1))
+      sprintf("%.2f", mean(icc_vals, na.rm = TRUE))
+    }, error = function(e) NA_character_)
+    icc_df[[model_name]] <- as.character(icc_value[1])
+  }
+
+  combined <- rbind(nobs_df, participant_df, icc_df)
+  # No position attribute — rows will appear at the bottom of the table,
+  # which is correct for pooled models that lack a GOF section.
+  combined
+}
+
+#' Average a scalar quantity extracted from each fit
+#'
+#' @param fits List of fitted models
+#' @param extract_fn Function that takes a model and returns a numeric scalar
+#' @return Mean of extracted values across fits
+average_re_quantity <- function(fits, extract_fn) {
+  vals <- vapply(fits, function(f) {
+    tryCatch(extract_fn(f), error = function(e) NA_real_)
+  }, numeric(1))
+  mean(vals, na.rm = TRUE)
 }

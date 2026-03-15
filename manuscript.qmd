@@ -34,9 +34,10 @@ execute:
   cache: true
   freeze: auto   # Use `quarto render --cache-refresh` to force re-execution
 params:
-  refit_h1: false
-  refit_h2: false
+  refit_panel: false
   refit_diary: false
+  refit_diary_imputed: false
+  refit_appendix: false
   rerun_preprocessing: false
 format:
   html:
@@ -129,9 +130,10 @@ withr::with_envvar(
 )
 
 # TOGGLE HYPOTHESES EVALUATION
-eval_h1 <- isTRUE(params$refit_h1)
-eval_h2 <- isTRUE(params$refit_h2)
+eval_panel <- isTRUE(params$refit_panel)
 eval_diary <- isTRUE(params$refit_diary)
+eval_diary_imputed <- isTRUE(params$refit_diary_imputed)
+eval_appendix <- isTRUE(params$refit_appendix)
 
 # Load helper functions
 source("helpers.R")
@@ -157,6 +159,13 @@ if (!file.exists("data/processed/selfreport.csv.gz") ||
 # Load preprocessed data (includes 3-step filtering: outcomes + timezone + gaming)
 selfreport <- read_csv("data/processed/selfreport.csv.gz", show_col_types = FALSE)
 data.intake <- read_csv("data/processed/intake_clean.csv.gz", show_col_types = FALSE)
+
+# Load stacked imputed data for Rubin's rules (20 imputations × all pid×wave rows)
+imputed_long <- readRDS("data/processed/selfreport_imputed_long.rds")
+
+# Initialize Rubin bundle containers (populated in fit-h1/h2-models chunks)
+panel_h1_rubin <- list()
+panel_h2_rubin <- list()
 
 # Valid participants are those in selfreport (passed 3-step filter)
 valid_pids <- unique(selfreport$pid)
@@ -1037,7 +1046,7 @@ Missingness in the adjustment covariates was limited in the original (pre-imputa
 
 ### H1
 
-The preregistered analyses in the Stage 1 protocol [@ballou2024psychological] specified four multilevel models in which late-night gaming minutes, averaged over 28 days (monthly) or 14 days (biweekly), predicted sleep quality (H1a), sleep duration (H1b), wellbeing (H1c), and daytime sleepiness (H1d), with random intercepts and random slopes for the late-night gaming exposure by participant and an additional random intercept for gender in the linear models. When applying this specification to the Open Play data, the preregistered random-slope structures led to convergence problems and boundary estimates (near-zero variance components), particularly for the cumulative link mixed model. To obtain stable and interpretable estimates we simplified the random-effects structure to random intercepts for participants (and for gender where supported), dropped gender as a fixed-effect covariate, and used the multiply imputed outcomes as our primary analytic dataset rather than the incomplete original outcomes.
+The preregistered analyses in the Stage 1 protocol [@ballou2024psychological] specified four multilevel models in which late-night gaming minutes, averaged over 28 days (monthly) or 14 days (biweekly), predicted sleep quality (H1a), sleep duration (H1b), wellbeing (H1c), and daytime sleepiness (H1d), with random intercepts and random slopes for the late-night gaming exposure by participant and an additional random intercept for gender in the linear models. When applying this specification to the Open Play data, the preregistered random-slope structures led to convergence problems and boundary estimates (near-zero variance components), particularly for the cumulative link mixed model. To obtain stable and interpretable estimates we simplified the random-effects structure to random intercepts for participants (and for gender where supported), dropped gender as a fixed-effect covariate, and used the multiply imputed outcomes as our primary analytic dataset rather than the incomplete original outcomes. Each model was fit separately to each of the 20 imputed datasets, and parameter estimates were pooled using Rubin's rules [@rubin1987multiple], which correctly accounts for both within- and between-imputation variability.
 
 More concretely, H1a replaces the preregistered random intercept–slope structure `(1 + monthly_avg_minutes_played | pid)` with a random intercept for participants `(1 | pid)`. For H1b, attempts to retain the preregistered random intercept for gender led to non-convergence and boundary estimates, so we used a single random intercept for participants `(1 | pid)` while keeping the same 28-day late-night average exposure. H1c and H1d follow the same logic of dropping the preregistered random slopes for participants while preserving a random intercept for gender and the same fixed-effect adjustment set (excluding gender as a fixed effect).
 
@@ -1047,37 +1056,40 @@ More concretely, H1a replaces the preregistered random intercept–slope structu
 #| message: false
 #| warning: false
 
-h1a_ln_minutes <- get_h1_effect(
-  path = "output/models/imputed_model_h1a.rds",
-  term = "ln_monthly_avg_minutes_played_10"
-)
-h1b_ln_minutes <- get_h1_effect(
-  path = "output/models/imputed_model_h1b.rds",
-  term = "ln_monthly_avg_minutes_played_10"
-)
-h1c_ln_minutes <- get_h1_effect(
-  path = "output/models/imputed_model_h1c.rds",
-  term = "ln_biweekly_avg_minutes_played_10"
-)
-h1d_ln_minutes <- get_h1_effect(
-  path = "output/models/imputed_model_h1d.rds",
-  term = "ln_monthly_avg_minutes_played_10"
-)
+# Load Rubin bundles for inline effects (either from current fit or cached)
+panel_h1a_bundle <- if (length(panel_h1_rubin)) panel_h1_rubin[["H1a: Sleep Quality"]] else
+  tryCatch(readRDS("output/models/imputed_h1a_rubin.rds"), error = function(e) NULL)
+panel_h1b_bundle <- if (length(panel_h1_rubin)) panel_h1_rubin[["H1b: Sleep Duration"]] else
+  tryCatch(readRDS("output/models/imputed_h1b_rubin.rds"), error = function(e) NULL)
+panel_h1c_bundle <- if (length(panel_h1_rubin)) panel_h1_rubin[["H1c: Wellbeing"]] else
+  tryCatch(readRDS("output/models/imputed_h1c_rubin.rds"), error = function(e) NULL)
+panel_h1d_bundle <- if (length(panel_h1_rubin)) panel_h1_rubin[["H1d: Daytime Sleepiness"]] else
+  tryCatch(readRDS("output/models/imputed_h1d_rubin.rds"), error = function(e) NULL)
+
+h1a_ln_minutes <- get_pooled_effect(panel_h1a_bundle, "ln_monthly_avg_minutes_played_10")
+h1b_ln_minutes <- get_pooled_effect(panel_h1b_bundle, "ln_monthly_avg_minutes_played_10")
+h1c_ln_minutes <- get_pooled_effect(panel_h1c_bundle, "ln_biweekly_avg_minutes_played_10")
+h1d_ln_minutes <- get_pooled_effect(panel_h1d_bundle, "ln_monthly_avg_minutes_played_10")
 
 # Marginal probability computation for H1a (probit CLMM)
-# Per-10-min marginal effect: dP/dx = phi((b*x - threshold) / marginal_sd) * b / marginal_sd
+# Average threshold and sigma_u across 20 imputed fits, use pooled b and SE
 h1a_marginal <- tryCatch({
-  m <- readRDS("output/models/imputed_model_h1a.rds")
-  b <- m$beta["ln_monthly_avg_minutes_played_10"]
-  t2 <- m$alpha["Fairly good|Fairly bad"]
-  sd_re <- m$ST$pid[1, 1]
-  marginal_sd <- sqrt(1 + sd_re^2)
-  pp_per_10min <- dnorm((b * 0 - t2) / marginal_sd) * b / marginal_sd * 100
+  pv <- pool_vcov(panel_h1a_bundle$fits)
+  b_gaming <- pv$qbar["ln_monthly_avg_minutes_played_10"]
+  se_gaming <- sqrt(pv$vcov["ln_monthly_avg_minutes_played_10",
+                             "ln_monthly_avg_minutes_played_10"])
+  alpha_j <- average_re_quantity(panel_h1a_bundle$fits, function(f)
+    f$alpha["Fairly good|Fairly bad"])
+  sigma_u <- average_re_quantity(panel_h1a_bundle$fits, function(f)
+    f$ST$pid[1, 1])
+  marginal_sd <- sqrt(1 + sigma_u^2)
+  pp_per_10min <- dnorm((b_gaming * 0 - alpha_j) / marginal_sd) *
+    b_gaming / marginal_sd * 100
   list(pp_per_10min = pp_per_10min)
 }, error = function(e) NULL)
 ```
 
-Under these implemented models, the late-night gaming term in the sleep-quality model (H1a) is estimated as `r h1a_ln_minutes` (probit coefficient per 10 min/day). On the probability scale, each additional 10 minutes of average daily late-night gaming is associated with an approximate `r if (!is.null(h1a_marginal)) sprintf("%.1f", h1a_marginal$pp_per_10min)` percentage-point increase in the marginal probability of reporting fairly bad or very bad sleep quality. The corresponding effects are `r h1b_ln_minutes` for sleep duration (H1b), suggesting little systematic association between late-night gaming and self-reported sleep hours, `r h1c_ln_minutes` for wellbeing (H1c), indicating minimal change in SWEMWBS scores with greater late-night play, and `r h1d_ln_minutes` for daytime sleepiness (H1d), again suggesting negligible variation in Epworth scores as a function of late-night gaming. All estimates are computed using the `parameters` package from the easystats ecosystem [@easystats]. These models additionally adjust for age, BMI, SES index, region, and weekend versus weekday timing (with gender modelled as a random intercept in H1c and H1d), and they use rolling 14- and 28-day windows of late-night play anchored to each survey date. Full coefficient estimates, confidence intervals, and variance components are reported in the H1 regression summary table, to which we refer for all remaining parameters.
+Under these implemented models, the late-night gaming term in the sleep-quality model (H1a) is estimated as `r h1a_ln_minutes` (probit coefficient per 10 min/day). On the probability scale, each additional 10 minutes of average daily late-night gaming is associated with an approximate `r if (!is.null(h1a_marginal)) sprintf("%.1f", h1a_marginal$pp_per_10min)` percentage-point increase in the marginal probability of reporting fairly bad or very bad sleep quality. @fig-latenight-sleepquality-exceedance translates this coefficient to the probability scale: marginal predicted probabilities of poor sleep quality (Fairly bad or Very bad) were computed for each of the 20 imputed datasets and pooled via Rubin's rules, with 95% confidence intervals derived from the combined within- and between-imputation variance on the probability scale using the delta method. The corresponding effects are `r h1b_ln_minutes` for sleep duration (H1b), suggesting little systematic association between late-night gaming and self-reported sleep hours, `r h1c_ln_minutes` for wellbeing (H1c), indicating minimal change in SWEMWBS scores with greater late-night play, and `r h1d_ln_minutes` for daytime sleepiness (H1d), again suggesting negligible variation in Epworth scores as a function of late-night gaming. All imputed-data estimates are pooled across 20 multiply imputed datasets using Rubin's rules [@rubin1987multiple]. These models additionally adjust for age, BMI, SES index, region, and weekend versus weekday timing (with gender modelled as a random intercept in H1c and H1d), and they use rolling 14- and 28-day windows of late-night play anchored to each survey date. Full coefficient estimates, confidence intervals, and variance components are reported in the H1 regression summary table, to which we refer for all remaining parameters.
 
 
 
@@ -1088,11 +1100,40 @@ Under these implemented models, the late-night gaming term in the sleep-quality 
 #| results: asis
 
 h1_models <- list()
+panel_h1_rubin <- list()  # Rubin's rules bundles for imputed models
 if (!dir.exists("output/models")) {
   dir.create("output/models", recursive = TRUE)
 }
 
-fit_h1_models_inline <- function(inputs, version_label) {
+# --- Shared prep/fit functions for H1 ---
+panel_h1_prep_monthly <- function(d) {
+  inputs <- build_gaming_inputs(d)
+  inputs$gamingMonthly |>
+    enforce_monthly_wave_subset() |>
+    mutate(
+      psqi_comp1_quality_rounded = round(psqi_comp1_quality),
+      psqi_6_ord = factor(
+        psqi_comp1_quality_rounded,
+        levels = c(0, 1, 2, 3),
+        labels = c("Very good", "Fairly good", "Fairly bad", "Very bad"),
+        ordered = TRUE
+      )
+    ) |>
+    filter(!is.na(psqi_6_ord))
+}
+
+panel_h1_prep_monthly_lmer <- function(d) {
+  inputs <- build_gaming_inputs(d)
+  inputs$gamingMonthly |> enforce_monthly_wave_subset()
+}
+
+panel_h1_prep_biweekly <- function(d) {
+  inputs <- build_gaming_inputs(d)
+  inputs$gamingBiweekly
+}
+
+# --- Complete-case fitting (single fit, unchanged) ---
+fit_panel_h1_completecase <- function(inputs, version_label) {
   gamingMonthly <- inputs$gamingMonthly |>
     enforce_monthly_wave_subset() |>
     mutate(
@@ -1155,21 +1196,101 @@ fit_h1_models_inline <- function(inputs, version_label) {
   )
 }
 
-if (eval_h1) {
-  for (ver in names(gaming_inputs)) {
-    h1_models[[ver]] <- fit_h1_models_inline(gaming_inputs[[ver]], ver)
+if (eval_panel) {
+  # --- Imputed: Rubin's rules (fit on each of 20 imputations, then pool) ---
+  message("Fitting H1 models on 20 imputed datasets (Rubin's rules)...")
+
+  panel_h1_rubin[["H1a: Sleep Quality"]] <- fit_on_imputations(
+    imputed_long,
+    prep_fn = panel_h1_prep_monthly,
+    fit_fn = function(d) clmm(
+      psqi_6_ord ~ ln_monthly_avg_minutes_played_10 +
+        age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+        (1 | pid),
+      data = d, link = "probit", Hess = TRUE,
+      control = clmm.control(maxIter = 5000, gradTol = 1e-3)
+    )
+  )
+
+  panel_h1_rubin[["H1b: Sleep Duration"]] <- fit_on_imputations(
+    imputed_long,
+    prep_fn = panel_h1_prep_monthly_lmer,
+    fit_fn = function(d) lmer(
+      total_hours_sleep ~ ln_monthly_avg_minutes_played_10 +
+        age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+        (1 | pid),
+      data = d, control = lmerControl(optimizer = "bobyqa")
+    )
+  )
+
+  panel_h1_rubin[["H1c: Wellbeing"]] <- fit_on_imputations(
+    imputed_long,
+    prep_fn = panel_h1_prep_biweekly,
+    fit_fn = function(d) lmer(
+      wemwbs ~ ln_biweekly_avg_minutes_played_10 +
+        age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+        (1 | pid) + (1 | gender),
+      data = d, control = lmerControl(optimizer = "bobyqa")
+    )
+  )
+
+  panel_h1_rubin[["H1d: Daytime Sleepiness"]] <- fit_on_imputations(
+    imputed_long,
+    prep_fn = panel_h1_prep_monthly_lmer,
+    fit_fn = function(d) lmer(
+      epsTotal ~ ln_monthly_avg_minutes_played_10 +
+        age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+        (1 | pid) + (1 | gender),
+      data = d, control = lmerControl(optimizer = "bobyqa")
+    )
+  )
+
+  # Save Rubin bundles for figures/inline use
+  for (nm in names(panel_h1_rubin)) {
+    tag <- tolower(gsub(".*: ", "h1", nm)) |> gsub(" ", "", x = _)
+    tag <- switch(nm,
+      "H1a: Sleep Quality" = "h1a",
+      "H1b: Sleep Duration" = "h1b",
+      "H1c: Wellbeing" = "h1c",
+      "H1d: Daytime Sleepiness" = "h1d"
+    )
+    saveRDS(panel_h1_rubin[[nm]], glue("output/models/imputed_{tag}_rubin.rds"))
   }
+
+  # For modelsummary: pooled mipo objects
+  h1_models[["imputed"]] <- lapply(panel_h1_rubin, `[[`, "pooled")
+
 } else {
-  for (ver in names(gaming_inputs)) {
-    cached <- load_h1_models_from_disk(ver)
-    if (!is.null(cached)) {
-      h1_models[[ver]] <- cached
-    }
+  # Load cached models
+  # Imputed: try Rubin bundles first
+  rubin_paths <- list(
+    "H1a: Sleep Quality" = "output/models/imputed_h1a_rubin.rds",
+    "H1b: Sleep Duration" = "output/models/imputed_h1b_rubin.rds",
+    "H1c: Wellbeing" = "output/models/imputed_h1c_rubin.rds",
+    "H1d: Daytime Sleepiness" = "output/models/imputed_h1d_rubin.rds"
+  )
+  if (all(file.exists(unlist(rubin_paths)))) {
+    panel_h1_rubin <- lapply(rubin_paths, readRDS)
+    h1_models[["imputed"]] <- lapply(panel_h1_rubin, `[[`, "pooled")
+  } else {
+    # Fall back to old single-fit cached models
+    cached <- load_h1_models_from_disk("imputed")
+    if (!is.null(cached)) h1_models[["imputed"]] <- cached
   }
 }
 
+# --- Complete-case H1 (appendix) ---
+if (eval_appendix) {
+  h1_models[["completecase"]] <- fit_panel_h1_completecase(
+    gaming_inputs[["completecase"]], "completecase"
+  )
+} else {
+  cached_cc <- load_h1_models_from_disk("completecase")
+  if (!is.null(cached_cc)) h1_models[["completecase"]] <- cached_cc
+}
+
 if (!length(h1_models)) {
-  message("No cached H1 models were found. Render with `-P refit_h1:true` to create them.")
+  message("No cached H1 models were found. Render with `-P refit_panel:true` to create them.")
 }
 ```
 
@@ -1208,14 +1329,21 @@ supp_versions <- setdiff(names(h1_models), main_version)
 
 dir.create("output/tables", showWarnings = FALSE, recursive = TRUE)
 
+# Use pooled custom rows if Rubin bundles are available, else fall back to single-fit
+h1_add_rows <- if (length(panel_h1_rubin) > 0) {
+  get_custom_rows_pooled(panel_h1_rubin)
+} else {
+  get_custom_rows(h1_models[[main_version]])
+}
+
 tt_h1 <- modelsummary(
     h1_models[[main_version]],
     fmt = fmt_sprintf("%.2f"),
     estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
     statistic = NULL,
-    gof_omit = "AIC|BIC|Log|RMSE|R2|ICC",
+    gof_omit = "AIC|BIC|Log|RMSE|R2|ICC|Num|nobs",
     coef_map = coef_map_h1,
-    add_rows = get_custom_rows(h1_models[[main_version]]),
+    add_rows = h1_add_rows,
     notes = c("+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
               "LN = late-night. Confidence intervals shown in brackets.",
               "ICC = Intraclass Correlation Coefficient (adjusted)."),
@@ -1237,7 +1365,7 @@ if (length(supp_versions) > 0) {
       fmt = fmt_sprintf("%.2f"),
       estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
       statistic = NULL,
-      gof_omit = "AIC|BIC|Log|RMSE|R2|ICC",
+      gof_omit = "AIC|BIC|Log|RMSE|R2|ICC|Num|nobs",
       coef_map = coef_map_h1,
       add_rows = get_custom_rows(h1_models[[ver]]),
       notes = c("+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
@@ -1254,7 +1382,7 @@ if (length(supp_versions) > 0) {
 
 ```{r}
 #| label: fig-latenight-sleepquality-exceedance
-#| fig-cap: "Predicted probability of poor sleep quality as a function of late-night gaming. The line shows the marginal probability of reporting poor sleep quality (Fairly bad or Very bad) at minute-level resolution from 0 to 90 minutes of average daily late-night gaming. The ribbon represents 95% confidence intervals derived from the gaming coefficient SE. Vertical reference lines show the median, mean, 75th percentile, and 90th percentile of the sample distribution. The marginal density plot (top panel) shows the distribution of late-night gaming in the sample. Predictions are population-average probabilities (marginalised over the participant random intercept) derived from the H1a probit CLMM, with other covariates held at their reference/mean values."
+#| fig-cap: "Marginal predicted probability of poor sleep quality (Fairly bad or Very bad) as a function of late-night gaming. Predictions are derived from the H1a probit cumulative link mixed model fitted separately on each of 20 multiply imputed datasets; predicted probabilities and their within-imputation variances are then pooled via Rubin's rules. The solid line shows the pooled point estimate and the shaded ribbon the 95% confidence interval, both computed on the probability scale using the delta method applied to each imputation's threshold, gaming coefficient, and variance--covariance matrix, then combined with Rubin's within- and between-imputation variance components. Probabilities are population-average (marginalised over the participant random intercept) with other covariates held at their reference or mean values. The top panel shows the marginal density of late-night gaming in the sample; vertical reference lines mark the median, mean, 75th, and 90th percentiles."
 #| fig-width: 9
 #| fig-height: 6
 #| code-summary: "Probability of poor sleep quality by late-night gaming"
@@ -1262,16 +1390,18 @@ if (length(supp_versions) > 0) {
 library(ordinal)
 library(patchwork)
 
-# Load the fitted H1a model
-h1a_model <- readRDS("output/models/imputed_model_h1a.rds")
+# Load the Rubin bundle for H1a (or fall back to cached)
+panel_h1a_fig_bundle <- if (!is.null(panel_h1a_bundle)) panel_h1a_bundle else
+  tryCatch(readRDS("output/models/imputed_h1a_rubin.rds"), error = function(e) NULL)
 
-# Use per-10-min granularity from 0 to 9 (= 0 to 90 minutes)
+fits <- panel_h1a_fig_bundle$fits
+m    <- length(fits)
+
+# Prediction grid: 0–90 min in 10-min units
 ln_sequence_10 <- seq(0, 9, by = 0.1)
-
-# Keep x-axis ticks at 30-minute intervals (in original minutes)
 ln_bins <- c(0, 30, 60, 90)
 
-# Calculate distribution statistics for reference lines (in original minutes)
+# Distribution statistics for reference lines
 ln_stats <- gamingMonthly |>
   filter(!is.na(ln_monthly_avg_minutes_played)) |>
   pull(ln_monthly_avg_minutes_played) |>
@@ -1282,31 +1412,52 @@ ln_stats <- gamingMonthly |>
     p90 = quantile(x, 0.90)
   )}()
 
-# Compute MARGINAL exceedance probabilities for the CLMM.
-# emmeans mode="exc.prob" gives CONDITIONAL predictions (random effect = 0),
-# which are near-zero when sigma_u is large. The correct marginal formula for a
-# probit random-intercept model is:
-#   P(Y > j | x) = 1 - Phi((alpha_j - eta(x)) / sqrt(1 + sigma_u^2))
-# where eta(x) = beta_gaming * x (other scaled covariates at mean = 0, reference levels).
+# --- Per-imputation marginal predictions with delta-method variance ----------
+# For each of the 20 imputed fits, compute:
+#   P(Y > "Fairly good" | x) = 1 - Phi(g(x) / denom)
+# where g(x) = alpha_j - b*x, denom = sqrt(1 + sigma_u^2)
+# and Var(prob) via delta method using that fit's vcov.
+pred_list <- lapply(seq_len(m), function(i) {
+  f <- fits[[i]]
 
-sigma_u   <- sqrt(h1a_model$ST$pid[1, 1])
-alpha_j   <- h1a_model$alpha["Fairly good|Fairly bad"]   # P(Fairly bad or Very bad)
-b_gaming  <- coef(h1a_model)["ln_monthly_avg_minutes_played_10"]
-se_gaming <- sqrt(vcov(h1a_model)[
-  "ln_monthly_avg_minutes_played_10",
-  "ln_monthly_avg_minutes_played_10"
-])
-denom <- sqrt(1 + sigma_u^2)
+  alpha_j  <- f$alpha["Fairly good|Fairly bad"]
+  b_gaming <- coef(f)["ln_monthly_avg_minutes_played_10"]
+  sigma_u  <- f$ST$pid[1, 1]
+  denom    <- sqrt(1 + sigma_u^2)
 
-lp    <- b_gaming * ln_sequence_10
-lp_lo <- (b_gaming - 1.96 * se_gaming) * ln_sequence_10
-lp_hi <- (b_gaming + 1.96 * se_gaming) * ln_sequence_10
+  V <- as.matrix(vcov(f))
+  var_alpha <- V["Fairly good|Fairly bad", "Fairly good|Fairly bad"]
+  var_b     <- V["ln_monthly_avg_minutes_played_10",
+                  "ln_monthly_avg_minutes_played_10"]
+  cov_ab    <- V["Fairly good|Fairly bad",
+                  "ln_monthly_avg_minutes_played_10"]
+
+  g_x    <- alpha_j - b_gaming * ln_sequence_10
+  prob   <- pnorm(g_x / denom, lower.tail = FALSE)
+
+  # Within-imputation variance on probability scale (delta method)
+  var_gx   <- var_alpha + ln_sequence_10^2 * var_b - 2 * ln_sequence_10 * cov_ab
+  dphi     <- dnorm(g_x / denom) / denom
+  var_prob <- dphi^2 * var_gx
+
+  tibble(x = ln_sequence_10, prob = prob, var_prob = var_prob)
+})
+
+# --- Pool predictions via Rubin's rules --------------------------------------
+prob_mat <- do.call(cbind, lapply(pred_list, \(d) d$prob))
+var_mat  <- do.call(cbind, lapply(pred_list, \(d) d$var_prob))
+
+qbar      <- rowMeans(prob_mat)                    # pooled point estimate
+ubar      <- rowMeans(var_mat)                     # mean within-imputation var
+b_var     <- apply(prob_mat, 1, var)               # between-imputation var
+total_var <- ubar + (1 + 1/m) * b_var              # Rubin's total variance
+se_pooled <- sqrt(total_var)
 
 plot_data <- tibble(
   ln_monthly_avg_minutes_played = ln_sequence_10 * 10,
-  exc.prob  = pnorm((alpha_j - lp)    / denom, lower.tail = FALSE),
-  asymp.LCL = pnorm((alpha_j - lp_lo) / denom, lower.tail = FALSE),
-  asymp.UCL = pnorm((alpha_j - lp_hi) / denom, lower.tail = FALSE)
+  exc.prob  = qbar,
+  asymp.LCL = qbar - 1.96 * se_pooled,
+  asymp.UCL = qbar + 1.96 * se_pooled
 )
 
 # Prepare raw data for marginal distribution
@@ -1317,7 +1468,6 @@ marginal_data <- gamingMonthly |>
 # Create distribution panel (top)
 p_dist <- ggplot(marginal_data, aes(x = ln_monthly_avg_minutes_played)) +
   geom_density(fill = "gray70", color = "gray50", alpha = 0.6) +
-  # Add reference lines
   geom_vline(xintercept = ln_stats$median, linetype = "dotted",
              color = "gray40", linewidth = 0.5) +
   geom_vline(xintercept = ln_stats$mean, linetype = "dashed",
@@ -1340,9 +1490,8 @@ p_dist <- ggplot(marginal_data, aes(x = ln_monthly_avg_minutes_played)) +
     plot.margin = margin(5, 5, 0, 5)
   )
 
-# Create main plot with distribution reference lines
+# Create main prediction plot
 p_main <- ggplot(plot_data, aes(x = ln_monthly_avg_minutes_played, y = exc.prob)) +
-  # Add vertical reference lines for distribution statistics
   geom_vline(xintercept = ln_stats$median, linetype = "dotted",
              color = "gray40", linewidth = 0.5) +
   geom_vline(xintercept = ln_stats$mean, linetype = "dashed",
@@ -1351,26 +1500,23 @@ p_main <- ggplot(plot_data, aes(x = ln_monthly_avg_minutes_played, y = exc.prob)
              color = "gray40", linewidth = 0.5) +
   geom_vline(xintercept = ln_stats$p90, linetype = "dashed",
              color = "gray40", linewidth = 0.5) +
-  # Add annotations for reference lines
-  annotate("text", x = ln_stats$median, y = 0.175,
+  annotate("text", x = ln_stats$median, y = max(plot_data$asymp.UCL),
            label = "Median", angle = 90, vjust = -0.5, size = 3, color = "gray40") +
-  annotate("text", x = ln_stats$mean, y = 0.175,
+  annotate("text", x = ln_stats$mean, y = max(plot_data$asymp.UCL),
            label = "Mean", angle = 90, vjust = -0.5, size = 3, color = "gray40") +
-  annotate("text", x = ln_stats$p75, y = 0.175,
+  annotate("text", x = ln_stats$p75, y = max(plot_data$asymp.UCL),
            label = "75th %ile", angle = 90, vjust = -0.5, size = 3, color = "gray40") +
-  annotate("text", x = ln_stats$p90, y = 0.175,
+  annotate("text", x = ln_stats$p90, y = max(plot_data$asymp.UCL),
            label = "90th %ile", angle = 90, vjust = -0.5, size = 3, color = "gray40") +
-  # Exceedance probability ribbons and lines
   geom_ribbon(aes(ymin = asymp.LCL, ymax = asymp.UCL),
-              alpha = 0.4, fill = "#f46d43",
-              color = "#f46d43", linewidth = 0.3, linetype = "dashed") +
-  geom_line(linewidth = 1.5, color = "#d62828") +
+              alpha = 0.3, fill = "#d62828") +
+  geom_line(linewidth = 1, color = "#d62828") +
   scale_x_continuous(
     breaks = ln_bins,
     labels = paste0(ln_bins, " min"),
     limits = c(0, 90)
   ) +
-  scale_y_continuous(labels = scales::percent_format(), limits = c(0, 0.20)) +
+  scale_y_continuous(labels = scales::percent_format()) +
   labs(
     x = "Average Daily Late-Night Gaming (min/day)",
     y = "Predicted Probability of Poor Sleep Quality"
@@ -1402,68 +1548,50 @@ In the final models we therefore mean-centred chronotype (`msf_sc_centered`) and
 #| message: false
 #| warning: false
 
-h2a_ln_minutes_msf <- get_h2_interaction(
-  path = "output/models/imputed_model_h2a.rds",
-  term = "ln_monthly_avg_minutes_played_10:msf_sc_centered"
-)
-h2b_ln_minutes_msf <- get_h2_interaction(
-  path = "output/models/imputed_model_h2b.rds",
-  term = "ln_monthly_avg_minutes_played_10:msf_sc_centered"
-)
-h2c_ln_minutes_msf <- get_h2_interaction(
-  path = "output/models/imputed_model_h2c.rds",
-  term = "ln_biweekly_avg_minutes_played_10:msf_sc_centered"
-)
-h2d_ln_minutes_msf <- get_h2_interaction(
-  path = "output/models/imputed_model_h2d.rds",
-  term = "ln_monthly_avg_minutes_played_10:msf_sc_centered"
-)
+# Load Rubin bundles for H2 inline effects
+panel_h2a_bundle <- if (length(panel_h2_rubin)) panel_h2_rubin[["H2a: Sleep Quality"]] else
+  tryCatch(readRDS("output/models/imputed_h2a_rubin.rds"), error = function(e) NULL)
+panel_h2b_bundle <- if (length(panel_h2_rubin)) panel_h2_rubin[["H2b: Sleep Duration"]] else
+  tryCatch(readRDS("output/models/imputed_h2b_rubin.rds"), error = function(e) NULL)
+panel_h2c_bundle <- if (length(panel_h2_rubin)) panel_h2_rubin[["H2c: Wellbeing"]] else
+  tryCatch(readRDS("output/models/imputed_h2c_rubin.rds"), error = function(e) NULL)
+panel_h2d_bundle <- if (length(panel_h2_rubin)) panel_h2_rubin[["H2d: Daytime Sleepiness"]] else
+  tryCatch(readRDS("output/models/imputed_h2d_rubin.rds"), error = function(e) NULL)
+
+# Interaction effects (primary H2 tests)
+h2a_ln_minutes_msf <- get_pooled_effect(panel_h2a_bundle,
+  "ln_monthly_avg_minutes_played_10:msf_sc_centered")
+h2b_ln_minutes_msf <- get_pooled_effect(panel_h2b_bundle,
+  "ln_monthly_avg_minutes_played_10:msf_sc_centered")
+h2c_ln_minutes_msf <- get_pooled_effect(panel_h2c_bundle,
+  "ln_biweekly_avg_minutes_played_10:msf_sc_centered")
+h2d_ln_minutes_msf <- get_pooled_effect(panel_h2d_bundle,
+  "ln_monthly_avg_minutes_played_10:msf_sc_centered")
 
 # (Exploratory) main effects for late-night gaming and chronotype
-h2a_main_ln <- get_h2_interaction(
-  path = "output/models/imputed_model_h2a.rds",
-  term = "ln_monthly_avg_minutes_played_10"
-)
-h2a_main_msf <- get_h2_interaction(
-  path = "output/models/imputed_model_h2a.rds",
-  term = "msf_sc_centered"
-)
+h2a_main_ln <- get_pooled_effect(panel_h2a_bundle, "ln_monthly_avg_minutes_played_10")
+h2a_main_msf <- get_pooled_effect(panel_h2a_bundle, "msf_sc_centered")
 
-h2b_main_ln <- get_h2_interaction(
-  path = "output/models/imputed_model_h2b.rds",
-  term = "ln_monthly_avg_minutes_played_10"
-)
-h2b_main_msf <- get_h2_interaction(
-  path = "output/models/imputed_model_h2b.rds",
-  term = "msf_sc_centered"
-)
+h2b_main_ln <- get_pooled_effect(panel_h2b_bundle, "ln_monthly_avg_minutes_played_10")
+h2b_main_msf <- get_pooled_effect(panel_h2b_bundle, "msf_sc_centered")
 
-h2c_main_ln <- get_h2_interaction(
-  path = "output/models/imputed_model_h2c.rds",
-  term = "ln_biweekly_avg_minutes_played_10"
-)
-h2c_main_msf <- get_h2_interaction(
-  path = "output/models/imputed_model_h2c.rds",
-  term = "msf_sc_centered"
-)
+h2c_main_ln <- get_pooled_effect(panel_h2c_bundle, "ln_biweekly_avg_minutes_played_10")
+h2c_main_msf <- get_pooled_effect(panel_h2c_bundle, "msf_sc_centered")
 
-h2d_main_ln <- get_h2_interaction(
-  path = "output/models/imputed_model_h2d.rds",
-  term = "ln_monthly_avg_minutes_played_10"
-)
-h2d_main_msf <- get_h2_interaction(
-  path = "output/models/imputed_model_h2d.rds",
-  term = "msf_sc_centered"
-)
+h2d_main_ln <- get_pooled_effect(panel_h2d_bundle, "ln_monthly_avg_minutes_played_10")
+h2d_main_msf <- get_pooled_effect(panel_h2d_bundle, "msf_sc_centered")
 
-# Marginal probability computation for H2a (probit CLMM)
+# Marginal probability computation for H2a (probit CLMM) — pooled estimates
 h2a_marginal <- tryCatch({
-  m <- readRDS("output/models/imputed_model_h2a.rds")
-  b_ln <- m$beta["ln_monthly_avg_minutes_played_10"]
-  t2 <- m$alpha["Fairly good|Fairly bad"]
-  sd_re <- m$ST$pid[1, 1]
-  marginal_sd <- sqrt(1 + sd_re^2)
-  pp_per_10min <- dnorm((b_ln * 0 - t2) / marginal_sd) * b_ln / marginal_sd * 100
+  pv <- pool_vcov(panel_h2a_bundle$fits)
+  b_ln <- pv$qbar["ln_monthly_avg_minutes_played_10"]
+  alpha_j <- average_re_quantity(panel_h2a_bundle$fits, function(f)
+    f$alpha["Fairly good|Fairly bad"])
+  sigma_u <- average_re_quantity(panel_h2a_bundle$fits, function(f)
+    f$ST$pid[1, 1])
+  marginal_sd <- sqrt(1 + sigma_u^2)
+  pp_per_10min <- dnorm((b_ln * 0 - alpha_j) / marginal_sd) *
+    b_ln / marginal_sd * 100
   list(pp_per_10min = pp_per_10min)
 }, error = function(e) NULL)
 ```
@@ -1479,28 +1607,51 @@ Although not part of our preregistered hypotheses, the main effect of late-night
 #| results: asis
 
 h2_models <- list()
+panel_h2_rubin <- list()  # Rubin's rules bundles for imputed H2 models
 
-fit_h2_models_inline <- function(inputs, version_label) {
-  gamingMonthly <- inputs$gamingMonthly |>
-    enforce_monthly_wave_subset()
+# --- Shared prep functions for H2 ---
+panel_h2_prep_monthly_clmm <- function(d) {
+  inputs <- build_gaming_inputs(d)
+  inputs$gamingMonthly |>
+    enforce_monthly_wave_subset() |>
+    mutate(
+      psqi_comp1_quality_rounded = round(psqi_comp1_quality),
+      psqi_6_ord = factor(
+        psqi_comp1_quality_rounded,
+        levels = c(0, 1, 2, 3),
+        labels = c("Very good", "Fairly good", "Fairly bad", "Very bad"),
+        ordered = TRUE
+      )
+    ) |>
+    filter(!is.na(psqi_6_ord), !is.na(msf_sc_centered))
+}
 
+panel_h2_prep_monthly_lmer <- function(d) {
+  inputs <- build_gaming_inputs(d)
+  inputs$gamingMonthly |>
+    enforce_monthly_wave_subset() |>
+    filter(!is.na(msf_sc_centered), !is.na(total_hours_sleep), !is.na(epsTotal))
+}
+
+panel_h2_prep_biweekly <- function(d) {
+  inputs <- build_gaming_inputs(d)
+  inputs$gamingBiweekly |>
+    filter(!is.na(msf_sc_centered), !is.na(wemwbs))
+}
+
+# --- Complete-case fitting (single fit, unchanged) ---
+fit_panel_h2_completecase <- function(inputs, version_label) {
+  gamingMonthly <- inputs$gamingMonthly |> enforce_monthly_wave_subset()
   gamingBiweekly <- inputs$gamingBiweekly
 
   gamingMonthly_complete <- gamingMonthly |>
     filter(!is.na(msf_sc_centered), !is.na(total_hours_sleep), !is.na(epsTotal))
-
   gamingBiweekly_complete <- gamingBiweekly |>
     filter(!is.na(msf_sc_centered), !is.na(wemwbs))
 
   if (nrow(gamingMonthly_complete) < 50 || nrow(gamingBiweekly_complete) < 50) {
-    message(
-      sprintf(
-        "Skipping H2 models for %s version: insufficient complete cases (monthly: %d, biweekly: %d)",
-        version_label,
-        nrow(gamingMonthly_complete),
-        nrow(gamingBiweekly_complete)
-      )
-    )
+    message(sprintf("Skipping H2 completecase: insufficient cases (monthly: %d, biweekly: %d)",
+                    nrow(gamingMonthly_complete), nrow(gamingBiweekly_complete)))
     return(NULL)
   }
 
@@ -1521,8 +1672,7 @@ fit_h2_models_inline <- function(inputs, version_label) {
       age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
       (1 | pid),
     data = gamingMonthly_h2,
-    link = "probit",
-    Hess = TRUE,
+    link = "probit", Hess = TRUE,
     control = clmm.control(maxIter = 5000, gradTol = 1e-3)
   )
 
@@ -1560,20 +1710,91 @@ fit_h2_models_inline <- function(inputs, version_label) {
   )
 }
 
-if (eval_h2) {
-  for (ver in names(gaming_inputs)) {
-    fitted_models <- fit_h2_models_inline(gaming_inputs[[ver]], ver)
-    if (!is.null(fitted_models)) {
-      h2_models[[ver]] <- fitted_models
-    }
+if (eval_panel) {
+  # --- Imputed: Rubin's rules ---
+  message("Fitting H2 models on 20 imputed datasets (Rubin's rules)...")
+
+  panel_h2_rubin[["H2a: Sleep Quality"]] <- fit_on_imputations(
+    imputed_long,
+    prep_fn = panel_h2_prep_monthly_clmm,
+    fit_fn = function(d) clmm(
+      psqi_6_ord ~ ln_monthly_avg_minutes_played_10 * msf_sc_centered +
+        age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+        (1 | pid),
+      data = d, link = "probit", Hess = TRUE,
+      control = clmm.control(maxIter = 5000, gradTol = 1e-3)
+    )
+  )
+
+  panel_h2_rubin[["H2b: Sleep Duration"]] <- fit_on_imputations(
+    imputed_long,
+    prep_fn = panel_h2_prep_monthly_lmer,
+    fit_fn = function(d) lmer(
+      total_hours_sleep ~ ln_monthly_avg_minutes_played_10 * msf_sc_centered +
+        age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+        (1 | pid) + (1 | gender),
+      data = d
+    )
+  )
+
+  panel_h2_rubin[["H2c: Wellbeing"]] <- fit_on_imputations(
+    imputed_long,
+    prep_fn = panel_h2_prep_biweekly,
+    fit_fn = function(d) lmer(
+      wemwbs ~ ln_biweekly_avg_minutes_played_10 * msf_sc_centered +
+        age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+        (1 | pid) + (1 | gender),
+      data = d
+    )
+  )
+
+  panel_h2_rubin[["H2d: Daytime Sleepiness"]] <- fit_on_imputations(
+    imputed_long,
+    prep_fn = panel_h2_prep_monthly_lmer,
+    fit_fn = function(d) lmer(
+      epsTotal ~ ln_monthly_avg_minutes_played_10 * msf_sc_centered +
+        age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+        (1 | pid) + (1 | gender),
+      data = d
+    )
+  )
+
+  for (nm in names(panel_h2_rubin)) {
+    tag <- switch(nm,
+      "H2a: Sleep Quality" = "h2a",
+      "H2b: Sleep Duration" = "h2b",
+      "H2c: Wellbeing" = "h2c",
+      "H2d: Daytime Sleepiness" = "h2d"
+    )
+    saveRDS(panel_h2_rubin[[nm]], glue("output/models/imputed_{tag}_rubin.rds"))
   }
+
+  h2_models[["imputed"]] <- lapply(panel_h2_rubin, `[[`, "pooled")
+
 } else {
-  for (ver in names(gaming_inputs)) {
-    cached <- load_h2_models_from_disk(ver)
-    if (!is.null(cached)) {
-      h2_models[[ver]] <- cached
-    }
+  # Load cached models
+  rubin_paths_h2 <- list(
+    "H2a: Sleep Quality" = "output/models/imputed_h2a_rubin.rds",
+    "H2b: Sleep Duration" = "output/models/imputed_h2b_rubin.rds",
+    "H2c: Wellbeing" = "output/models/imputed_h2c_rubin.rds",
+    "H2d: Daytime Sleepiness" = "output/models/imputed_h2d_rubin.rds"
+  )
+  if (all(file.exists(unlist(rubin_paths_h2)))) {
+    panel_h2_rubin <- lapply(rubin_paths_h2, readRDS)
+    h2_models[["imputed"]] <- lapply(panel_h2_rubin, `[[`, "pooled")
+  } else {
+    cached <- load_h2_models_from_disk("imputed")
+    if (!is.null(cached)) h2_models[["imputed"]] <- cached
   }
+}
+
+# --- Complete-case H2 (appendix) ---
+if (eval_appendix) {
+  cc_fitted <- fit_panel_h2_completecase(gaming_inputs[["completecase"]], "completecase")
+  if (!is.null(cc_fitted)) h2_models[["completecase"]] <- cc_fitted
+} else {
+  cached_cc <- load_h2_models_from_disk("completecase")
+  if (!is.null(cached_cc)) h2_models[["completecase"]] <- cached_cc
 }
 
 ```
@@ -1610,14 +1831,20 @@ if (eval_h2) {
   main_version <- "imputed"
   supp_versions <- setdiff(names(h2_models), main_version)
 
+h2_add_rows <- if (length(panel_h2_rubin) > 0) {
+  get_custom_rows_pooled(panel_h2_rubin)
+} else {
+  get_custom_rows(h2_models[[main_version]])
+}
+
 tt_h2 <- modelsummary(
   h2_models[[main_version]],
   fmt = fmt_sprintf("%.2f"),
   estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
   statistic = NULL,
-  gof_omit = "AIC|BIC|Log|RMSE|R2|ICC",
+  gof_omit = "AIC|BIC|Log|RMSE|R2|ICC|Num|nobs",
   coef_map = coef_map_h2,
-  add_rows = get_custom_rows(h2_models[[main_version]]),
+  add_rows = h2_add_rows,
   notes = c("+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
             "LN = late-night. Confidence intervals shown in brackets.",
             "ICC = Intraclass Correlation Coefficient (adjusted)."),
@@ -1640,7 +1867,7 @@ tt_h2
           fmt = fmt_sprintf("%.2f"),
           estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
           statistic = NULL,
-          gof_omit = "AIC|BIC|Log|RMSE|R2|ICC",
+          gof_omit = "AIC|BIC|Log|RMSE|R2|ICC|Num|nobs",
           coef_map = coef_map_h2,
           add_rows = get_custom_rows(h2_models[[ver]]),
           notes = c("+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
@@ -2033,6 +2260,108 @@ saveRDS(diary_model_h2, "output/models/diary_model_h2_sleepquality.rds")
 ```
 
 ```{r}
+#| label: fit-diary-imputed-models
+#| echo: false
+#| message: false
+#| warning: false
+#| cache: false
+#| eval: !expr eval_diary_imputed
+
+library(ordinal)
+
+# Load imputed diary data (from imputation_diary.R)
+diary_imputed_long_path <- "data/processed/diary_imputed_long.rds"
+stopifnot(file.exists(diary_imputed_long_path))
+diary_imputed_raw <- readRDS(diary_imputed_long_path)
+
+# The imputed data has day_num (1-30) but diary models need late-night gaming
+# exposure from telemetry. We join the observed late-night gaming and rebuild
+# diary_ocat for each imputation.
+
+# Prep function: builds diary_ocat-equivalent from one imputation slice
+diary_imputed_prep_h1 <- function(d) {
+  # Join late-night gaming exposure via pid + day_num → wave_id mapping
+  # For imputed (unobserved) days, late-night gaming is 0 (no diary entry = no window)
+  d <- d |>
+    left_join(
+      diary_late_night |> rename(day_num = wave_id),
+      by = c("pid", "day_num")
+    ) |>
+    mutate(
+      late_night_gaming_hours_24h = replace_na(late_night_gaming_hours_24h, 0),
+      sleep_quality_num = pmax(pmin(as.integer(sleep_diary_quality_num), 5L), 1L),
+      late_night_minutes_trim = pmin(
+        late_night_gaming_hours_24h * 60,
+        quantile(late_night_gaming_hours_24h * 60, 0.99, na.rm = TRUE)
+      ),
+      sleep_quality_ord = factor(
+        sleep_quality_num,
+        levels = 5:1,
+        labels = c("Very good", "Good", "Fair", "Poor", "Very poor"),
+        ordered = TRUE
+      ),
+      is_weekend = factor(
+        day_type_weekend == 1 | day_type_dayoff == 1,
+        levels = c(FALSE, TRUE)
+      )
+    ) |>
+    group_by(pid) |>
+    mutate(
+      late_night_pid_mean = mean(late_night_minutes_trim, na.rm = TRUE),
+      late_night_within = late_night_minutes_trim - late_night_pid_mean
+    ) |>
+    ungroup() |>
+    mutate(
+      late_night_between = late_night_pid_mean - mean(late_night_pid_mean, na.rm = TRUE),
+      ln_within_10  = late_night_within / 10,
+      ln_between_10 = late_night_between / 10
+    ) |>
+    filter(!is.na(sleep_quality_ord))
+  d
+}
+
+diary_imputed_prep_h2 <- function(d) {
+  d <- diary_imputed_prep_h1(d)
+  d |> filter(!is.na(chronotype_centered))
+}
+
+# H1 formula (same as complete-case)
+diary_h1_formula_imp <- sleep_quality_ord ~
+  ln_within_10 + ln_between_10 +
+  age_scaled + bmi_scaled + SES_index_scaled + is_weekend + (1 | pid)
+
+# H2 formula (same as complete-case)
+diary_h2_formula_imp <- sleep_quality_ord ~
+  ln_within_10 * chronotype_centered +
+  ln_between_10 * chronotype_centered +
+  age_scaled + bmi_scaled + SES_index_scaled + is_weekend + (1 | pid)
+
+message("Fitting diary H1 on imputed data (Rubin's rules)...")
+diary_h1_rubin <- fit_on_imputations(
+  diary_imputed_raw,
+  prep_fn = diary_imputed_prep_h1,
+  fit_fn = function(d) clmm(
+    diary_h1_formula_imp, data = d, link = "probit", Hess = TRUE,
+    control = clmm.control(maxIter = 50000, gradTol = 0.5)
+  )
+)
+saveRDS(diary_h1_rubin, "output/models/imputed_diary_h1_rubin.rds")
+
+message("Fitting diary H2 on imputed data (Rubin's rules)...")
+diary_h2_rubin <- fit_on_imputations(
+  diary_imputed_raw,
+  prep_fn = diary_imputed_prep_h2,
+  fit_fn = function(d) clmm(
+    diary_h2_formula_imp, data = d, link = "probit", Hess = TRUE,
+    control = clmm.control(maxIter = 50000, gradTol = 0.5)
+  )
+)
+saveRDS(diary_h2_rubin, "output/models/imputed_diary_h2_rubin.rds")
+
+message("Diary imputed models saved.")
+```
+
+```{r}
 #| label: diary-main-effects
 #| echo: false
 #| message: false
@@ -2296,7 +2625,7 @@ if (!is.null(diary_model_h1_loaded) && !is.null(diary_model_h2_loaded)) {
     fmt = fmt_sprintf("%.2f"),
     estimate = "{estimate} [{conf.low}, {conf.high}]{stars}",
     statistic = NULL,
-    gof_omit = "AIC|BIC|Log|RMSE|R2|ICC",
+    gof_omit = "AIC|BIC|Log|RMSE|R2|ICC|Num|nobs",
     coef_map = diary_coef_map,
     add_rows = get_custom_rows(diary_models_combined),
     notes = c(
@@ -2361,7 +2690,7 @@ if ("completecase" %in% names(h1_models)) {
     fmt = fmt_sprintf("%.2f"),
     estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
     statistic = NULL,
-    gof_omit = "AIC|BIC|Log|RMSE|R2|ICC",
+    gof_omit = "AIC|BIC|Log|RMSE|R2|ICC|Num|nobs",
     coef_map = coef_map_h1,
     add_rows = get_custom_rows(h1_models[["completecase"]]),
     notes = c("+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
@@ -2376,7 +2705,7 @@ if ("completecase" %in% names(h1_models)) {
   )
   tt_h1_cc
 } else {
-  cat("Complete-case H1 models are unavailable. Render with `-P refit_h1:true` to regenerate them.\n")
+  cat("Complete-case H1 models are unavailable. Render with `-P refit_appendix:true` to regenerate them.\n")
 }
 ```
 
@@ -2400,7 +2729,7 @@ if ("completecase" %in% names(h2_models)) {
     fmt = fmt_sprintf("%.2f"),
     estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
     statistic = NULL,
-    gof_omit = "AIC|BIC|Log|RMSE|R2|ICC",
+    gof_omit = "AIC|BIC|Log|RMSE|R2|ICC|Num|nobs",
     coef_map = coef_map_h2,
     add_rows = get_custom_rows(h2_models[["completecase"]]),
     notes = c("+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
@@ -2415,7 +2744,7 @@ if ("completecase" %in% names(h2_models)) {
   )
   tt_h2_cc
 } else {
-  cat("Complete-case H2 models are unavailable. Render with `-P refit_h2:true` to regenerate them.\n")
+  cat("Complete-case H2 models are unavailable. Render with `-P refit_appendix:true` to regenerate them.\n")
 }
 ```
 
@@ -2512,40 +2841,56 @@ We fit linear mixed-effects models with the same predictor structure as H1d (day
 #| message: false
 #| warning: false
 
-# Prepare monthly gaming data with psqi_global for both versions
-# enforce_monthly_wave_subset() guarantees that only waves 2, 4, and 6 feed the regressions
-gamingMonthly_imputed <- gaming_inputs$imputed$gamingMonthly |>
-  enforce_monthly_wave_subset() |>
-  filter(!is.na(psqi_global))
-
+# Prepare complete-case monthly gaming data with psqi_global
 gamingMonthly_completecase <- gaming_inputs$completecase$gamingMonthly |>
   enforce_monthly_wave_subset() |>
   filter(!is.na(psqi_global))
 
-# Fit model with imputed data
-model_psqi_global_imputed <- lmer(
-  psqi_global ~ ln_monthly_avg_minutes_played_10 +
-    age_scaled + bmi_scaled + SES_index_scaled + region  + isWeekend +
-    (1 | pid) + (1 | gender),
-  data = gamingMonthly_imputed,
-  control = lmerControl(optimizer = "bobyqa")
-)
+# --- Imputed: Rubin's rules ---
+panel_psqi_prep_monthly <- function(d) {
+  inputs <- build_gaming_inputs(d)
+  inputs$gamingMonthly |>
+    enforce_monthly_wave_subset() |>
+    filter(!is.na(psqi_global))
+}
 
-# Fit model with complete-case data (excluding imputed PSQI global observations)
+panel_psqi_prep_monthly_chrono <- function(d) {
+  inputs <- build_gaming_inputs(d)
+  inputs$gamingMonthly |>
+    enforce_monthly_wave_subset() |>
+    filter(!is.na(psqi_global), !is.na(msf_sc_centered))
+}
+
+panel_psqi_rubin_base <- fit_on_imputations(
+  imputed_long,
+  prep_fn = panel_psqi_prep_monthly,
+  fit_fn = function(d) lmer(
+    psqi_global ~ ln_monthly_avg_minutes_played_10 +
+      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+      (1 | pid) + (1 | gender),
+    data = d, control = lmerControl(optimizer = "bobyqa")
+  )
+)
+model_psqi_global_imputed <- panel_psqi_rubin_base$pooled
+
+panel_psqi_rubin_chrono <- fit_on_imputations(
+  imputed_long,
+  prep_fn = panel_psqi_prep_monthly_chrono,
+  fit_fn = function(d) lmer(
+    psqi_global ~ ln_monthly_avg_minutes_played_10 * msf_sc_centered +
+      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+      (1 | pid) + (1 | gender),
+    data = d, control = lmerControl(optimizer = "bobyqa")
+  )
+)
+model_psqi_global_imputed_chrono <- panel_psqi_rubin_chrono$pooled
+
+# --- Complete-case: single fit (unchanged) ---
 model_psqi_global_completecase <- lmer(
   psqi_global ~ ln_monthly_avg_minutes_played_10 +
     age_scaled + bmi_scaled + SES_index_scaled + region  + isWeekend +
     (1 | pid) + (1 | gender),
   data = gamingMonthly_completecase,
-  control = lmerControl(optimizer = "bobyqa")
-)
-
-# Fit chronotype × playtime interaction models
-model_psqi_global_imputed_chrono <- lmer(
-  psqi_global ~ ln_monthly_avg_minutes_played_10 * msf_sc_centered +
-    age_scaled + bmi_scaled + SES_index_scaled + region  + isWeekend +
-    (1 | pid) + (1 | gender),
-  data = gamingMonthly_imputed,
   control = lmerControl(optimizer = "bobyqa")
 )
 
@@ -2599,11 +2944,19 @@ psqi_moderator_map <- psqi_moderator_map[!is.na(psqi_moderator_map)]
 psqi_random_map <- psqi_label_lookup[psqi_random_terms]
 psqi_random_map <- psqi_random_map[!is.na(psqi_random_map)]
 
+# Extract fixed effect names from all models (pooled mipo or lmerMod)
+.get_term_names <- function(m) {
+ if (inherits(m, "mipo")) {
+    summary(m)$term
+  } else {
+    names(lme4::fixef(m))
+  }
+}
 fixef_names <- unique(c(
-  names(lme4::fixef(model_psqi_global_imputed)),
-  names(lme4::fixef(model_psqi_global_completecase)),
-  names(lme4::fixef(model_psqi_global_imputed_chrono)),
-  names(lme4::fixef(model_psqi_global_completecase_chrono))
+  .get_term_names(model_psqi_global_imputed),
+  .get_term_names(model_psqi_global_completecase),
+  .get_term_names(model_psqi_global_imputed_chrono),
+  .get_term_names(model_psqi_global_completecase_chrono)
 ))
 fixef_names <- fixef_names[fixef_names != "(Intercept)"]
 
@@ -2636,6 +2989,26 @@ psqi_models_list <- list(
   "Chronotype × Playtime (Complete-Case)" = model_psqi_global_completecase_chrono
 )
 
+# Build custom rows: use Rubin bundles for imputed, single fits for complete-case
+psqi_custom_rows <- {
+  pooled_bundles <- list(
+    "Playtime (Imputed)" = panel_psqi_rubin_base,
+    "Chronotype × Playtime (Imputed)" = panel_psqi_rubin_chrono
+  )
+  cc_models <- list(
+    "Playtime (Complete-Case)" = model_psqi_global_completecase,
+    "Chronotype × Playtime (Complete-Case)" = model_psqi_global_completecase_chrono
+  )
+  pooled_rows <- get_custom_rows_pooled(pooled_bundles)
+  cc_rows <- get_custom_rows(cc_models)
+  # Merge: participant_df row then icc_df row
+  merged <- pooled_rows
+  for (col in names(cc_rows)) {
+    if (col != "term") merged[[col]] <- cc_rows[[col]]
+  }
+  merged
+}
+
 psqi_group_cols <- seq_along(psqi_models_list) + 1
 
 tt_psqi <- modelsummary(
@@ -2643,9 +3016,9 @@ tt_psqi <- modelsummary(
   fmt = fmt_sprintf("%.2f"),
   estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
   statistic = NULL,
-  gof_omit = "AIC|BIC|Log|RMSE|R2|ICC",
+  gof_omit = "AIC|BIC|Log|RMSE|R2|ICC|Num|nobs",
   coef_map = coef_map_psqi_global,
-  add_rows = get_custom_rows(psqi_models_list),
+  add_rows = psqi_custom_rows,
   notes = c(
     "+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
     "PSQI global score range: 0-21 (higher = worse sleep quality)",
@@ -2674,7 +3047,7 @@ tt_psqi
 
 ```{r}
 #| label: fig-h2c-interaction
-#| fig-cap: "Predicted wellbeing (SWEMWBS) as a function of late-night gaming, moderated by chronotype. Lines show model-predicted SWEMWBS scores at three levels of chronotype: −1 SD (morning-oriented), mean, and +1 SD (evening-oriented). Ribbons indicate 95% confidence intervals. Predictions are derived from the H2c linear mixed model, with other covariates held at their reference/mean values and random effects set to zero."
+#| fig-cap: "Predicted wellbeing (SWEMWBS) as a function of late-night gaming, moderated by chronotype. Lines show model-predicted SWEMWBS scores at three levels of chronotype: −1 SD (morning-oriented), mean, and +1 SD (evening-oriented). Ribbons indicate 95% confidence intervals. Predictions are derived from pooled H2c linear mixed model estimates (Rubin's rules across 20 imputed datasets), with other covariates held at their reference/mean values and random effects set to zero."
 #| fig-width: 8
 #| fig-height: 5
 #| code-summary: "H2c interaction plot: Late-night gaming × Chronotype on Wellbeing"
@@ -2682,12 +3055,16 @@ tt_psqi
 library(lme4)
 library(ggplot2)
 
-h2c_model <- readRDS("output/models/imputed_model_h2c.rds")
-fe <- fixef(h2c_model)
-vc <- vcov(h2c_model)
+# Use pooled coefficients and vcov from Rubin's rules
+panel_h2c_fig_bundle <- if (!is.null(panel_h2c_bundle)) panel_h2c_bundle else
+  tryCatch(readRDS("output/models/imputed_h2c_rubin.rds"), error = function(e) NULL)
+panel_pv_h2c <- pool_vcov(panel_h2c_fig_bundle$fits)
+fe <- panel_pv_h2c$qbar
+vc <- panel_pv_h2c$vcov
 
 # Chronotype levels: -1 SD, mean (0), +1 SD
-chrono_sd <- sd(h2c_model@frame$msf_sc_centered)
+# Use SD from first fit's data frame (identical across imputations)
+chrono_sd <- sd(panel_h2c_fig_bundle$fits[[1]]@frame$msf_sc_centered)
 chrono_levels <- c(-chrono_sd, 0, chrono_sd)
 chrono_labels <- c("−1 SD (morning)", "Mean", "+1 SD (evening)")
 
