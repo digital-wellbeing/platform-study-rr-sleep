@@ -2280,8 +2280,12 @@ diary_imputed_raw <- readRDS(diary_imputed_long_path)
 
 # Prep function: builds diary_ocat-equivalent from one imputation slice
 diary_imputed_prep_h1 <- function(d) {
+  # Restrict to originally observed diary days only. Rows where
+  # day_type_weekend_imputed_flag == TRUE are "phantom" days added during
+  # grid expansion; their gaming exposure is 0 and dilutes between-person variance.
+  d <- d |> filter(!day_type_weekend_imputed_flag)
+
   # Join late-night gaming exposure via pid + day_num → wave_id mapping
-  # For imputed (unobserved) days, late-night gaming is 0 (no diary entry = no window)
   d <- d |>
     left_join(
       diary_late_night |> rename(day_num = wave_id),
@@ -2362,29 +2366,63 @@ message("Diary imputed models saved.")
 ```
 
 ```{r}
+#| label: diary-imputed-load
+#| echo: false
+#| message: false
+#| warning: false
+#| cache: false
+
+# Load diary Rubin bundles from disk if not just fitted
+if (!exists("diary_h1_rubin") || is.null(diary_h1_rubin)) {
+  diary_h1_rubin <- tryCatch(
+    readRDS("output/models/imputed_diary_h1_rubin.rds"),
+    error = function(e) NULL
+  )
+}
+if (!exists("diary_h2_rubin") || is.null(diary_h2_rubin)) {
+  diary_h2_rubin <- tryCatch(
+    readRDS("output/models/imputed_diary_h2_rubin.rds"),
+    error = function(e) NULL
+  )
+}
+```
+
+```{r}
 #| label: diary-main-effects
 #| echo: false
 #| message: false
 #| warning: false
 #| cache: false
 
-# Load diary models (from disk if not just fitted)
+# Complete-case model paths (fallback)
 diary_h1_path <- "output/models/diary_model_h1_sleepquality.rds"
 diary_h2_path <- "output/models/diary_model_h2_sleepquality.rds"
 
-# H1 effects (per-10min, probit link — report b and SE, positive = worse sleep)
-diary_h1_within <- get_h2_interaction(diary_h1_path, "ln_within_10",
-                                       exponentiate = FALSE)
-diary_h1_between <- get_h2_interaction(diary_h1_path, "ln_between_10",
-                                        exponentiate = FALSE)
+# H1 effects: use pooled Rubin estimates if available, else fall back to complete-case
+if (!is.null(diary_h1_rubin)) {
+  diary_h1_within <- get_pooled_effect(diary_h1_rubin, "ln_within_10", exponentiate = FALSE)
+  diary_h1_between <- get_pooled_effect(diary_h1_rubin, "ln_between_10", exponentiate = FALSE)
+} else {
+  diary_h1_within <- get_h2_interaction(diary_h1_path, "ln_within_10", exponentiate = FALSE)
+  diary_h1_between <- get_h2_interaction(diary_h1_path, "ln_between_10", exponentiate = FALSE)
+}
 
-# H2 effects (per-10min × centered chronotype interaction, probit link)
-diary_h2_within_chrono <- get_h2_interaction(diary_h2_path,
-  "ln_within_10:chronotype_centered", exponentiate = FALSE)
-diary_h2_between_chrono <- get_h2_interaction(diary_h2_path,
-  "chronotype_centered:ln_between_10", exponentiate = FALSE)
-diary_h2_chrono_main <- get_h2_interaction(diary_h2_path,
-  "chronotype_centered", exponentiate = FALSE)
+# H2 effects: use pooled Rubin estimates if available, else fall back to complete-case
+if (!is.null(diary_h2_rubin)) {
+  diary_h2_within_chrono <- get_pooled_effect(diary_h2_rubin, "ln_within_10:chronotype_centered",
+                                               exponentiate = FALSE)
+  diary_h2_between_chrono <- get_pooled_effect(diary_h2_rubin, "chronotype_centered:ln_between_10",
+                                                exponentiate = FALSE)
+  diary_h2_chrono_main <- get_pooled_effect(diary_h2_rubin, "chronotype_centered",
+                                             exponentiate = FALSE)
+} else {
+  diary_h2_within_chrono <- get_h2_interaction(diary_h2_path,
+    "ln_within_10:chronotype_centered", exponentiate = FALSE)
+  diary_h2_between_chrono <- get_h2_interaction(diary_h2_path,
+    "chronotype_centered:ln_between_10", exponentiate = FALSE)
+  diary_h2_chrono_main <- get_h2_interaction(diary_h2_path,
+    "chronotype_centered", exponentiate = FALSE)
+}
 
 # Spline comparison info
 diary_spline_compare_loaded <- if (file.exists("output/models/diary_spline_compare.rds")) {
@@ -2393,8 +2431,16 @@ diary_spline_compare_loaded <- if (file.exists("output/models/diary_spline_compa
   NULL
 }
 
-# Extract raw numeric values for inline interpretation
-extract_clmm_est <- function(path, term, exponentiate = TRUE) {
+# Extract raw numeric values for inline interpretation (sig tests, direction)
+extract_pooled_est <- function(bundle, term) {
+  if (is.null(bundle) || is.null(bundle$pooled)) return(list(est = NA, ci_low = NA, ci_high = NA, p = NA))
+  s <- summary(bundle$pooled, conf.int = TRUE)
+  row <- s[s$term == term, , drop = FALSE]
+  if (nrow(row) == 0) return(list(est = NA, ci_low = NA, ci_high = NA, p = NA))
+  list(est = row$estimate, ci_low = row$`2.5 %`, ci_high = row$`97.5 %`, p = row$p.value)
+}
+
+extract_clmm_est <- function(path, term, exponentiate = FALSE) {
   if (!file.exists(path)) return(list(est = NA, ci_low = NA, ci_high = NA, p = NA))
   m <- readRDS(path)
   ct <- as.data.frame(coef(summary(m)))
@@ -2410,11 +2456,23 @@ extract_clmm_est <- function(path, term, exponentiate = TRUE) {
   list(est = est, ci_low = ci_low, ci_high = ci_high, p = p)
 }
 
-diary_h1_w <- extract_clmm_est(diary_h1_path, "ln_within_10", exponentiate = FALSE)
-diary_h1_b <- extract_clmm_est(diary_h1_path, "ln_between_10", exponentiate = FALSE)
-diary_h2_wc <- extract_clmm_est(diary_h2_path, "ln_within_10:chronotype_centered", exponentiate = FALSE)
-diary_h2_bc <- extract_clmm_est(diary_h2_path, "chronotype_centered:ln_between_10", exponentiate = FALSE)
-diary_h2_cm <- extract_clmm_est(diary_h2_path, "chronotype_centered", exponentiate = FALSE)
+if (!is.null(diary_h1_rubin)) {
+  diary_h1_w  <- extract_pooled_est(diary_h1_rubin, "ln_within_10")
+  diary_h1_b  <- extract_pooled_est(diary_h1_rubin, "ln_between_10")
+} else {
+  diary_h1_w  <- extract_clmm_est(diary_h1_path, "ln_within_10")
+  diary_h1_b  <- extract_clmm_est(diary_h1_path, "ln_between_10")
+}
+
+if (!is.null(diary_h2_rubin)) {
+  diary_h2_wc <- extract_pooled_est(diary_h2_rubin, "ln_within_10:chronotype_centered")
+  diary_h2_bc <- extract_pooled_est(diary_h2_rubin, "chronotype_centered:ln_between_10")
+  diary_h2_cm <- extract_pooled_est(diary_h2_rubin, "chronotype_centered")
+} else {
+  diary_h2_wc <- extract_clmm_est(diary_h2_path, "ln_within_10:chronotype_centered")
+  diary_h2_bc <- extract_clmm_est(diary_h2_path, "chronotype_centered:ln_between_10")
+  diary_h2_cm <- extract_clmm_est(diary_h2_path, "chronotype_centered")
+}
 
 # Helper for significance description
 sig_desc <- function(p) {
@@ -2426,15 +2484,28 @@ sig_desc <- function(p) {
 }
 
 # Marginal probability computation for diary H1 (probit CLMM, between-person)
-diary_h1_marginal <- tryCatch({
-  m <- readRDS(diary_h1_path)
-  b_between <- m$beta["ln_between_10"]
-  t_fair_poor <- m$alpha["Fair|Poor"]
-  sd_re <- m$ST$pid[1, 1]
-  marginal_sd <- sqrt(1 + sd_re^2)
-  pp_per_10min <- dnorm((b_between * 0 - t_fair_poor) / marginal_sd) * b_between / marginal_sd * 100
-  list(pp_per_10min = pp_per_10min)
-}, error = function(e) NULL)
+# Use pooled estimates (Rubin's rules) when available, else single complete-case fit
+diary_h1_marginal <- if (!is.null(diary_h1_rubin)) {
+  tryCatch({
+    pv        <- pool_vcov(diary_h1_rubin$fits)
+    b_between <- pv$qbar["ln_between_10"]
+    t_fair_poor <- average_re_quantity(diary_h1_rubin$fits, function(f) f$alpha["Fair|Poor"])
+    sigma_u   <- average_re_quantity(diary_h1_rubin$fits, function(f) sqrt(f$ST$pid[1, 1]))
+    marginal_sd <- sqrt(1 + sigma_u^2)
+    pp_per_10min <- dnorm((b_between * 0 - t_fair_poor) / marginal_sd) * b_between / marginal_sd * 100
+    list(pp_per_10min = pp_per_10min)
+  }, error = function(e) NULL)
+} else {
+  tryCatch({
+    m <- readRDS(diary_h1_path)
+    b_between <- m$beta["ln_between_10"]
+    t_fair_poor <- m$alpha["Fair|Poor"]
+    sd_re <- m$ST$pid[1, 1]
+    marginal_sd <- sqrt(1 + sd_re^2)
+    pp_per_10min <- dnorm((b_between * 0 - t_fair_poor) / marginal_sd) * b_between / marginal_sd * 100
+    list(pp_per_10min = pp_per_10min)
+  }, error = function(e) NULL)
+}
 ```
 
 To complement the panel-level analyses, we examined daily diary reports of sleep quality as a function of late-night gaming in the preceding 24 hours. Sleep quality was recorded on a 5-level ordinal scale (Very poor, Poor, Fair, Good, Very good) in each diary entry. We fitted cumulative link mixed models (CLMM; `ordinal::clmm`) with random intercepts for participants to account for repeated measurements. To separate within-person fluctuations from between-person differences in late-night gaming, we decomposed the trimmed late-night gaming variable (capped at the 99th percentile) into a within-person component (daily deviation from the participant's own mean) and a between-person component (participant mean centered at the grand mean). The analytical diary sample comprised `r diary_n_participants` participants contributing `r format(diary_n_entries, big.mark = ",")` diary entries with valid sleep quality ratings. Covariates included age, BMI, SES (all scaled), and a weekend indicator. Region is excluded from both diary models because all diary participants are US-based. These diary analyses are exploratory and were not formally pre-registered. Gender was initially considered as a random intercept but the random intercept for gender with only three levels did not converge; gender is therefore excluded from all diary models. A probit link was used (rather than logit) to ensure reliable convergence for both models. Late-night gaming is expressed in per-10-minute increments (i.e., the effect of each additional 10 minutes of late-night gaming) to aid interpretability while maintaining numerical stability. In the ordered factor coding, higher categories correspond to worse sleep quality (5 = "Very poor"), so positive coefficients indicate a higher probability of worse sleep. Covariates (age, BMI, SES) are scaled within the diary subsample. Missing SES values for diary participants with unrecognised employment categories (n = 23) were imputed via MICE (PMM, m = 5) using age, BMI, gender, and region as predictors, consistent with the panel-level missing-data strategy.
@@ -2455,26 +2526,33 @@ For the chronotype moderation model (H2), the interaction between within-person 
 #| message: false
 #| warning: false
 
-if (file.exists("output/models/diary_model_h1_sleepquality.rds")) {
+diary_h1_model_available <- !is.null(diary_h1_rubin) || file.exists("output/models/diary_model_h1_sleepquality.rds")
+
+if (diary_h1_model_available) {
   library(ordinal)
   library(patchwork)
-
-  diary_h1_fig <- readRDS("output/models/diary_model_h1_sleepquality.rds")
 
   # Prediction grid (per-10-min units: -6 to 9 = -60 to 90 min)
   ln_seq <- seq(-6, 9, by = 0.1)
 
   # MARGINAL exceedance probability — same method as panel Figure 2.
-  # emmeans mode="exc.prob" gives conditional predictions (RE = 0), which
-  # underestimate when sigma_u is non-trivial. Correct marginal formula for a
-  # probit random-intercept CLMM:
-  #   P(Y > j | x) = 1 - Phi((alpha_j - eta(x)) / sqrt(1 + sigma_u^2))
-  # where eta(x) = b_between * x_between (within held at 0, scaled covariates at mean = 0).
+  # For pooled (Rubin's rules): use pool_vcov() for b and SE, average_re_quantity()
+  # for alpha_j and sigma_u across imputations.
+  # For complete-case fallback: load single model directly.
+  if (!is.null(diary_h1_rubin)) {
+    pv_d        <- pool_vcov(diary_h1_rubin$fits)
+    b_between   <- pv_d$qbar["ln_between_10"]
+    se_between  <- sqrt(pv_d$vcov["ln_between_10", "ln_between_10"])
+    alpha_j_d   <- average_re_quantity(diary_h1_rubin$fits, function(f) f$alpha["Fair|Poor"])
+    sigma_u_d   <- average_re_quantity(diary_h1_rubin$fits, function(f) sqrt(f$ST$pid[1, 1]))
+  } else {
+    diary_h1_fig <- readRDS("output/models/diary_model_h1_sleepquality.rds")
+    sigma_u_d   <- sqrt(diary_h1_fig$ST$pid[1, 1])
+    alpha_j_d   <- diary_h1_fig$alpha["Fair|Poor"]
+    b_between   <- coef(diary_h1_fig)["ln_between_10"]
+    se_between  <- sqrt(vcov(diary_h1_fig)["ln_between_10", "ln_between_10"])
+  }
 
-  sigma_u_d   <- sqrt(diary_h1_fig$ST$pid[1, 1])
-  alpha_j_d   <- diary_h1_fig$alpha["Fair|Poor"]   # P(Poor or Very poor) = P(Y > "Fair")
-  b_between   <- coef(diary_h1_fig)["ln_between_10"]
-  se_between  <- sqrt(vcov(diary_h1_fig)["ln_between_10", "ln_between_10"])
   denom_d     <- sqrt(1 + sigma_u_d^2)
 
   lp_d    <- b_between * ln_seq
@@ -2552,7 +2630,7 @@ if (file.exists("output/models/diary_model_h1_sleepquality.rds")) {
       title = "Diary: Probability of Poor Sleep Quality by Late-Night Gaming"
     )
 } else {
-  message("Diary H1 model not found. Run with eval_diary = TRUE first.")
+  message("Diary H1 model not found. Run with eval_diary = TRUE or eval_diary_imputed = TRUE first.")
 }
 ```
 
@@ -2566,59 +2644,59 @@ if (file.exists("output/models/diary_model_h1_sleepquality.rds")) {
 library(tinytable)
 library(modelsummary)
 
-diary_model_h1_loaded <- if (file.exists("output/models/diary_model_h1_sleepquality.rds")) {
-  readRDS("output/models/diary_model_h1_sleepquality.rds")
-} else {
-  NULL
-}
+# Use imputed (Rubin's rules) models when available, else fall back to complete-case
+diary_use_imputed <- !is.null(diary_h1_rubin) && !is.null(diary_h2_rubin)
 
-diary_model_h2_loaded <- if (file.exists("output/models/diary_model_h2_sleepquality.rds")) {
-  readRDS("output/models/diary_model_h2_sleepquality.rds")
-} else {
-  NULL
-}
-
-if (!is.null(diary_model_h1_loaded) && !is.null(diary_model_h2_loaded)) {
-
-  # Build coef_map dynamically to handle gender/region factor levels
-  diary_coef_map <- c(
-    "ln_within_10"          = "LN gaming within-person (per 10 min)",
-    "ln_between_10"         = "LN gaming between-person (per 10 min)",
-    "chronotype_centered"   = "Chronotype (h, centered)",
-    "ln_within_10:chronotype_centered"   = "LN within × Chronotype",
-    "chronotype_centered:ln_between_10"  = "LN between × Chronotype",
-    "age_scaled"            = "Age (scaled)",
-    "bmi_scaled"            = "BMI (scaled)",
-    "SES_index_scaled"      = "SES (scaled)"
+if (diary_use_imputed) {
+  diary_models_combined <- list(
+    "H1: Sleep Quality" = diary_h1_rubin$pooled,
+    "H2: Chronotype Moderation" = diary_h2_rubin$pooled
   )
-
-  # Detect region terms from both models
+  # Coef names from pooled summary
   all_coef_names <- unique(c(
-    names(coef(diary_model_h1_loaded)),
-    names(coef(diary_model_h2_loaded))
+    summary(diary_h1_rubin$pooled)$term,
+    summary(diary_h2_rubin$pooled)$term
   ))
-  threshold_pattern <- "^[0-9]|^Very poor|^Very good|^Poor|^Fair|^Good"
-  non_threshold <- all_coef_names[!grepl(threshold_pattern, all_coef_names)]
-
-  region_terms <- non_threshold[grepl("^region", non_threshold)]
-  region_map <- setNames(
-    paste0("Region: ", gsub("^region", "", region_terms)),
-    region_terms
+  diary_add_rows <- get_custom_rows_pooled(
+    list("H1: Sleep Quality" = diary_h1_rubin, "H2: Chronotype Moderation" = diary_h2_rubin)
   )
-
-  weekend_map <- c()
-  if ("is_weekendTRUE" %in% non_threshold) {
-    weekend_map <- c("is_weekendTRUE" = "Day: Weekend")
-  } else if ("is_weekend" %in% non_threshold) {
-    weekend_map <- c("is_weekend" = "Day: Weekend")
-  }
-
-  diary_coef_map <- c(diary_coef_map, region_map, weekend_map)
-
+  tbl_note_source <- "Estimates pooled across 20 multiply imputed datasets using Rubin's rules."
+} else {
+  diary_model_h1_loaded <- tryCatch(readRDS("output/models/diary_model_h1_sleepquality.rds"), error = function(e) NULL)
+  diary_model_h2_loaded <- tryCatch(readRDS("output/models/diary_model_h2_sleepquality.rds"), error = function(e) NULL)
   diary_models_combined <- list(
     "H1: Sleep Quality" = diary_model_h1_loaded,
     "H2: Chronotype Moderation" = diary_model_h2_loaded
   )
+  all_coef_names <- if (!is.null(diary_model_h1_loaded) && !is.null(diary_model_h2_loaded)) {
+    unique(c(names(coef(diary_model_h1_loaded)), names(coef(diary_model_h2_loaded))))
+  } else character(0)
+  diary_add_rows <- get_custom_rows(Filter(Negate(is.null), diary_models_combined))
+  tbl_note_source <- "Complete-case estimates (imputed diary models not found)."
+}
+
+diary_any_model <- !is.null(diary_models_combined[["H1: Sleep Quality"]]) &&
+                   !is.null(diary_models_combined[["H2: Chronotype Moderation"]])
+
+if (diary_any_model) {
+  diary_coef_map <- c(
+    "ln_within_10"                       = "LN gaming within-person (per 10 min)",
+    "ln_between_10"                      = "LN gaming between-person (per 10 min)",
+    "chronotype_centered"                = "Chronotype (h, centered)",
+    "ln_within_10:chronotype_centered"   = "LN within × Chronotype",
+    "chronotype_centered:ln_between_10"  = "LN between × Chronotype",
+    "age_scaled"                         = "Age (scaled)",
+    "bmi_scaled"                         = "BMI (scaled)",
+    "SES_index_scaled"                   = "SES (scaled)"
+  )
+
+  weekend_map <- c()
+  if ("is_weekendTRUE" %in% all_coef_names) {
+    weekend_map <- c("is_weekendTRUE" = "Day: Weekend")
+  } else if ("is_weekend" %in% all_coef_names) {
+    weekend_map <- c("is_weekend" = "Day: Weekend")
+  }
+  diary_coef_map <- c(diary_coef_map, weekend_map)
 
   tt_diary <- modelsummary(
     diary_models_combined,
@@ -2627,11 +2705,12 @@ if (!is.null(diary_model_h1_loaded) && !is.null(diary_model_h2_loaded)) {
     statistic = NULL,
     gof_omit = "AIC|BIC|Log|RMSE|R2|ICC|Num|nobs",
     coef_map = diary_coef_map,
-    add_rows = get_custom_rows(diary_models_combined),
+    add_rows = diary_add_rows,
     notes = c(
       "+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
       "LN = late-night. Confidence intervals shown in brackets.",
-      "Cumulative link mixed models (random intercept for participant) on 5-level ordinal sleep quality (positive coefficients = higher probability of worse sleep). Both H1 and H2 use probit link (logit did not converge reliably for either model). Late-night gaming expressed per 10 minutes; chronotype in centered hours; age, BMI, SES scaled within the diary subsample. Region excluded: all diary participants are US-only.",
+      tbl_note_source,
+      "Cumulative link mixed models (random intercept for participant) on 5-level ordinal sleep quality (positive coefficients = higher probability of worse sleep). Both H1 and H2 use probit link. Late-night gaming expressed per 10 minutes; chronotype in centered hours; age, BMI, SES scaled within the diary subsample. Region excluded: all diary participants are US-only.",
       "Within = daily deviation from person mean; Between = person mean - grand mean."
     ),
     output = "tinytable"
@@ -2643,7 +2722,7 @@ if (!is.null(diary_model_h1_loaded) && !is.null(diary_model_h2_loaded)) {
   )
   tt_diary
 } else {
-  cat("Diary models not found. Render with `-P refit_diary:true` to generate them.")
+  cat("Diary models not found. Render with `-P refit_diary_imputed:true` to generate them.")
 }
 ```
 

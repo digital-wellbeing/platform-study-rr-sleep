@@ -32,12 +32,18 @@ DIARY_OUTCOMES <- c("life_sat", "affective_valence", "sleep_diary_quality_num")
 
 # Predictor variables (included in imputation model but only imputed where missing
 # in observed data; on expanded days these are also NA and imputed by PMM)
+#
+# Note: day_type_holiday, day_type_vacation, day_type_other are excluded because
+# they have near-zero base rates (~1-3% per day), causing near-singular predictor
+# matrices in the wide format. They are merged into day_type_nonstandard (any
+# non-regular day that is not a weekend or day off). Only day_type_dayoff and
+# day_type_weekend are kept separately because they feed directly into the
+# is_weekend covariate used in all diary models.
 DIARY_PREDICTORS <- c(
   "played24hr_num",
   "bpnsfs_1", "bpnsfs_2", "bpnsfs_3", "bpnsfs_4", "bpnsfs_5", "bpnsfs_6",
   "had_stress_num",
-  "day_type_dayoff", "day_type_weekend", "day_type_holiday",
-  "day_type_vacation", "day_type_other"
+  "day_type_dayoff", "day_type_weekend", "day_type_nonstandard"
 )
 
 # Wave-invariant auxiliary variables (never imputed, used as predictors only)
@@ -133,11 +139,14 @@ prepare_diary_for_imputation <- function() {
       ),
       sleep_diary_quality_num = recode_sleep_quality(sleep_diary_quality),
       # Dummy-code day type (reference = "Regular work day")
-      day_type_dayoff   = as.integer(sleep_diary_day_type == "Regular day off"),
-      day_type_weekend  = as.integer(sleep_diary_day_type == "Weekend"),
-      day_type_holiday  = as.integer(sleep_diary_day_type == "Holiday"),
-      day_type_vacation = as.integer(sleep_diary_day_type == "Vacation day"),
-      day_type_other    = as.integer(str_detect(sleep_diary_day_type, "Other")),
+      day_type_dayoff      = as.integer(sleep_diary_day_type == "Regular day off"),
+      day_type_weekend     = as.integer(sleep_diary_day_type == "Weekend"),
+      # Merge holiday/vacation/other into a single binary to avoid near-zero
+      # variance columns (base rates: holiday ~1%, vacation ~3%, other ~3%)
+      day_type_nonstandard = as.integer(
+        sleep_diary_day_type %in% c("Holiday", "Vacation day") |
+          str_detect(coalesce(sleep_diary_day_type, ""), "Other")
+      ),
       # Set all dummies to NA when day type is missing
       across(starts_with("day_type_"), ~if_else(is.na(sleep_diary_day_type), NA_integer_, .))
     )
@@ -338,23 +347,86 @@ reshape_diary_wide <- function(diary_expanded) {
 }
 
 
-#' Set up predictor matrix for diary imputation
+#' Set up predictor matrix for diary imputation (banded structure)
+#'
+#' Uses a banded predictor matrix to reduce multicollinearity from 30
+#' highly-correlated day-columns of the same variable. For each target column
+#' `var_d{t}`, predictors are:
+#'   - Same variable on days t-BAND_WIDTH to t+BAND_WIDTH (temporal neighbourhood)
+#'   - All other time-varying variables on the SAME day (within-day cross-variable)
+#'   - All auxiliary (wave-invariant) predictors
+#'
+#' This replaces quickpred, which selects ~all 30 day-columns per variable
+#' (inter-day r ~0.6 > any mincor threshold), causing near-singular matrices.
 #'
 #' @param data Wide-format diary data
+#' @param band_width Number of adjacent days to include for same-variable
+#'   temporal predictors (default 3 = 6 neighbours + current day)
 #' @return Predictor matrix for mice
-setup_diary_predictor_matrix <- function(data) {
-  message("Setting up predictor matrix...")
+setup_diary_predictor_matrix <- function(data, band_width = 3) {
+  message("Setting up predictor matrix (banded structure, band_width = ", band_width, ")...")
 
-  # Use quickpred with mincor threshold
-  pred <- quickpred(data, mincor = 0.1, exclude = "pid")
+  vars   <- names(data)
+  n_vars <- length(vars)
+  pred   <- matrix(0L, nrow = n_vars, ncol = n_vars,
+                   dimnames = list(vars, vars))
 
-  # Ensure pid is never used as predictor or imputed
-  pred["pid", ] <- 0
-  if ("pid" %in% colnames(pred)) pred[, "pid"] <- 0
+  # Parse column names into (variable, day) pairs
+  tv_pattern <- paste0("^(.+)_d([0-9]+)$")
+  parsed <- data.frame(
+    col     = vars,
+    varname = str_match(vars, tv_pattern)[, 2],
+    day_num = as.integer(str_match(vars, tv_pattern)[, 3]),
+    stringsAsFactors = FALSE
+  )
+  is_tv  <- !is.na(parsed$varname)
+  is_aux <- vars %in% DIARY_AUXILIARY
 
-  # Summary
+  for (i in seq_len(n_vars)) {
+    target_col <- vars[i]
+    if (!is_tv[i]) next                      # skip pid and auxiliaries as targets
+
+    t_var <- parsed$varname[i]
+    t_day <- parsed$day_num[i]
+
+    for (j in seq_len(n_vars)) {
+      if (i == j) next
+      pred_col <- vars[j]
+
+      if (is_aux[j]) {
+        # Always include wave-invariant auxiliaries
+        pred[i, j] <- 1L
+      } else if (is_tv[j]) {
+        p_var <- parsed$varname[j]
+        p_day <- parsed$day_num[j]
+
+        if (p_var == t_var) {
+          # Same variable: include only within band_width days
+          if (abs(p_day - t_day) <= band_width && p_day != t_day) {
+            pred[i, j] <- 1L
+          }
+        } else {
+          # Different variable: include only same day
+          if (p_day == t_day) {
+            pred[i, j] <- 1L
+          }
+        }
+      }
+    }
+  }
+
+  # Ensure pid is never a predictor or imputed target
+  if ("pid" %in% vars) {
+    pred["pid", ] <- 0L
+    pred[, "pid"] <- 0L
+  }
+
   n_predictors <- rowSums(pred > 0)
-  message(sprintf("  Average predictors per variable: %.1f", mean(n_predictors)))
+  tv_rows      <- n_predictors[is_tv]
+  message(sprintf("  Average predictors per time-varying variable: %.1f (was ~232 with quickpred)",
+                  mean(tv_rows)))
+  message(sprintf("  Same-variable temporal predictors: up to %d (days ±%d)",
+                  band_width * 2, band_width))
 
   pred
 }
@@ -396,11 +468,70 @@ setup_diary_methods <- function(data) {
 }
 
 
+#' Create a where matrix that skips phantom (structurally-missing) cells
+#'
+#' Phantom cells arise from grid expansion: participant A may have completed only
+#' 20 diary days, so days 21-30 for that participant are NA by design (not item
+#' non-response). Imputing these structural NAs adds spurious variation and
+#' wastes computation. The where matrix tells mice which NA cells to impute:
+#' TRUE = impute this cell, FALSE = leave as-is (NA for phantom cells).
+#'
+#' Observed days with genuine item non-response (e.g., did complete the diary but
+#' skipped one question) are marked TRUE and receive PMM imputation as intended.
+#'
+#' @param diary_wide Wide-format diary data (post reshape_diary_wide)
+#' @param observed_keys Data frame with (pid, day_num) of actually-observed entries
+#' @return Logical matrix, same dimensions as diary_wide
+create_phantom_where_matrix <- function(diary_wide, observed_keys) {
+  message("  Creating where matrix to skip phantom cells...")
+
+  # Fast lookup: set of "pid_daynum" strings that were actually observed
+  obs_set <- paste(observed_keys$pid, observed_keys$day_num, sep = "_")
+
+  pids   <- diary_wide$pid
+  n_rows <- nrow(diary_wide)
+  n_cols <- ncol(diary_wide)
+  vars   <- names(diary_wide)
+
+  # Start with all TRUE (impute everything that's NA)
+  where <- matrix(TRUE, nrow = n_rows, ncol = n_cols,
+                  dimnames = list(NULL, vars))
+
+  # pid: never impute
+  where[, "pid"] <- FALSE
+
+  # Auxiliaries: complete after fill_static, never impute
+  where[, intersect(DIARY_AUXILIARY, vars)] <- FALSE
+
+  # For each time-varying column, mark phantom cells as FALSE
+  tv_pattern <- paste0("^(", paste(DIARY_TIMEVARYING, collapse = "|"), ")_d([0-9]+)$")
+  tv_cols    <- grep(tv_pattern, vars, value = TRUE)
+  day_nums   <- as.integer(str_extract(tv_cols, "[0-9]+$"))
+
+  for (k in seq_along(tv_cols)) {
+    col     <- tv_cols[k]
+    day_val <- day_nums[k]
+    keys    <- paste(pids, day_val, sep = "_")
+    phantom <- !(keys %in% obs_set)         # TRUE where day was not observed at all
+    where[phantom, col] <- FALSE
+  }
+
+  n_phantom <- sum(!where[, tv_cols])
+  n_genuine <- sum(where[, tv_cols] & is.na(as.matrix(diary_wide[, tv_cols])))
+  message(sprintf("  Phantom cells (will not impute): %d", n_phantom))
+  message(sprintf("  Genuine missing cells (will impute): %d", n_genuine))
+
+  where
+}
+
+
 #' Run diary imputation using chunked parallel approach
 #'
 #' @param data Wide-format diary data
+#' @param where Logical matrix from create_phantom_where_matrix(); cells marked
+#'   FALSE are structural NAs (phantom days) and will not be imputed.
 #' @return mids object
-run_diary_imputation <- function(data) {
+run_diary_imputation <- function(data, where = NULL) {
   n_cores <- availableCores()
   message(sprintf("\n=== Running Diary Multiple Imputation (Chunked) ==="))
   message(sprintf("Available CPU cores: %d", n_cores))
@@ -450,16 +581,19 @@ run_diary_imputation <- function(data) {
     chunk_sizes[n_workers] <- chunk_sizes[n_workers] - (total_assigned - N_IMPUTATIONS)
   }
 
+  # Split where matrix into per-chunk slices (same rows, aligned to chunk seeds)
   imp_list <- future_lapply(seq_len(n_workers), function(i) {
-    mice(
-      data = data,
-      m = chunk_sizes[i],
-      method = methods,
+    args <- list(
+      data            = data,
+      m               = chunk_sizes[i],
+      method          = methods,
       predictorMatrix = pred,
-      maxit = N_ITERATIONS,
-      seed = chunk_seeds[i],
-      printFlag = FALSE
+      maxit           = N_ITERATIONS,
+      seed            = chunk_seeds[i],
+      printFlag       = FALSE
     )
+    if (!is.null(where)) args$where <- where
+    do.call(mice, args)
   }, future.seed = TRUE)
 
   # Combine results
@@ -592,8 +726,11 @@ create_diary_diagnostics <- function(imp, output_dir = DIARY_OUTPUT_DIR) {
   })]
 
   # Limit diagnostic plots to a representative subset (first 5 days per outcome)
+  # Use days 1-5 that actually have some missingness (not all structural NA)
   outcome_diagnostic_cols <- unlist(lapply(DIARY_OUTCOMES, function(var) {
-    cols <- grep(paste0("^", var, "_d[1-5]$"), cols_with_missing, value = TRUE)
+    # Match columns like life_sat_d1 ... life_sat_d5 that exist in the mids data
+    candidate_cols <- paste0(var, "_d", 1:5)
+    cols <- intersect(candidate_cols, cols_with_missing)
     head(cols, 5)
   }))
 
@@ -601,7 +738,10 @@ create_diary_diagnostics <- function(imp, output_dir = DIARY_OUTPUT_DIR) {
   message("  Creating convergence plots...")
   pdf(file.path(output_dir, "convergence_plots.pdf"), width = 12, height = 8)
   tryCatch({
-    print(plot(imp, outcome_diagnostic_cols))
+    # mice plot() with character vector of column names
+    if (length(outcome_diagnostic_cols) > 0) {
+      print(plot(imp, y = outcome_diagnostic_cols))
+    }
   }, error = function(e) {
     message("    Warning: convergence plot failed: ", e$message)
   })
@@ -680,14 +820,22 @@ main <- function() {
   # Step 1-2: Prepare diary data
   diary_prepped <- prepare_diary_for_imputation()
 
+  # Record observed (pid, day_num) pairs BEFORE grid expansion.
+  # Used to mark phantom cells in the where matrix so mice does not impute them.
+  observed_keys <- diary_prepped |> dplyr::select(pid, day_num) |> distinct()
+
   # Step 3: Expand to 30-day grid
   diary_expanded <- expand_diary_grid(diary_prepped)
 
   # Step 4: Reshape to wide format
   diary_wide <- reshape_diary_wide(diary_expanded)
 
+  # Step 4b: Build where matrix — phantom cells (structural NAs from grid
+  # expansion) are marked FALSE so mice leaves them as NA without imputing.
+  where_mat <- create_phantom_where_matrix(diary_wide, observed_keys)
+
   # Step 5-6: Run MICE imputation
-  imp <- run_diary_imputation(diary_wide)
+  imp <- run_diary_imputation(diary_wide, where = where_mat)
 
   # Step 7: Reshape back to long + add flags
   diary_long <- reshape_diary_to_long(imp)
