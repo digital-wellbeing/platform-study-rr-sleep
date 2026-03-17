@@ -22,10 +22,18 @@ library(future.apply)
 # CONFIGURATION
 # ==============================================================================
 
-N_IMPUTATIONS <- 20
+N_IMPUTATIONS <- 60
 N_ITERATIONS  <- 20
 SEED          <- 42
 DIARY_DAYS    <- 1:30
+
+# --- Imputation strategy ---
+# TRUE  = multilevel (long format, 2l.pmm via miceadds; recommended for
+#         unbiased between-person effects in nested diary data)
+# FALSE = wide-format banded PMM (legacy approach, kept as fallback)
+MULTILEVEL_IMPUTATION <- TRUE
+N_LAG_LEADS           <- 5    # lag/lead depth for temporal context (multilevel only)
+BAND_WIDTH            <- 5    # band width for wide-format fallback (was 3)
 
 # Outcome variables to impute
 DIARY_OUTCOMES <- c("life_sat", "affective_valence", "sleep_diary_quality_num")
@@ -43,22 +51,32 @@ DIARY_PREDICTORS <- c(
   "played24hr_num",
   "bpnsfs_1", "bpnsfs_2", "bpnsfs_3", "bpnsfs_4", "bpnsfs_5", "bpnsfs_6",
   "had_stress_num",
-  "day_type_dayoff", "day_type_weekend", "day_type_nonstandard"
+  "day_type_dayoff", "day_type_weekend", "day_type_nonstandard",
+  # Objective late-night gaming from telemetry (complete data; no genuine item missingness
+  # on observed days). Included to make the imputation model congenial with the
+  # H1a analysis model, which uses late-night gaming as the key predictor of sleep quality.
+  "late_night_hours_24h"
 )
 
 # Wave-invariant auxiliary variables (never imputed, used as predictors only)
 DIARY_AUXILIARY <- c(
-"age_scaled", "bmi_scaled", "SES_index_scaled",
-  "chronotype_centered", "gender"
+  "age_scaled", "bmi_scaled", "SES_index_scaled",
+  "chronotype_centered", "gender",
+  # Person-mean of daily late-night gaming hours (between-person component of the
+  # H1a predictor). Including it as a person-level auxiliary ensures imputed sleep
+  # quality values reflect stable individual differences in late-night gaming,
+  # satisfying the congeniality requirement for valid multiple imputation.
+  "late_night_pid_mean_scaled"
 )
 
 # All time-varying variables to reshape to wide
 DIARY_TIMEVARYING <- c(DIARY_OUTCOMES, DIARY_PREDICTORS)
 
 # Source data
-DIARY_DATA_PATH   <- "data/raw/survey_daily.csv.gz"
-INTAKE_DATA_PATH  <- "data/processed/intake_clean.csv.gz"
-PANEL_DATA_PATH   <- "data/processed/selfreport.csv.gz"
+DIARY_DATA_PATH        <- "data/raw/survey_daily.csv.gz"
+INTAKE_DATA_PATH       <- "data/processed/intake_clean.csv.gz"
+PANEL_DATA_PATH        <- "data/processed/selfreport.csv.gz"
+GAMING_SESSIONS_PATH   <- "data/processed/gaming_sessions.csv.gz"
 
 # Output paths
 DIARY_OUTPUT_DIR  <- "output/imputation_diary"
@@ -92,6 +110,84 @@ recode_sleep_quality <- function(x) {
   out <- factor(x, levels = lvls, ordered = TRUE)
   as.integer(out)
 }
+
+#' Compute daily late-night gaming hours from platform telemetry
+#'
+#' For each diary entry, sums late-night gaming minutes from all gaming sessions
+#' that overlap the 24-hour window ending at the diary submission timestamp,
+#' using the same proportional-overlap method as the manuscript analysis model.
+#' This ensures the imputation model is congenial with H1a.
+#'
+#' @param diary_with_ts Data frame with columns: pid, day_num, diary_ts
+#' @return Data frame with columns: pid, day_num, late_night_hours_24h,
+#'   late_night_pid_mean (person-mean across observed days),
+#'   late_night_pid_mean_scaled (z-scored across participants)
+compute_diary_late_night_gaming <- function(diary_with_ts) {
+  message("  Computing late-night gaming exposure from telemetry...")
+
+  gaming_sessions_raw <- read_csv(GAMING_SESSIONS_PATH, show_col_types = FALSE)
+
+  gaming_sessions <- gaming_sessions_raw |>
+    mutate(
+      session_start    = ymd_hms(sessionStart, tz = "UTC", quiet = TRUE),
+      session_end      = ymd_hms(sessionEnd,   tz = "UTC", quiet = TRUE),
+      latenightMinutes = replace_na(latenightMinutes, 0)
+    ) |>
+    filter(!is.na(session_start), !is.na(session_end), session_end > session_start)
+
+  # Join diary entries to all sessions for that participant, then filter
+  # to sessions overlapping the 24h window ending at diary_ts
+  # The cross-join by pid is intentional: each diary entry is matched against
+  # all gaming sessions for that participant, then filtered to the 24h window.
+  # Suppress the many-to-many warning that dplyr emits for this pattern.
+  diary_gaming <- diary_with_ts |>
+    select(pid, day_num, diary_ts) |>
+    left_join(gaming_sessions, by = "pid", relationship = "many-to-many") |>
+    filter(
+      session_end   > diary_ts - hours(24),
+      session_start <= diary_ts
+    ) |>
+    mutate(
+      overlap_minutes = pmax(0, as.numeric(difftime(
+        pmin(session_end, diary_ts),
+        pmax(session_start, diary_ts - hours(24)),
+        units = "mins"
+      ))),
+      session_minutes           = as.numeric(difftime(session_end, session_start, units = "mins")),
+      overlap_frac              = if_else(session_minutes > 0, overlap_minutes / session_minutes, 0),
+      late_night_minutes_overlap = latenightMinutes * overlap_frac
+    ) |>
+    group_by(pid, day_num) |>
+    summarise(
+      late_night_hours_24h = sum(late_night_minutes_overlap, na.rm = TRUE) / 60,
+      .groups = "drop"
+    )
+
+  # Left-join back so non-gaming days get 0 (not NA)
+  result <- diary_with_ts |>
+    select(pid, day_num) |>
+    left_join(diary_gaming, by = c("pid", "day_num")) |>
+    mutate(late_night_hours_24h = replace_na(late_night_hours_24h, 0))
+
+  # Compute person-mean (between-person component) and z-score it
+  person_means <- result |>
+    group_by(pid) |>
+    summarise(late_night_pid_mean = mean(late_night_hours_24h, na.rm = TRUE), .groups = "drop") |>
+    mutate(late_night_pid_mean_scaled = as.numeric(scale(late_night_pid_mean)))
+
+  result <- result |>
+    left_join(person_means, by = "pid")
+
+  message(sprintf(
+    "  Gaming exposure computed: %d person-day rows; person-mean range [%.2f, %.2f] hours",
+    nrow(result),
+    min(result$late_night_pid_mean, na.rm = TRUE),
+    max(result$late_night_pid_mean, na.rm = TRUE)
+  ))
+
+  result
+}
+
 
 #' Prepare diary data for imputation
 #'
@@ -151,12 +247,15 @@ prepare_diary_for_imputation <- function() {
       across(starts_with("day_type_"), ~if_else(is.na(sleep_diary_day_type), NA_integer_, .))
     )
 
-  # --- Assign sequential day number per participant ---
+  # --- Assign day number per participant ---
+  # Use as.integer(wave) which encodes the calendar day within the 30-day diary
+  # window (e.g. wave 3 = day 3 regardless of how many entries preceded it).
+  # This correctly aligns with diary_late_night in the analysis model, which is
+  # joined on wave_id = as.integer(wave). Using row_number() was incorrect for
+  # participants with gaps (skipped days produced a shifted mapping).
   diary <- diary |>
     arrange(pid, diary_ts) |>
-    group_by(pid) |>
-    mutate(day_num = row_number()) |>
-    ungroup()
+    mutate(day_num = as.integer(wave))
 
   # --- Load wave-invariant covariates ---
   message("  Loading wave-invariant covariates...")
@@ -253,6 +352,28 @@ prepare_diary_for_imputation <- function() {
         as.numeric(scale(msf, scale = FALSE))
       }
     )
+
+  # --- Compute late-night gaming exposure from telemetry ---
+  # diary_ts is still present in `diary` at this point (dropped only in the
+  # select below). Gaming data is objective telemetry; no genuine missingness
+  # on observed days (0 if participant did not play that night).
+  diary_gaming <- compute_diary_late_night_gaming(diary)
+
+  # Add late_night_hours_24h (time-varying) to the diary data frame
+  diary <- diary |>
+    left_join(
+      diary_gaming |> select(pid, day_num, late_night_hours_24h),
+      by = c("pid", "day_num")
+    )
+
+  # Add person-mean (late_night_pid_mean_scaled) to the covariate lookup so
+  # it becomes a person-level auxiliary predictor in the imputation model
+  person_mean_lookup <- diary_gaming |>
+    select(pid, late_night_pid_mean_scaled) |>
+    distinct()
+
+  covariate_lookup <- covariate_lookup |>
+    left_join(person_mean_lookup, by = "pid")
 
   # --- Join covariates to diary ---
   diary_prepped <- diary |>
@@ -546,7 +667,7 @@ run_diary_imputation <- function(data, where = NULL) {
                   n_workers, imps_per_chunk))
 
   # Set up predictor matrix and methods
-  pred <- setup_diary_predictor_matrix(data)
+  pred <- setup_diary_predictor_matrix(data, band_width = BAND_WIDTH)
   methods <- setup_diary_methods(data)
 
   # Report missingness for outcome columns
@@ -809,39 +930,353 @@ create_diary_diagnostics <- function(imp, output_dir = DIARY_OUTPUT_DIR) {
 
 
 # ==============================================================================
+# MULTILEVEL IMPUTATION FUNCTIONS (long format, 2l.pmm via miceadds)
+# ==============================================================================
+
+#' Add temporal lag and lead columns for specified variables
+#'
+#' Adds {var}_lag1 ... {var}_lag{k} and {var}_lead1 ... {var}_lead{k} columns
+#' for each variable in vars, computed within pid groups. These serve as
+#' temporal-neighbourhood predictors (replacing the wide-format band concept).
+#' Lag/lead columns are NOT imputed (method = ""); they are missing for
+#' days near the boundary of each participant's diary window.
+#'
+#' @param data Long-format diary data with pid and day_num columns
+#' @param vars Character vector of variable names to lag/lead
+#' @param k    Number of lag/lead steps in each direction
+#' @return data with 2 * k * length(vars) new columns appended
+add_temporal_lags <- function(data, vars, k) {
+  message(sprintf("  Adding ±%d day lag/lead predictors for: %s",
+                  k, paste(vars, collapse = ", ")))
+
+  data <- data |> arrange(pid, day_num)
+
+  for (var in vars) {
+    for (i in seq_len(k)) {
+      lag_col  <- paste0(var, "_lag",  i)
+      lead_col <- paste0(var, "_lead", i)
+      data <- data |>
+        group_by(pid) |>
+        mutate(
+          !!lag_col  := dplyr::lag( !!sym(var), n = i, default = NA_real_),
+          !!lead_col := dplyr::lead(!!sym(var), n = i, default = NA_real_)
+        ) |>
+        ungroup()
+    }
+  }
+
+  n_new <- 2L * k * length(vars)
+  message(sprintf("  Added %d lag/lead columns", n_new))
+  data
+}
+
+
+#' Prepare diary long data for multilevel mice (type conversions)
+#'
+#' - Converts pid to integer (required for 2l.pmm cluster coding: column coded -2)
+#' - Converts gender factor to numeric integer
+#' - Returns both the mice-ready data frame and a pid lookup table for
+#'   restoring character pid values after imputation.
+#'
+#' @param data Long-format diary data (observed days + auxiliaries + lag/lead cols)
+#' @return List with $data (mice-ready) and $pid_lookup (pid ↔ pid_int mapping)
+prepare_for_mice_multilevel <- function(data) {
+  message("  Converting pid to integer and gender to numeric for mice...")
+
+  pid_levels  <- sort(unique(data$pid))
+  pid_lookup  <- tibble(pid = pid_levels, pid_int = seq_along(pid_levels))
+
+  out <- data |>
+    left_join(pid_lookup, by = "pid") |>
+    mutate(gender_num = as.integer(factor(gender))) |>
+    select(-pid, -gender)
+
+  message(sprintf("  %d participants → pid_int 1..%d", length(pid_levels), length(pid_levels)))
+  list(data = out, pid_lookup = pid_lookup)
+}
+
+
+#' Set up predictor matrix for multilevel mice (2l.pmm + pmm)
+#'
+#' Coding (van Buuren, 2018):
+#'   -2 = cluster (pid_int) — used in rows imputed with 2l.pmm
+#'    2 = level-2 (between-person) predictor
+#'    1 = level-1 (within-person) predictor
+#'    0 = not a predictor / not imputed
+#'
+#' Outcome variables (DIARY_OUTCOMES) use 2l.pmm → need -2/1/2 coding.
+#' Predictor variables (DIARY_PREDICTORS) use pmm → use 0/1 coding only
+#' (pmm ignores the -2/2 coding).
+#'
+#' @param data          mice-ready data frame (with pid_int, gender_num, lag cols)
+#' @param lag_lead_cols character vector of lag/lead column names
+#' @return Integer predictor matrix
+setup_multilevel_predictor_matrix <- function(data, lag_lead_cols) {
+  message("Setting up multilevel predictor matrix (-2/1/2 coding)...")
+
+  vars   <- names(data)
+  n_vars <- length(vars)
+  pred   <- matrix(0L, nrow = n_vars, ncol = n_vars,
+                   dimnames = list(vars, vars))
+
+  # Categorise each variable
+  l2_vars <- c(
+    intersect(DIARY_AUXILIARY, vars),   # age_scaled, bmi_scaled, SES_index_scaled,
+    "late_night_pid_mean_scaled",       #   chronotype_centered (already in DIARY_AUXILIARY)
+    "gender_num"
+  )
+  l1_vars <- c(
+    "day_num",
+    DIARY_PREDICTORS,                   # played24hr_num, bpnsfs_*, had_stress_num, ...
+    lag_lead_cols                       # temporal neighbourhood
+  )
+
+  for (i in seq_len(n_vars)) {
+    target <- vars[i]
+
+    is_2l_target  <- target %in% DIARY_OUTCOMES
+    is_pmm_target <- target %in% DIARY_PREDICTORS
+    if (!is_2l_target && !is_pmm_target) next
+
+    for (j in seq_len(n_vars)) {
+      if (i == j) next
+      pred_var <- vars[j]
+
+      if (pred_var == "pid_int") {
+        # Cluster column: -2 for 2l.pmm targets, 0 for regular pmm targets
+        if (is_2l_target) pred[i, j] <- -2L
+
+      } else if (pred_var %in% l2_vars) {
+        # Between-person (level-2): coded 2 for 2l targets, 1 for pmm targets
+        pred[i, j] <- if (is_2l_target) 2L else 1L
+
+      } else if (pred_var %in% l1_vars ||
+                 pred_var %in% DIARY_OUTCOMES) {
+        # Within-person (level-1) and cross-outcome predictors
+        pred[i, j] <- 1L
+      }
+    }
+  }
+
+  # pid_int itself is never imputed
+  if ("pid_int" %in% vars) pred["pid_int", ] <- 0L
+
+  n_preds <- rowSums(pred != 0)
+  outcome_preds <- n_preds[DIARY_OUTCOMES[DIARY_OUTCOMES %in% vars]]
+  message(sprintf("  Avg predictors per outcome variable: %.1f", mean(outcome_preds)))
+  pred
+}
+
+
+#' Set up mice imputation methods for multilevel diary data
+#'
+#' - DIARY_OUTCOMES with any missingness: "2l.pmm" (miceadds; requires cluster = -2)
+#' - DIARY_PREDICTORS with any missingness: "pmm"
+#' - Everything else (auxiliaries, lag/lead, pid_int): "" (not imputed)
+#'
+#' @param data mice-ready data frame
+#' @return Named character vector of mice methods
+setup_multilevel_methods <- function(data) {
+  message("Setting up multilevel imputation methods (2l.pmm / pmm)...")
+
+  methods <- rep("", ncol(data))
+  names(methods) <- names(data)
+
+  for (var in names(data)) {
+    if (var %in% DIARY_OUTCOMES && any(is.na(data[[var]]))) {
+      methods[var] <- "2l.pmm"
+    } else if (var %in% DIARY_PREDICTORS && any(is.na(data[[var]]))) {
+      methods[var] <- "pmm"
+    }
+  }
+
+  message(sprintf("  2l.pmm (outcomes): %d  |  pmm (L1 predictors): %d",
+                  sum(methods == "2l.pmm"), sum(methods == "pmm")))
+  methods
+}
+
+
+#' Run multilevel diary imputation (long format, 2l.pmm + miceadds)
+#'
+#' Uses the miceadds::mice.impute.2l.pmm method for outcome variables so that
+#' the two-level (participant/day) structure is properly modelled during
+#' imputation, reducing attenuation of between-person effects. Level-1
+#' predictor variables with genuine missingness are imputed via regular pmm.
+#'
+#' @param data          mice-ready long-format data (pid_int as cluster integer)
+#' @param lag_lead_cols Names of lag/lead columns (not imputed; predictors only)
+#' @return mids object (long-format; same row count as input data)
+run_multilevel_imputation <- function(data, lag_lead_cols) {
+  message("\n=== Running Multilevel Diary Imputation (2l.pmm, long format) ===")
+  message(sprintf("m = %d  |  maxit = %d  |  N rows (observed days) = %d",
+                  N_IMPUTATIONS, N_ITERATIONS, nrow(data)))
+
+  library(miceadds)   # ensures mice.impute.2l.pmm is on the search path
+
+  pred    <- setup_multilevel_predictor_matrix(data, lag_lead_cols)
+  methods <- setup_multilevel_methods(data)
+
+  message("\nGenuine missingness in outcome variables:")
+  for (var in DIARY_OUTCOMES) {
+    n_miss <- sum(is.na(data[[var]]))
+    message(sprintf("  %s: %d missing (%.2f%%)", var, n_miss, 100 * n_miss / nrow(data)))
+  }
+
+  n_workers      <- min(4L, availableCores(), N_IMPUTATIONS)
+  chunk_sizes    <- rep(ceiling(N_IMPUTATIONS / n_workers), n_workers)
+  total_assigned <- sum(chunk_sizes)
+  if (total_assigned > N_IMPUTATIONS)
+    chunk_sizes[n_workers] <- chunk_sizes[n_workers] - (total_assigned - N_IMPUTATIONS)
+
+  set.seed(SEED)
+  chunk_seeds <- sample.int(1e7, n_workers)
+
+  plan(multisession, workers = n_workers)
+  message(sprintf("Launching %d parallel chunks (~%d imps each)...", n_workers, chunk_sizes[1]))
+  start_time <- Sys.time()
+
+  imp_list <- future_lapply(seq_len(n_workers), function(i) {
+    library(miceadds)
+    mice(
+      data,
+      m               = chunk_sizes[i],
+      method          = methods,
+      predictorMatrix = pred,
+      maxit           = N_ITERATIONS,
+      seed            = chunk_seeds[i],
+      printFlag       = FALSE
+    )
+  }, future.seed = TRUE)
+
+  plan(sequential)
+
+  message("Combining imputed datasets...")
+  imp_combined <- Reduce(ibind, imp_list)
+
+  elapsed <- as.numeric(difftime(Sys.time(), start_time, units = "mins"))
+  message(sprintf("Multilevel imputation complete in %.1f minutes | total m = %d",
+                  elapsed, imp_combined$m))
+  imp_combined
+}
+
+
+#' Reshape multilevel mids object (long format) to stacked long output
+#'
+#' Unlike the wide-format pipeline, the mids object from multilevel imputation
+#' already contains long-format completed datasets. This function stacks them,
+#' restores the character pid from the integer lookup, and drops working
+#' columns (pid_int, gender_num, lag/lead columns).
+#'
+#' @param imp          mids object (long-format input data)
+#' @param pid_lookup   tibble with pid / pid_int mapping
+#' @param lag_lead_cols character vector of lag/lead column names to drop
+#' @return Stacked long-format data frame with .imp column
+extract_multilevel_long <- function(imp, pid_lookup, lag_lead_cols) {
+  message("=== Extracting stacked long-format data from multilevel mids ===")
+
+  long_list <- lapply(seq_len(imp$m), function(i) {
+    completed <- mice::complete(imp, i)
+
+    completed |>
+      left_join(pid_lookup, by = "pid_int") |>        # restore character pid
+      mutate(
+        gender = factor(levels(pid_lookup$pid)[1],    # placeholder; overwritten below
+                        levels = c("Male", "Female", "Other"))
+      ) |>
+      select(-pid_int, -gender_num,                   # drop working columns
+             -any_of(lag_lead_cols)) |>               # drop lag/lead predictors
+      mutate(.imp = i)
+  })
+
+  # Restore gender from the original data (gender_num was a working encoding)
+  # We can't recover factor labels from the integer alone without the original
+  # levels, so pass through by rejoining from the original long data embedded
+  # in imp$data
+  orig_gender <- imp$data |>
+    left_join(pid_lookup, by = "pid_int") |>
+    select(pid, day_num, gender_num)
+
+  result <- bind_rows(long_list) |>
+    select(-gender) |>
+    left_join(
+      orig_gender |>
+        mutate(gender = factor(
+          case_when(gender_num == 1 ~ "Male",
+                    gender_num == 2 ~ "Female",
+                    TRUE            ~ "Other"),
+          levels = c("Male", "Female", "Other")
+        )) |>
+        select(pid, day_num, gender),
+      by = c("pid", "day_num")
+    )
+
+  message(sprintf("  %d rows × %d cols  (%d imputations × %d observed person-days)",
+                  nrow(result), ncol(result), imp$m, nrow(result) / imp$m))
+  result
+}
+
+
+# ==============================================================================
 # MAIN
 # ==============================================================================
 
 main <- function() {
   message("\n", paste(rep("=", 60), collapse = ""))
   message("  DIARY MULTIPLE IMPUTATION")
+  message(sprintf("  Strategy: %s",
+                  if (MULTILEVEL_IMPUTATION) "MULTILEVEL (2l.pmm, long format)"
+                  else sprintf("WIDE-FORMAT BANDED PMM (band_width = %d)", BAND_WIDTH)))
   message(paste(rep("=", 60), collapse = ""), "\n")
 
-  # Step 1-2: Prepare diary data
+  # ── Step 1: Prepare observed diary data ──────────────────────────────────
   diary_prepped <- prepare_diary_for_imputation()
 
-  # Record observed (pid, day_num) pairs BEFORE grid expansion.
-  # Used to mark phantom cells in the where matrix so mice does not impute them.
-  observed_keys <- diary_prepped |> dplyr::select(pid, day_num) |> distinct()
+  if (MULTILEVEL_IMPUTATION) {
+    # ── MULTILEVEL PATH (long format, 2l.pmm) ──────────────────────────────
 
-  # Step 3: Expand to 30-day grid
-  diary_expanded <- expand_diary_grid(diary_prepped)
+    # Add temporal lag/lead predictors (±N_LAG_LEADS days per outcome variable)
+    message(sprintf("\n=== Adding temporal lag/lead predictors (±%d days) ===", N_LAG_LEADS))
+    diary_with_lags <- add_temporal_lags(diary_prepped, DIARY_OUTCOMES, N_LAG_LEADS)
 
-  # Step 4: Reshape to wide format
-  diary_wide <- reshape_diary_wide(diary_expanded)
+    lag_lead_cols <- grep(
+      paste0("_(lag|lead)[0-9]+$"),
+      names(diary_with_lags), value = TRUE
+    )
 
-  # Step 4b: Build where matrix — phantom cells (structural NAs from grid
-  # expansion) are marked FALSE so mice leaves them as NA without imputing.
-  where_mat <- create_phantom_where_matrix(diary_wide, observed_keys)
+    # Convert pid → integer; gender → numeric (required for 2l.pmm coding)
+    message("\n=== Preparing data for multilevel mice ===")
+    mice_prep     <- prepare_for_mice_multilevel(diary_with_lags)
+    diary_mice    <- mice_prep$data
+    pid_lookup    <- mice_prep$pid_lookup
 
-  # Step 5-6: Run MICE imputation
-  imp <- run_diary_imputation(diary_wide, where = where_mat)
+    # Run mice (2l.pmm for outcomes, pmm for L1 predictors)
+    imp <- run_multilevel_imputation(diary_mice, lag_lead_cols)
 
-  # Step 7: Reshape back to long + add flags
-  diary_long <- reshape_diary_to_long(imp)
+    # Extract stacked long format; restore pid and gender
+    diary_long <- extract_multilevel_long(imp, pid_lookup, lag_lead_cols)
+
+  } else {
+    # ── WIDE-FORMAT PATH (legacy banded PMM) ───────────────────────────────
+
+    # Record observed keys before expansion (for phantom-cell where matrix)
+    observed_keys <- diary_prepped |> dplyr::select(pid, day_num) |> distinct()
+
+    # Expand to 30-day grid, reshape to wide, build where matrix
+    diary_expanded <- expand_diary_grid(diary_prepped)
+    diary_wide     <- reshape_diary_wide(diary_expanded)
+    where_mat      <- create_phantom_where_matrix(diary_wide, observed_keys)
+
+    # Run MICE (banded PMM, wide format)
+    imp <- run_diary_imputation(diary_wide, where = where_mat)
+
+    # Reshape back to long
+    diary_long <- reshape_diary_to_long(imp)
+  }
+
+  # ── Step N-1: Add imputed flags (shared by both paths) ───────────────────
   diary_long <- add_imputed_flags(diary_long, diary_prepped)
 
-  # Step 8: Save outputs
+  # ── Step N: Save outputs ─────────────────────────────────────────────────
   message("\n=== Saving outputs ===")
   dir.create(dirname(DIARY_MIDS_PATH), showWarnings = FALSE, recursive = TRUE)
   saveRDS(imp, DIARY_MIDS_PATH)
@@ -851,7 +1286,7 @@ main <- function() {
   message(sprintf("  Long-format data saved to %s", DIARY_LONG_PATH))
   message(sprintf("  Dimensions: %d rows × %d columns", nrow(diary_long), ncol(diary_long)))
 
-  # Step 9: Diagnostics
+  # Diagnostics
   create_diary_diagnostics(imp)
 
   message("\n", paste(rep("=", 60), collapse = ""))
