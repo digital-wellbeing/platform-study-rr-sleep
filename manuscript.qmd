@@ -2196,7 +2196,7 @@ diary_model_h1 <- clmm(diary_h1_formula, data = diary_ocat, link = "probit", Hes
                         control = clmm.control(maxIter = 50000, gradTol = 0.5))
 saveRDS(diary_model_h1, "output/models/diary_model_h1_sleepquality.rds")
 
-# Spline comparison (df = 2:6) — use CLM (no RE) for speed; linearity check only
+# Spline comparison (df = 2:6) — probit CLMM with random intercept for participant
 diary_covariate_terms <- c("ln_between_10", "age_scaled", "bmi_scaled",
                            "SES_index_scaled", "region", "is_weekend")
 
@@ -2204,16 +2204,18 @@ diary_spline_fits <- purrr::map(2:6, \(df) {
   f <- as.formula(paste(
     "sleep_quality_ord ~",
     paste(c(sprintf("splines::ns(ln_within_10, df = %d)", df),
-            diary_covariate_terms), collapse = " + ")
+            diary_covariate_terms, "(1 | pid)"), collapse = " + ")
   ))
-  mod <- clm(f, data = diary_ocat, link = "probit", Hess = TRUE)
+  mod <- clmm(f, data = diary_ocat, link = "probit", Hess = TRUE,
+              control = clmm.control(maxIter = 5000, gradTol = 1e-3))
   list(df = df, model = mod)
 })
 
-diary_clm_linear <- clm(
+diary_clmm_linear <- clmm(
   sleep_quality_ord ~ ln_within_10 + ln_between_10 +
-    age_scaled + bmi_scaled + SES_index_scaled + region + is_weekend,
-  data = diary_ocat, link = "probit", Hess = TRUE
+    age_scaled + bmi_scaled + SES_index_scaled + region + is_weekend + (1 | pid),
+  data = diary_ocat, link = "probit", Hess = TRUE,
+  control = clmm.control(maxIter = 5000, gradTol = 1e-3)
 )
 
 diary_spline_compare <- tibble(
@@ -2221,7 +2223,7 @@ diary_spline_compare <- tibble(
   AIC = purrr::map_dbl(diary_spline_fits, \(x) AIC(x$model))
 ) |> arrange(AIC) |> mutate(deltaAIC = AIC - min(AIC))
 
-diary_linear_aic <- AIC(diary_clm_linear)
+diary_linear_aic <- AIC(diary_clmm_linear)
 diary_best_spline_aic <- diary_spline_compare$AIC[1]
 
 diary_spline_compare$linear_AIC <- diary_linear_aic
@@ -3426,3 +3428,387 @@ if (length(diary_sub_item_rows) > 0) {
 diary_tbl
 ```
 
+```{=typst}
+#pagebreak()
+```
+
+# Appendix: Diary Models — Complete-Case (Non-Imputed Data)
+
+The tables below reproduce the H1 and H2 diary regression results using the non-imputed, complete-case diary dataset (i.e., the raw `diary_ocat` and `diary_ocat_h2` datasets with no imputation). These serve as a sensitivity check alongside the Rubin's-rules pooled estimates reported in the main results. Both models use a probit-link CLMM with a random intercept for participant. Positive coefficients indicate a higher probability of worse sleep quality.
+
+```{r}
+#| label: tbl-appendix-diary-completecase
+#| echo: false
+#| message: false
+#| warning: false
+#| tbl-cap: "Appendix: Diary H1 and H2 Probit CLMM — Complete-Case (Non-Imputed Data)"
+
+library(ordinal)
+library(modelsummary)
+
+diary_cc_h1 <- tryCatch(
+  readRDS("output/models/diary_model_h1_sleepquality.rds"),
+  error = function(e) NULL
+)
+diary_cc_h2 <- tryCatch(
+  readRDS("output/models/diary_model_h2_sleepquality.rds"),
+  error = function(e) NULL
+)
+
+if (!is.null(diary_cc_h1) && !is.null(diary_cc_h2)) {
+
+  diary_cc_models <- list(
+    "H1a: Sleep Quality (direct)" = diary_cc_h1,
+    "H2a: Sleep Quality (chronotype mod.)" = diary_cc_h2
+  )
+
+  all_cc_coef_names <- unique(c(names(coef(diary_cc_h1)), names(coef(diary_cc_h2))))
+
+  diary_cc_coef_map <- c(
+    "ln_within_10"                       = "LN gaming within-person (per 10 min)",
+    "ln_between_10"                      = "LN gaming between-person (per 10 min)",
+    "chronotype_centered"                = "Chronotype (h, centered)",
+    "ln_within_10:chronotype_centered"   = "LN within × Chronotype",
+    "chronotype_centered:ln_between_10"  = "LN between × Chronotype",
+    "age_scaled"                         = "Age (scaled)",
+    "bmi_scaled"                         = "BMI (scaled)",
+    "SES_index_scaled"                   = "SES (scaled)"
+  )
+
+  if ("is_weekendTRUE" %in% all_cc_coef_names) {
+    diary_cc_coef_map <- c(diary_cc_coef_map, "is_weekendTRUE" = "Day: Weekend")
+  } else if ("is_weekend" %in% all_cc_coef_names) {
+    diary_cc_coef_map <- c(diary_cc_coef_map, "is_weekend" = "Day: Weekend")
+  }
+
+  tt_diary_cc <- modelsummary(
+    diary_cc_models,
+    fmt = fmt_sprintf("%.2f"),
+    estimate  = "{estimate} [{conf.low}, {conf.high}]{stars}",
+    statistic = NULL,
+    gof_omit  = "AIC|BIC|Log|RMSE|R2|ICC|Num|nobs",
+    coef_map  = diary_cc_coef_map,
+    add_rows  = get_custom_rows(diary_cc_models),
+    notes = c(
+      "+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
+      "LN = late-night. Confidence intervals shown in brackets.",
+      "Complete-case estimates — no imputation applied to the diary outcome.",
+      "Cumulative link mixed models (random intercept for participant) on 5-level ordinal sleep quality (positive coefficients = higher probability of worse sleep). Probit link. Late-night gaming per 10 minutes; chronotype in centered hours; age, BMI, SES scaled within the diary subsample. Region excluded: all diary participants are US-only.",
+      "Within = daily deviation from person mean; Between = person mean - grand mean."
+    ),
+    output = "tinytable"
+  )
+  dir.create("output/tables", showWarnings = FALSE, recursive = TRUE)
+  tryCatch(
+    save_tt(tt_diary_cc, "output/tables/appendix-diary-completecase.png", overwrite = TRUE),
+    error = function(e) message("Note: PNG export skipped (", e$message, ")")
+  )
+  tt_diary_cc
+
+} else {
+  cat("Complete-case diary models not found. Render with `-P refit_diary:true` to regenerate them.\n")
+}
+```
+
+
+```{=typst}
+#pagebreak()
+```
+
+# Appendix: Panel H1 Natural Spline Sensitivity
+
+This section examines whether the relationship between late-night gaming and each panel outcome (H1a–H1d) deviates meaningfully from the linearity assumed in the pre-registered models. For each outcome, the linear gaming predictor is replaced by a natural cubic spline (degrees of freedom selected by AIC on complete-case data across df = 2–4). All other aspects of each model are held constant: the same random-effects structure, covariates, and link function (probit for H1a; identity for H1b–H1d). Imputed estimates are pooled across 20 multiply-imputed datasets via Rubin's rules.
+
+```{r}
+#| label: appendix-h1-spline-fit
+#| echo: false
+#| message: false
+#| warning: false
+#| eval: !expr eval_appendix
+
+library(splines)
+library(ordinal)
+
+# --- Helper: factory function that captures df in the closure ---
+make_spline_fit_fn <- function(model_type, outcome, predictor, df,
+                                extra_gender_re = FALSE) {
+  force(model_type); force(outcome); force(predictor)
+  force(df);         force(extra_gender_re)
+  re_str <- if (extra_gender_re) "(1 | pid) + (1 | gender)" else "(1 | pid)"
+  if (model_type == "clmm") {
+    function(d) clmm(
+      as.formula(sprintf(
+        "%s ~ ns(%s, df = %d) + age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend + (1 | pid)",
+        outcome, predictor, df
+      )),
+      data = d, link = "probit", Hess = TRUE,
+      control = clmm.control(maxIter = 5000, gradTol = 1e-3)
+    )
+  } else {
+    function(d) lmer(
+      as.formula(sprintf(
+        "%s ~ ns(%s, df = %d) + age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend + %s",
+        outcome, predictor, df, re_str
+      )),
+      data = d, control = lmerControl(optimizer = "bobyqa")
+    )
+  }
+}
+
+# --- Prepare complete-case datasets ---
+cc_monthly_h1a_sp <- gaming_inputs[["completecase"]]$gamingMonthly |>
+  enforce_monthly_wave_subset() |>
+  mutate(
+    psqi_comp1_quality_rounded = round(psqi_comp1_quality),
+    psqi_6_ord = factor(
+      psqi_comp1_quality_rounded,
+      levels = c(0, 1, 2, 3),
+      labels = c("Very good", "Fairly good", "Fairly bad", "Very bad"),
+      ordered = TRUE
+    )
+  ) |>
+  filter(!is.na(psqi_6_ord))
+
+cc_monthly_sp  <- gaming_inputs[["completecase"]]$gamingMonthly |> enforce_monthly_wave_subset()
+cc_biweekly_sp <- gaming_inputs[["completecase"]]$gamingBiweekly
+
+# --- AIC-based df selection on complete-case data ---
+run_aic_sel <- function(data, fit_fn_factory, dfs) {
+  aics <- vapply(dfs, function(df) {
+    tryCatch(AIC(fit_fn_factory(df)(data)), error = function(e) Inf)
+  }, numeric(1))
+  list(aics = setNames(aics, dfs), best_df = dfs[which.min(aics)])
+}
+
+dfs_try <- 2:4
+
+h1a_sel <- run_aic_sel(cc_monthly_h1a_sp,
+  function(df) make_spline_fit_fn("clmm", "psqi_6_ord",
+    "ln_monthly_avg_minutes_played_10", df), dfs_try)
+h1b_sel <- run_aic_sel(cc_monthly_sp,
+  function(df) make_spline_fit_fn("lmer", "total_hours_sleep",
+    "ln_monthly_avg_minutes_played_10", df, FALSE), dfs_try)
+h1c_sel <- run_aic_sel(cc_biweekly_sp,
+  function(df) make_spline_fit_fn("lmer", "wemwbs",
+    "ln_biweekly_avg_minutes_played_10", df, TRUE), dfs_try)
+h1d_sel <- run_aic_sel(cc_monthly_sp,
+  function(df) make_spline_fit_fn("lmer", "epsTotal",
+    "ln_monthly_avg_minutes_played_10", df, TRUE), dfs_try)
+
+# Linear AIC baselines
+h1a_lin_aic <- tryCatch(AIC(clmm(
+  psqi_6_ord ~ ln_monthly_avg_minutes_played_10 +
+    age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend + (1 | pid),
+  data = cc_monthly_h1a_sp, link = "probit", Hess = TRUE,
+  control = clmm.control(maxIter = 5000, gradTol = 1e-3))), error = function(e) NA_real_)
+h1b_lin_aic <- tryCatch(AIC(lmer(
+  total_hours_sleep ~ ln_monthly_avg_minutes_played_10 +
+    age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend + (1 | pid),
+  data = cc_monthly_sp, control = lmerControl(optimizer = "bobyqa"))), error = function(e) NA_real_)
+h1c_lin_aic <- tryCatch(AIC(lmer(
+  wemwbs ~ ln_biweekly_avg_minutes_played_10 +
+    age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+    (1 | pid) + (1 | gender),
+  data = cc_biweekly_sp, control = lmerControl(optimizer = "bobyqa"))), error = function(e) NA_real_)
+h1d_lin_aic <- tryCatch(AIC(lmer(
+  epsTotal ~ ln_monthly_avg_minutes_played_10 +
+    age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+    (1 | pid) + (1 | gender),
+  data = cc_monthly_sp, control = lmerControl(optimizer = "bobyqa"))), error = function(e) NA_real_)
+
+panel_h1_spline_aic <- tibble::tibble(
+  Outcome    = c("H1a: Sleep Quality", "H1b: Sleep Duration",
+                 "H1c: Wellbeing", "H1d: Daytime Sleepiness"),
+  Model      = c("CLMM probit", "lmer", "lmer", "lmer"),
+  `Best df`  = c(h1a_sel$best_df, h1b_sel$best_df, h1c_sel$best_df, h1d_sel$best_df),
+  `Linear AIC`  = round(c(h1a_lin_aic, h1b_lin_aic, h1c_lin_aic, h1d_lin_aic), 1),
+  `Spline AIC`  = round(c(min(h1a_sel$aics), min(h1b_sel$aics),
+                           min(h1c_sel$aics), min(h1d_sel$aics)), 1)
+) |> dplyr::mutate(`ΔAIC` = round(`Spline AIC` - `Linear AIC`, 1))
+
+saveRDS(panel_h1_spline_aic, "output/models/panel_h1_spline_aic.rds")
+
+# --- Fit complete-case spline models (used for prediction curves) ---
+cc_h1a_spline <- make_spline_fit_fn("clmm", "psqi_6_ord",
+  "ln_monthly_avg_minutes_played_10", h1a_sel$best_df)(cc_monthly_h1a_sp)
+cc_h1b_spline <- make_spline_fit_fn("lmer", "total_hours_sleep",
+  "ln_monthly_avg_minutes_played_10", h1b_sel$best_df, FALSE)(cc_monthly_sp)
+cc_h1c_spline <- make_spline_fit_fn("lmer", "wemwbs",
+  "ln_biweekly_avg_minutes_played_10", h1c_sel$best_df, TRUE)(cc_biweekly_sp)
+cc_h1d_spline <- make_spline_fit_fn("lmer", "epsTotal",
+  "ln_monthly_avg_minutes_played_10", h1d_sel$best_df, TRUE)(cc_monthly_sp)
+
+# Bundle models + predictor x-values (needed to reconstruct ns() knots for prediction)
+saveRDS(list(
+  h1a = cc_h1a_spline, h1b = cc_h1b_spline,
+  h1c = cc_h1c_spline, h1d = cc_h1d_spline,
+  h1a_df = h1a_sel$best_df, h1b_df = h1b_sel$best_df,
+  h1c_df = h1c_sel$best_df, h1d_df = h1d_sel$best_df,
+  x_h1a  = cc_monthly_h1a_sp$ln_monthly_avg_minutes_played_10,
+  x_h1b  = cc_monthly_sp$ln_monthly_avg_minutes_played_10,
+  x_h1c  = cc_biweekly_sp$ln_biweekly_avg_minutes_played_10,
+  x_h1d  = cc_monthly_sp$ln_monthly_avg_minutes_played_10
+), "output/models/panel_h1_spline_cc_fits.rds")
+
+# --- Fit imputed spline models via Rubin's rules ---
+panel_h1_spline_rubin_sp <- list()
+
+panel_h1_spline_rubin_sp[["H1a"]] <- fit_on_imputations(
+  imputed_long,
+  prep_fn = panel_h1_prep_monthly,
+  fit_fn  = make_spline_fit_fn("clmm", "psqi_6_ord",
+              "ln_monthly_avg_minutes_played_10", h1a_sel$best_df)
+)
+panel_h1_spline_rubin_sp[["H1b"]] <- fit_on_imputations(
+  imputed_long,
+  prep_fn = panel_h1_prep_monthly_lmer,
+  fit_fn  = make_spline_fit_fn("lmer", "total_hours_sleep",
+              "ln_monthly_avg_minutes_played_10", h1b_sel$best_df, FALSE)
+)
+panel_h1_spline_rubin_sp[["H1c"]] <- fit_on_imputations(
+  imputed_long,
+  prep_fn = panel_h1_prep_biweekly,
+  fit_fn  = make_spline_fit_fn("lmer", "wemwbs",
+              "ln_biweekly_avg_minutes_played_10", h1c_sel$best_df, TRUE)
+)
+panel_h1_spline_rubin_sp[["H1d"]] <- fit_on_imputations(
+  imputed_long,
+  prep_fn = panel_h1_prep_monthly_lmer,
+  fit_fn  = make_spline_fit_fn("lmer", "epsTotal",
+              "ln_monthly_avg_minutes_played_10", h1d_sel$best_df, TRUE)
+)
+
+saveRDS(panel_h1_spline_rubin_sp, "output/models/panel_h1_spline_rubin.rds")
+```
+
+```{r}
+#| label: appendix-h1-spline-load
+#| echo: false
+#| message: false
+#| warning: false
+
+panel_h1_spline_aic     <- tryCatch(readRDS("output/models/panel_h1_spline_aic.rds"),
+                                    error = function(e) NULL)
+panel_h1_spline_cc_fits <- tryCatch(readRDS("output/models/panel_h1_spline_cc_fits.rds"),
+                                    error = function(e) NULL)
+panel_h1_spline_rubin_sp <- tryCatch(readRDS("output/models/panel_h1_spline_rubin.rds"),
+                                     error = function(e) NULL)
+```
+
+```{r}
+#| label: tbl-appendix-h1-spline-aic
+#| echo: false
+#| message: false
+#| warning: false
+#| tbl-cap: "AIC comparison for panel H1 linear vs. natural spline models (complete-case data). Best df selected from 2–4. ΔAIC = Spline AIC − Linear AIC; negative values indicate improvement over the linear specification."
+
+if (!is.null(panel_h1_spline_aic)) {
+  tinytable::tt(panel_h1_spline_aic) |>
+    tinytable::style_tt(j = 6, bold = TRUE)
+} else {
+  cat("AIC table not available. Render with `-P refit_appendix:true` to generate.\n")
+}
+```
+
+```{r}
+#| label: fig-appendix-h1-spline
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-width: 9
+#| fig-height: 8
+#| fig-cap: "Marginal predicted outcomes as a function of late-night gaming (natural cubic spline, complete-case data). Shaded ribbon: 95% CI from the delta method. Predictor shown on the log-transformed per-10-minute scale used in all models. All other covariates held at reference values (scaled continuous predictors at zero; isWeekend = 0; reference region). H1a: P(Fairly bad or Very bad sleep quality), marginalised over the participant random intercept via the marginal probit formula. H1b–H1d: predicted means on the original scale. Curve title shows selected spline df."
+
+# Helper: reconstruct the ns() basis using the stored training x values (preserving
+# the original knot locations), then compute marginal predictions with delta-method CIs.
+build_spline_curve <- function(fit, x_train, best_df, predictor,
+                                threshold = "Fairly good|Fairly bad",
+                                n_grid = 150) {
+  x_grid  <- seq(quantile(x_train, 0.02, na.rm = TRUE),
+                 quantile(x_train, 0.98, na.rm = TRUE), length.out = n_grid)
+  ns_obj  <- ns(x_train, df = best_df)       # preserves original knot placement
+  ns_grid <- predict(ns_obj, newx = x_grid)  # evaluates basis at grid using same knots
+
+  if (inherits(fit, "clmm")) {
+    beta_all  <- coef(fit)
+    is_thr    <- grepl("\\|", names(beta_all))
+    beta_coef <- beta_all[!is_thr]
+    alpha_thr <- beta_all[threshold]
+    sigma_u   <- tryCatch(fit$ST$pid[1, 1], error = function(e) 0)
+    marginal_sd <- sqrt(1 + sigma_u^2)
+
+    ns_idx  <- grep(sprintf("ns\\(%s", predictor), names(beta_coef))
+    beta_ns <- beta_coef[ns_idx]
+    vc_ns   <- tryCatch(vcov(fit)[names(beta_ns), names(beta_ns), drop = FALSE],
+                        error = function(e) NULL)
+
+    eta     <- as.numeric(ns_grid %*% beta_ns)
+    pred    <- 1 - pnorm((alpha_thr - eta) / marginal_sd)
+    se_pred <- if (!is.null(vc_ns)) {
+      se_eta <- sqrt(rowSums(ns_grid * (ns_grid %*% vc_ns)))
+      dnorm((alpha_thr - eta) / marginal_sd) / marginal_sd * se_eta
+    } else rep(NA_real_, n_grid)
+
+  } else {
+    beta    <- lme4::fixef(fit)
+    ns_idx  <- grep(sprintf("ns\\(%s", predictor), names(beta))
+    beta_ns <- beta[ns_idx]
+    vc_ns   <- as.matrix(vcov(fit))[names(beta_ns), names(beta_ns), drop = FALSE]
+
+    pred    <- beta["(Intercept)"] + as.numeric(ns_grid %*% beta_ns)
+    se_pred <- sqrt(rowSums(ns_grid * (ns_grid %*% vc_ns)))
+  }
+
+  tibble::tibble(x    = x_grid,
+                 pred = pred,
+                 lo   = pred - 1.96 * se_pred,
+                 hi   = pred + 1.96 * se_pred)
+}
+
+if (!is.null(panel_h1_spline_cc_fits)) {
+  sp <- panel_h1_spline_cc_fits
+
+  curve_a <- build_spline_curve(sp$h1a, sp$x_h1a, sp$h1a_df, "ln_monthly_avg_minutes_played_10")
+  curve_b <- build_spline_curve(sp$h1b, sp$x_h1b, sp$h1b_df, "ln_monthly_avg_minutes_played_10")
+  curve_c <- build_spline_curve(sp$h1c, sp$x_h1c, sp$h1c_df, "ln_biweekly_avg_minutes_played_10")
+  curve_d <- build_spline_curve(sp$h1d, sp$x_h1d, sp$h1d_df, "ln_monthly_avg_minutes_played_10")
+
+  spline_theme  <- theme_bw(base_size = 11) +
+    theme(panel.grid.minor = element_blank())
+  xlab_monthly  <- "Late-night gaming (ln, per 10 min · monthly)"
+  xlab_biweekly <- "Late-night gaming (ln, per 10 min · biweekly)"
+
+  p_a <- ggplot(curve_a, aes(x, pred)) +
+    geom_ribbon(aes(ymin = lo, ymax = hi), fill = "#0072B2", alpha = 0.20) +
+    geom_line(color = "#0072B2", linewidth = 0.9) +
+    labs(title = sprintf("H1a: Sleep Quality  (df = %d)", sp$h1a_df),
+         x = xlab_monthly, y = "P(Fairly bad or Very bad)") +
+    spline_theme
+
+  p_b <- ggplot(curve_b, aes(x, pred)) +
+    geom_ribbon(aes(ymin = lo, ymax = hi), fill = "#0072B2", alpha = 0.20) +
+    geom_line(color = "#0072B2", linewidth = 0.9) +
+    labs(title = sprintf("H1b: Sleep Duration  (df = %d)", sp$h1b_df),
+         x = xlab_monthly, y = "Sleep duration (hours)") +
+    spline_theme
+
+  p_c <- ggplot(curve_c, aes(x, pred)) +
+    geom_ribbon(aes(ymin = lo, ymax = hi), fill = "#0072B2", alpha = 0.20) +
+    geom_line(color = "#0072B2", linewidth = 0.9) +
+    labs(title = sprintf("H1c: Wellbeing  (df = %d)", sp$h1c_df),
+         x = xlab_biweekly, y = "SWEMWBS score") +
+    spline_theme
+
+  p_d <- ggplot(curve_d, aes(x, pred)) +
+    geom_ribbon(aes(ymin = lo, ymax = hi), fill = "#0072B2", alpha = 0.20) +
+    geom_line(color = "#0072B2", linewidth = 0.9) +
+    labs(title = sprintf("H1d: Daytime Sleepiness  (df = %d)", sp$h1d_df),
+         x = xlab_monthly, y = "ESS score") +
+    spline_theme
+
+  (p_a | p_b) / (p_c | p_d)
+
+} else {
+  cat("Spline models not available. Render with `-P refit_appendix:true` to generate.\n")
+}
+```
