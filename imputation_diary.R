@@ -579,37 +579,38 @@ prepare_for_mice_multilevel <- function(data) {
 
 #' Set up predictor matrix for multilevel mice (2l.pmm + pmm)
 #'
-#' Coding (van Buuren, 2018):
+#' Coding (van Buuren, 2018, Ch. 7 Tables 7.5-7.6):
 #'   -2 = cluster (pid_int) — used in rows imputed with 2l.pmm
-#'    2 = level-2 (between-person) predictor
-#'    1 = level-1 (within-person) predictor
+#'    3 = fixed effect + cluster mean (for level-1 predictors of 2l.pmm targets)
+#'    1 = fixed effect only (for level-2 predictors and auxiliary level-1 vars)
 #'    0 = not a predictor / not imputed
 #'
-#' Outcome variables (DIARY_OUTCOMES) use 2l.pmm → need -2/1/2 coding.
-#' Predictor variables (DIARY_PREDICTORS) use pmm → use 0/1 coding only
-#' (pmm ignores the -2/2 coding).
+#' Level-2 variables are coded 1 (not 2) because they are person-level
+#' constants — random slopes for constants are meaningless and cause
+#' numerical instability.  Cross-outcome and time-varying level-1
+#' predictors are coded 3 so that both the raw value and its
+#' disaggregated cluster mean enter the 2l.pmm imputation model.
 #'
 #' @param data          mice-ready data frame (with pid_int, gender_num, lag cols)
 #' @param lag_lead_cols character vector of lag/lead column names
 #' @return Integer predictor matrix
 setup_multilevel_predictor_matrix <- function(data, lag_lead_cols) {
-  message("Setting up multilevel predictor matrix (-2/1/2 coding)...")
+  message("Setting up multilevel predictor matrix (-2/1/3 coding)...")
 
   vars   <- names(data)
   n_vars <- length(vars)
   pred   <- matrix(0L, nrow = n_vars, ncol = n_vars,
                    dimnames = list(vars, vars))
 
-  # Categorise each variable
   l2_vars <- c(
-    intersect(DIARY_AUXILIARY, vars),   # age_scaled, bmi_scaled, SES_index_scaled,
-    "late_night_pid_mean_scaled",       #   chronotype_centered (already in DIARY_AUXILIARY)
+    intersect(DIARY_AUXILIARY, vars),
+    "late_night_pid_mean_scaled",
     "gender_num"
   )
   l1_vars <- c(
     "day_num",
-    DIARY_PREDICTORS,                   # played24hr_num, bpnsfs_*, had_stress_num, ...
-    lag_lead_cols                       # temporal neighbourhood
+    DIARY_PREDICTORS,
+    lag_lead_cols
   )
 
   for (i in seq_len(n_vars)) {
@@ -624,27 +625,30 @@ setup_multilevel_predictor_matrix <- function(data, lag_lead_cols) {
       pred_var <- vars[j]
 
       if (pred_var == "pid_int") {
-        # Cluster column: -2 for 2l.pmm targets, 0 for regular pmm targets
         if (is_2l_target) pred[i, j] <- -2L
 
       } else if (pred_var %in% l2_vars) {
-        # Between-person (level-2): coded 2 for 2l targets, 1 for pmm targets
-        pred[i, j] <- if (is_2l_target) 2L else 1L
+        pred[i, j] <- 1L
+
+      } else if (is_2l_target && (pred_var %in% DIARY_OUTCOMES ||
+                                   pred_var %in% DIARY_PREDICTORS)) {
+        pred[i, j] <- 3L
 
       } else if (pred_var %in% l1_vars ||
                  pred_var %in% DIARY_OUTCOMES) {
-        # Within-person (level-1) and cross-outcome predictors
         pred[i, j] <- 1L
       }
     }
   }
 
-  # pid_int itself is never imputed
   if ("pid_int" %in% vars) pred["pid_int", ] <- 0L
 
-  n_preds <- rowSums(pred != 0)
+  n_preds   <- rowSums(pred != 0)
+  n_code3   <- rowSums(pred == 3)
   outcome_preds <- n_preds[DIARY_OUTCOMES[DIARY_OUTCOMES %in% vars]]
-  message(sprintf("  Avg predictors per outcome variable: %.1f", mean(outcome_preds)))
+  outcome_c3    <- n_code3[DIARY_OUTCOMES[DIARY_OUTCOMES %in% vars]]
+  message(sprintf("  Avg predictors per outcome: %.1f (%.1f with cluster means)",
+                  mean(outcome_preds), mean(outcome_c3)))
   pred
 }
 
@@ -692,7 +696,18 @@ run_multilevel_imputation <- function(data, lag_lead_cols) {
   message(sprintf("m = %d  |  maxit = %d  |  N rows (observed days) = %d",
                   N_IMPUTATIONS, N_ITERATIONS, nrow(data)))
 
-  library(miceadds)   # ensures mice.impute.2l.pmm is on the search path
+  library(miceadds)
+
+  # Grand-mean center continuous outcomes (van Buuren 2018, Sec 7.10.6)
+  center_means <- list()
+  for (v in intersect(DIARY_OUTCOMES, names(data))) {
+    if (is.numeric(data[[v]])) {
+      gm <- mean(data[[v]], na.rm = TRUE)
+      center_means[[v]] <- gm
+      data[[v]] <- data[[v]] - gm
+      message(sprintf("  Centered %s (grand mean = %.3f)", v, gm))
+    }
+  }
 
   pred    <- setup_multilevel_predictor_matrix(data, lag_lead_cols)
   methods <- setup_multilevel_methods(data)
@@ -737,7 +752,7 @@ run_multilevel_imputation <- function(data, lag_lead_cols) {
   elapsed <- as.numeric(difftime(Sys.time(), start_time, units = "mins"))
   message(sprintf("Multilevel imputation complete in %.1f minutes | total m = %d",
                   elapsed, imp_combined$m))
-  imp_combined
+  list(imp = imp_combined, center_means = center_means)
 }
 
 
@@ -752,20 +767,23 @@ run_multilevel_imputation <- function(data, lag_lead_cols) {
 #' @param pid_lookup   tibble with pid / pid_int mapping
 #' @param lag_lead_cols character vector of lag/lead column names to drop
 #' @return Stacked long-format data frame with .imp column
-extract_multilevel_long <- function(imp, pid_lookup, lag_lead_cols) {
+extract_multilevel_long <- function(imp, pid_lookup, lag_lead_cols,
+                                    center_means = list()) {
   message("=== Extracting stacked long-format data from multilevel mids ===")
 
   long_list <- lapply(seq_len(imp$m), function(i) {
     completed <- mice::complete(imp, i)
 
+    # Back-transform grand-mean centering (van Buuren 2018, Sec 7.10.6)
+    for (v in names(center_means)) {
+      if (v %in% names(completed))
+        completed[[v]] <- completed[[v]] + center_means[[v]]
+    }
+
     completed |>
-      left_join(pid_lookup, by = "pid_int") |>        # restore character pid
-      mutate(
-        gender = factor(levels(pid_lookup$pid)[1],    # placeholder; overwritten below
-                        levels = c("Male", "Female", "Other"))
-      ) |>
-      select(-pid_int, -gender_num,                   # drop working columns
-             -any_of(lag_lead_cols)) |>               # drop lag/lead predictors
+      left_join(pid_lookup, by = "pid_int") |>
+      select(-pid_int, -gender_num,
+             -any_of(lag_lead_cols)) |>
       mutate(.imp = i)
   })
 
@@ -778,7 +796,6 @@ extract_multilevel_long <- function(imp, pid_lookup, lag_lead_cols) {
     select(pid, day_num, gender_num)
 
   result <- bind_rows(long_list) |>
-    select(-gender) |>
     left_join(
       orig_gender |>
         mutate(gender = factor(
@@ -825,10 +842,13 @@ main <- function() {
   pid_lookup    <- mice_prep$pid_lookup
 
   # Step 4: Run mice (2l.pmm for outcomes, pmm for L1 predictors)
-  imp <- run_multilevel_imputation(diary_mice, lag_lead_cols)
+  imp_result <- run_multilevel_imputation(diary_mice, lag_lead_cols)
+  imp          <- imp_result$imp
+  center_means <- imp_result$center_means
 
   # Step 5: Extract stacked long format; restore pid and gender
-  diary_long <- extract_multilevel_long(imp, pid_lookup, lag_lead_cols)
+  diary_long <- extract_multilevel_long(imp, pid_lookup, lag_lead_cols,
+                                        center_means = center_means)
 
   # Step 6: Add imputed flags
   diary_long <- add_imputed_flags(diary_long, diary_prepped)
@@ -836,8 +856,8 @@ main <- function() {
   # ── Step N: Save outputs ─────────────────────────────────────────────────
   message("\n=== Saving outputs ===")
   dir.create(dirname(DIARY_MIDS_PATH), showWarnings = FALSE, recursive = TRUE)
-  saveRDS(imp, DIARY_MIDS_PATH)
-  message(sprintf("  mids object saved to %s", DIARY_MIDS_PATH))
+  saveRDS(imp_result, DIARY_MIDS_PATH)
+  message(sprintf("  mids + center_means saved to %s", DIARY_MIDS_PATH))
 
   saveRDS(diary_long, DIARY_LONG_PATH)
   message(sprintf("  Long-format data saved to %s", DIARY_LONG_PATH))

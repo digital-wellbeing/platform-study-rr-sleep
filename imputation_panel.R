@@ -471,22 +471,26 @@ prepare_for_mice_multilevel <- function(data, lag_lead_cols) {
 
 #' Set up predictor matrix for multilevel mice (2l.pmm)
 #'
-#' Coding for miceadds::mice.impute.2l.pmm:
+#' Coding for miceadds::mice.impute.2l.pmm (van Buuren, 2018, Ch. 7):
 #'   -2 = cluster (pid_int)
-#'    2 = fixed + random effect (use only when clusters have enough observations)
-#'    1 = fixed effect only
+#'    3 = fixed effect + cluster mean (recommended for level-1 predictors)
+#'    1 = fixed effect only (for level-2 predictors and auxiliary level-1 vars)
 #'    0 = not a predictor / not imputed
 #'
-#' Panel data has at most 6 waves (3 for monthly variables), so level-2
-#' (between-person) variables are coded as 1 (fixed effect only) rather than 2
-#' (which would add random slopes and over-parameterise the model).
-#' Only pid_int is coded -2 to specify the random-intercept cluster.
+#' Following van Buuren's recipe (Tables 7.5-7.6): cross-outcome level-1
+#' variables get code 3 so that both the raw value and its cluster mean enter
+#' the imputation model. Level-2 (between-person) variables remain coded 1.
+#' In biweekly pass only, BIWEEKLY_GAMING_VARS get 3; in monthly pass, wave,
+#' gaming vars, and lag/lead stay at 1 to avoid inflating predictor count.
 #'
 #' @param data          mice-ready data frame (with pid_int, gender_num, etc.)
 #' @param lag_lead_cols Character vector of lag/lead column names
+#' @param pass         "biweekly" or "monthly" — controls code-3 assignment
 #' @return Integer predictor matrix
-setup_multilevel_predictor_matrix <- function(data, lag_lead_cols) {
-  message("Setting up multilevel predictor matrix (-2/1 coding)...")
+setup_multilevel_predictor_matrix <- function(data, lag_lead_cols,
+                                             pass = c("biweekly", "monthly")) {
+  pass <- match.arg(pass)
+  message(sprintf("Setting up multilevel predictor matrix (-2/1/3 coding, %s pass)...", pass))
 
   vars   <- names(data)
   n_vars <- length(vars)
@@ -503,7 +507,9 @@ setup_multilevel_predictor_matrix <- function(data, lag_lead_cols) {
   )
   l1_vars <- intersect(l1_vars, vars)
 
-  all_predictor_vars <- c(l2_vars, l1_vars, VARS_TO_IMPUTE, DERIVED_VARS)
+  l1_outcome_vars <- intersect(c(VARS_TO_IMPUTE, DERIVED_VARS), vars)
+
+  all_predictor_vars <- c(l2_vars, l1_vars, l1_outcome_vars)
 
   for (i in seq_len(n_vars)) {
     target <- vars[i]
@@ -518,6 +524,13 @@ setup_multilevel_predictor_matrix <- function(data, lag_lead_cols) {
 
       if (pred_var == "pid_int") {
         if (is_2l_target) pred[i, j] <- -2L
+      } else if (pred_var %in% l2_vars) {
+        pred[i, j] <- 1L
+      } else if (is_2l_target && (
+        pred_var %in% l1_outcome_vars ||
+        (pred_var %in% BIWEEKLY_GAMING_VARS && pass == "biweekly")
+      )) {
+        pred[i, j] <- 3L
       } else if (pred_var %in% all_predictor_vars) {
         pred[i, j] <- 1L
       }
@@ -526,12 +539,16 @@ setup_multilevel_predictor_matrix <- function(data, lag_lead_cols) {
 
   if ("pid_int" %in% vars) pred["pid_int", ] <- 0L
 
-  n_preds <- rowSums(pred != 0)
+  n_preds   <- rowSums(pred != 0)
+  n_code3   <- rowSums(pred == 3)
   outcome_preds <- n_preds[intersect(VARS_TO_IMPUTE, vars)]
-  message(sprintf("  Avg predictors per outcome variable: %.1f", mean(outcome_preds)))
-  message(sprintf("  Level-2 vars (fixed effect): %s", paste(l2_vars, collapse = ", ")))
-  message(sprintf("  Level-1 vars: %d (wave + gaming + %d lag/lead)",
-                  length(l1_vars), length(lag_lead_cols)))
+  outcome_c3    <- n_code3[intersect(VARS_TO_IMPUTE, vars)]
+  message(sprintf("  Avg predictors per outcome: %.1f (%.1f with cluster means)",
+                  mean(outcome_preds), mean(outcome_c3)))
+  message(sprintf("  Level-2 vars (code 1): %s", paste(l2_vars, collapse = ", ")))
+  message(sprintf("  Level-1 vars (code 1): %d (wave + %d lag/lead)",
+                  length(intersect(c("wave", lag_lead_cols), vars)),
+                  length(lag_lead_cols)))
 
   pred
 }
@@ -603,6 +620,19 @@ run_multilevel_imputation <- function(data, lag_lead_cols) {
   message(sprintf("m = %d  |  maxit = %d  |  N rows (all waves) = %d",
                   N_IMPUTATIONS, N_ITERATIONS, nrow(data)))
 
+  # ── Grand-mean center continuous outcomes (van Buuren 2018, Sec 7.10.6) ──
+  # Improves lmer stability inside 2l.pmm, especially with few waves per cluster.
+  center_means <- list()
+  all_center_vars <- c(VARS_TO_IMPUTE, DERIVED_VARS)
+  for (v in intersect(all_center_vars, names(data))) {
+    if (is.numeric(data[[v]])) {
+      gm <- mean(data[[v]], na.rm = TRUE)
+      center_means[[v]] <- gm
+      data[[v]] <- data[[v]] - gm
+      message(sprintf("  Centered %s (grand mean = %.3f)", v, gm))
+    }
+  }
+
   # ── Pass 1: Biweekly variables (all 6 waves) ─────────────────────────────
   message("\n--- Pass 1: Biweekly variables (wemwbs, waves 1-6) ---")
 
@@ -612,14 +642,13 @@ run_multilevel_imputation <- function(data, lag_lead_cols) {
     lag_lead_cols, value = TRUE
   )
 
-  # Select columns relevant to this pass
   keep_bw <- unique(c("pid_int", "wave", biweekly_cols,
                        MICE_L2_NUMERIC, "gender_num", "region_num",
                        BIWEEKLY_GAMING_VARS, biweekly_lag_lead))
   keep_bw <- intersect(keep_bw, names(data))
   data_bw <- data[, keep_bw, drop = FALSE]
 
-  pred_bw <- setup_multilevel_predictor_matrix(data_bw, biweekly_lag_lead)
+  pred_bw <- setup_multilevel_predictor_matrix(data_bw, biweekly_lag_lead, pass = "biweekly")
   meth_bw <- rep("", ncol(data_bw)); names(meth_bw) <- names(data_bw)
   for (v in biweekly_cols) {
     if (any(is.na(data_bw[[v]]))) meth_bw[v] <- "2l.pmm"
@@ -644,7 +673,6 @@ run_multilevel_imputation <- function(data, lag_lead_cols) {
     lag_lead_cols, value = TRUE
   )
 
-  # Subset to waves 2,4,6 only (removes structural NAs)
   rows_monthly <- data$wave %in% MONTHLY_WAVES
   keep_mo <- unique(c("pid_int", "wave", monthly_cols, derived_cols,
                        MICE_L2_NUMERIC, "gender_num", "region_num",
@@ -652,13 +680,12 @@ run_multilevel_imputation <- function(data, lag_lead_cols) {
   keep_mo <- intersect(keep_mo, names(data))
   data_mo <- data[rows_monthly, keep_mo, drop = FALSE]
 
-  pred_mo <- setup_multilevel_predictor_matrix(data_mo, monthly_lag_lead)
+  pred_mo <- setup_multilevel_predictor_matrix(data_mo, monthly_lag_lead, pass = "monthly")
   meth_mo <- rep("", ncol(data_mo)); names(meth_mo) <- names(data_mo)
   for (v in monthly_cols) {
     if (any(is.na(data_mo[[v]]))) meth_mo[v] <- "2l.pmm"
   }
 
-  # Passive imputation for psqi_global
   if ("psqi_global" %in% names(data_mo)) {
     component_cols <- intersect(PSQI_COMPONENT_VARS, names(data_mo))
     if (length(component_cols) == 7) {
@@ -679,7 +706,7 @@ run_multilevel_imputation <- function(data, lag_lead_cols) {
 
   imp_mo <- run_mice_parallel(data_mo, meth_mo, pred_mo, label = "monthly")
 
-  list(biweekly = imp_bw, monthly = imp_mo)
+  list(biweekly = imp_bw, monthly = imp_mo, center_means = center_means)
 }
 
 
@@ -700,22 +727,28 @@ extract_multilevel_long <- function(imp_result, pid_lookup, region_lookup,
 
   imp_bw <- imp_result$biweekly
   imp_mo <- imp_result$monthly
+  center_means <- imp_result$center_means
 
   biweekly_vars <- intersect(BIWEEKLY_VARS, names(imp_bw$data))
   monthly_vars  <- intersect(c(MONTHLY_VARS, DERIVED_VARS), names(imp_mo$data))
 
   result_list <- lapply(seq_len(N_IMPUTATIONS), function(i) {
-    # Extract biweekly imputed values
     bw_completed <- mice::complete(imp_bw, i) |>
       left_join(pid_lookup, by = "pid_int") |>
       select(pid, wave, all_of(biweekly_vars))
 
-    # Extract monthly imputed values (only waves 2,4,6)
     mo_completed <- mice::complete(imp_mo, i) |>
       left_join(pid_lookup, by = "pid_int") |>
       select(pid, wave, all_of(monthly_vars))
 
-    # Start from original data, replace imputed columns
+    # Back-transform grand-mean centering (van Buuren 2018, Sec 7.10.6)
+    for (v in names(center_means)) {
+      if (v %in% names(bw_completed))
+        bw_completed[[v]] <- bw_completed[[v]] + center_means[[v]]
+      if (v %in% names(mo_completed))
+        mo_completed[[v]] <- mo_completed[[v]] + center_means[[v]]
+    }
+
     result <- original_data |>
       select(-any_of(c(biweekly_vars, monthly_vars))) |>
       left_join(bw_completed, by = c("pid", "wave")) |>
