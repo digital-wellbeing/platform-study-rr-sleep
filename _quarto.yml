@@ -1,6 +1,9 @@
 project:
   title: "Quarto preprint"
 
+execute:
+  freeze: auto
+
 format:
   html:
     toc: true
