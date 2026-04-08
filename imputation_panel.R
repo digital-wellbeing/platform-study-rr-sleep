@@ -310,7 +310,7 @@ add_gaming_exposure <- function(data,
     ))
   }
 
-  message("Calculating gaming exposure predictors (biweekly averages)...")
+  message("Calculating gaming exposure predictors (biweekly + monthly averages)...")
 
   sessions_daily <- read_csv(sessions_path, show_col_types = FALSE) %>%
     mutate(
@@ -348,7 +348,11 @@ add_gaming_exposure <- function(data,
       total_biweekly_avg_minutes_played =
         window_sum(pid, .exposure_date, 14, "total_minutes") / 14,
       ln_biweekly_avg_minutes_played =
-        window_sum(pid, .exposure_date, 14, "ln_minutes") / 14
+        window_sum(pid, .exposure_date, 14, "ln_minutes") / 14,
+      total_monthly_avg_minutes_played =
+        window_sum(pid, .exposure_date, 28, "total_minutes") / 28,
+      ln_monthly_avg_minutes_played =
+        window_sum(pid, .exposure_date, 28, "ln_minutes") / 28
     ) %>%
     ungroup() %>%
     select(-.exposure_date)

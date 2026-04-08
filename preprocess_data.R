@@ -1057,7 +1057,6 @@ preprocess_all_data <- function() {
     n_imputations = N_IMPUTATIONS,
     n_iterations = N_ITERATIONS,
     create_diagnostics_flag = TRUE,
-    parallel_method = "chunked",
     drop_wemwbs_w1_missing_flag = FALSE,  # Already dropped above
     skip_preparation = TRUE  # Data is already prepared
   )
