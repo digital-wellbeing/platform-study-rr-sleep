@@ -1,0 +1,33 @@
+=== Date Imputation Summary ===
+
+Dates inferred: 3221 records across 1038 participants
+
+Overall records by date source:
+  Inferred: 3221 records (1038 participants)
+  Observed: 6241 records (1577 participants)
+
+
+Records by wave and date source:
+  Wave 1 (Observed): 1577 records
+  Wave 2 (Inferred): 452 records
+  Wave 2 (Observed): 1125 records
+  Wave 3 (Inferred): 516 records
+  Wave 3 (Observed): 1061 records
+  Wave 4 (Inferred): 657 records
+  Wave 4 (Observed): 920 records
+  Wave 5 (Inferred): 731 records
+  Wave 5 (Observed): 846 records
+  Wave 6 (Inferred): 865 records
+  Wave 6 (Observed): 712 records
+
+
+Exposure summary (overall vs late-night, biweekly vs monthly):
+  ln_biweekly_avg_minutes_played | Inferred: n=3221, mean=15.52, sd=33.00, median=0.00, IQR=[0.00, 14.53]
+  ln_biweekly_avg_minutes_played | Observed: n=6241, mean=23.07, sd=40.52, median=4.64, IQR=[0.00, 27.66]
+  ln_monthly_avg_minutes_played | Inferred: n=1974, mean=15.46, sd=29.62, median=1.57, IQR=[0.00, 16.48]
+  ln_monthly_avg_minutes_played | Observed: n=2757, mean=22.77, sd=37.41, median=6.49, IQR=[0.08, 28.62]
+  total_biweekly_avg_minutes_played | Inferred: n=3221, mean=76.59, sd=108.91, median=26.12, IQR=[0.00, 113.20]
+  total_biweekly_avg_minutes_played | Observed: n=6241, mean=111.14, sd=122.02, median=71.58, IQR=[16.86, 162.70]
+  total_monthly_avg_minutes_played | Inferred: n=1974, mean=76.94, sd=99.41, median=39.18, IQR=[0.65, 113.15]
+  total_monthly_avg_minutes_played | Observed: n=2757, mean=108.92, sd=112.25, median=73.90, IQR=[23.60, 157.75]
+

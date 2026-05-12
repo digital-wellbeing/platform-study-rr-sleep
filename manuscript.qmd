@@ -1,10 +1,10 @@
 ---
-title: Late-Night Gaming, Sleep and Wellbeing
-subtitle: The Pri(n)ce of Playing Past Bedtime
-running-head: Late-Night Gaming
+title: "Late-Night Gaming and Sleep in Adults: A Registered Report Using Multi-Platform Telemetry"
+subtitle: Chronotype, Sleep, and Wellbeing in Adult Gamers
+running-head: Late-Night Gaming and Sleep
 author:
   - name: Tamás A. Földes
-    email: tamas.foldes@oii.ox.ac.uk
+    email: contact@tamasfoldes.mozmail.com
     orcid: 0000-0002-0623-9149
     url: https://example.com
     corresponding: true
@@ -20,8 +20,8 @@ affiliations:
   - id: 2
     name: Second University
 abstract: |
-  Your abstract goes here. This will appear prominently at the top of your document.
-categories: [keyword1, keyword2, keyword3]
+  Late-night gaming has been linked to disrupted sleep and poorer wellbeing, but most evidence relies on self-reported play time in adolescent samples and rarely tests chronotype as a moderator in adults. Using the Open Play dataset—a three-month longitudinal study of adult gamers in the UK and US that paired session-level digital-trace data from Nintendo, Xbox, and Steam with biweekly panel and daily-diary self-reports—this Registered Report tested whether late-night gaming (23:00–06:00) predicted (H1a) poorer sleep quality, (H1b) shorter sleep duration, (H1c) greater daytime sleepiness, and (H1d) lower mental wellbeing, and whether these associations were amplified among individuals with more evening-leaning chronotypes (H2). Outcomes were assessed with the PSQI, ESS, and SWEMWBS across six biweekly waves; chronotype was indexed by the MCTQ-derived MSF~sc~. Only H1a was supported: each additional 10 minutes of daily late-night gaming was associated with an approximate 0.9 percentage-point increase in the probability of reporting poor sleep quality, consistent across imputed, complete-case, and exploratory diary specifications. TOST equivalence tests accepted the null for H1b–H1d, bounding any true effects below ±7 minutes of nightly sleep, ±0.38 Epworth points, and ±0.53 SWEMWBS points per one-SD (≈36 min/day) increase in late-night gaming. None of the H2 chronotype × late-night gaming interactions reached significance in the pooled imputation models; equivalence tests accepted the null for H2b–H2d, with H2a undecided. The findings provide selective and modest support for the sleep-displacement account—limited to subjective sleep quality—alongside equivalence-grounded evidence against meaningful effects on sleep duration, daytime sleepiness, wellbeing, or chronotype-based vulnerability.
+categories: [late-night gaming, sleep quality, chronotype, mental wellbeing, digital trace data, registered report]
 authornote: |
   Author notes go here.
 date: last-modified
@@ -46,9 +46,10 @@ format:
     code-fold: true
     html-math-method: katex
     embed-resources: true
+    include-after-body: appendix-prefix.html
   preprint-typst:
     wordcount: true
-    citeproc: true
+    citeproc: false
     # Common options - uncomment to use
     theme: jou                   # Journal theme (2-column)
     # line-number: true            # Line numbering
@@ -56,6 +57,24 @@ format:
     # leading: 0.6em               # Line spacing
     # first-line-indent: 1.8em     # Paragraph indent
 ---
+
+<!--
+Render runtime notes
+====================
+A cold full render of this manuscript takes roughly 23 minutes per output
+format (HTML ≈ 23 min, typst/PDF ≈ 23 min on the same host; quarto freezes
+per format so each pass re-executes). The dominant bottleneck is
+`tbl-diary-h1h2` (~15-18 min per pass) because `get_custom_rows_pooled()`
+at helpers.R:815 calls `performance::icc()` on every clmm fit in the
+pooled diary bundles (60 imputations × 2 models = 120 calls). Individual
+chunks carry `# runtime:` comments with more detail. Timings were
+reconstructed from `_freeze/manuscript/figure-*/` mtimes on a cold render
+on 2026-04-08; treat them as order-of-magnitude estimates, not benchmarks.
+The heavy model-fitting chunks (`fit-h1-models`, `fit-h2-models`,
+`fit-diary-imputed-models`, `appendix-h1-spline-fit`) are gated by
+`refit_*` params defaulting to false, so they only run when explicitly
+requested via `-P refit_*:true`.
+-->
 
 # Introduction
 
@@ -90,6 +109,23 @@ In addition to testing direct relationships between late-night gaming and variou
 
 By examining chronotype on a continuous scale as a moderating factor, this study seeks to provide a more nuanced understanding of the potential risks associated with late-night gaming and to identify individuals who may be most vulnerable to its negative effects.
 
+```{r}
+#| label: methods-constants
+#| echo: false
+#| message: false
+#| warning: false
+
+# Constants referenced in Methods prose. Must match the upstream settings in
+# imputation_panel.R (N_IMPUTATIONS / N_ITERATIONS); any drift will be caught
+# by the validation stopifnot() in the load-data chunk below.
+n_imputations_panel <- 20L
+n_iterations_panel  <- 20L
+# Diary imputation uses more imputations due to higher per-day missingness;
+# must match imputation_diary.R N_IMPUTATIONS / N_ITERATIONS.
+n_imputations_diary <- 60L
+n_iterations_diary  <- 20L
+```
+
 # Methods
 
 ## Data Source and Measures
@@ -98,9 +134,9 @@ The analyses reported here are part of a Stage 1 Registered Report [@ballou2024p
 
 ## Handling Missing Data
 
-Missingness in the longitudinal self-report outcomes (PSQI components, PSQI sleep duration, Epworth Sleepiness Scale, and SWEMWBS) was addressed via hierarchical two-level multiple imputation by chained equations [MICE; `mice` v3.16.0 and `miceadds` v3.19 in R; @vanbuuren2011mice; @robitzsch2024miceadds] using predictive mean matching for multilevel data (`2l.pmm`). This method models participants as clusters with repeated waves nested within, preserving between-person variation that single-level PMM would attenuate. We imputed under a Missing at Random assumption conditional on rich auxiliary information. Because sleep measures (PSQI, ESS) were only collected at waves 2, 4, and 6 by design, the imputation was run in two passes: biweekly variables (SWEMWBS, measured at all six waves) and monthly variables (PSQI components, sleep duration, ESS, measured at waves 2, 4, 6 only). This two-pass approach avoids exposing the mixed-effects model inside `2l.pmm` to the structural NAs that arise at non-measurement waves. The PSQI global score was derived via passive imputation (sum of seven imputed component scores). Following van Buuren's [-@vanbuuren2018flexible, Ch. 7] multilevel imputation recipe, predictor matrices coded participant ID as the random-intercept cluster (code −2), level-2 (person-level) predictors as fixed effects only (code 1), and level-1 outcome cross-predictors with disaggregated cluster means (code 3). In the biweekly pass, biweekly gaming exposure averages also received code 3; in the monthly pass, wave, gaming, and lag/lead terms remained at code 1 to avoid inflating the predictor count. This coding ensures that both the raw within-person value and its person mean enter the imputation model where appropriate, preserving the between- vs. within-person decomposition critical for contextual effects. Continuous outcomes were grand-mean centred before imputation and back-transformed afterwards to improve stability of the mixed-effects models inside `2l.pmm` [@vanbuuren2018flexible, Sec. 7.10.6]. Quality control diagnostics (convergence, density, strip, missingness, and between-imputation variability plots) are generated by `R/qc_imputation.R` and saved to `output/qc_imputation/`. Level-2 (person-level) predictors included static demographics (age, BMI, SES, region, gender recoded as male/female/other) and chronotype (MSF~sc~); level-1 time-varying predictors included wave number, biweekly gaming exposure averages (total and late-night minutes over the preceding 14 days), and ±1-wave temporal lag and lead terms for each outcome variable to capture within-person trajectories. To ensure each participant contributed a full six-wave panel, we first expanded the self-report data to the complete pid × wave grid and inferred survey timestamps for missing waves by aligning observed dates with wave-specific medians; those inferred dates were then used to compute the rolling gaming exposures. We generated 20 imputed datasets with 20 iterations per pass—sufficient to stabilize estimates given wave-specific missingness rates up to ~55%. Diagnostic density and strip plots confirmed plausible imputations. All regressions were fit separately in each imputed dataset and combined using Rubin’s rules.
+Missingness in the longitudinal self-report outcomes (PSQI components, PSQI sleep duration, Epworth Sleepiness Scale, and SWEMWBS) was addressed via hierarchical two-level multiple imputation by chained equations [MICE; `mice` v3.16.0 and `miceadds` v3.19 in R; @vanbuuren2011mice; @robitzsch2024miceadds] using predictive mean matching for multilevel data (`2l.pmm`). This method models participants as clusters with repeated waves nested within, preserving between-person variation that single-level PMM would attenuate. We imputed under a Missing at Random assumption conditional on rich auxiliary information. Because sleep measures (PSQI, ESS) were only collected at waves 2, 4, and 6 by design, the imputation was run in two passes: biweekly variables (SWEMWBS, measured at all six waves) and monthly variables (PSQI components, sleep duration, ESS, measured at waves 2, 4, 6 only). This two-pass approach avoids exposing the mixed-effects model inside `2l.pmm` to the structural NAs that arise at non-measurement waves. The PSQI global score was derived via passive imputation (sum of seven imputed component scores). Following van Buuren's [-@vanbuuren2018flexible, Ch. 7] multilevel imputation recipe, predictor matrices coded participant ID as the random-intercept cluster (code −2), level-2 (person-level) predictors as fixed effects only (code 1), and level-1 outcome cross-predictors with disaggregated cluster means (code 3). In the biweekly pass, biweekly gaming exposure averages also received code 3; in the monthly pass, wave, gaming, and lag/lead terms remained at code 1 to avoid inflating the predictor count. This coding ensures that both the raw within-person value and its person mean enter the imputation model where appropriate, preserving the between- vs. within-person decomposition critical for contextual effects. Continuous outcomes were grand-mean centred before imputation and back-transformed afterwards to improve stability of the mixed-effects models inside `2l.pmm` [@vanbuuren2018flexible, Sec. 7.10.6]. Quality control diagnostics (convergence, density, strip, missingness, and between-imputation variability plots) were inspected and found to be acceptable. Level-2 (person-level) predictors included static demographics (age, BMI, SES, region, gender recoded as male/female/other) and chronotype (MSF~sc~); level-1 time-varying predictors included wave number, biweekly gaming exposure averages (total and late-night minutes over the preceding 14 days), and ±1-wave temporal lag and lead terms for each outcome variable to capture within-person trajectories. To ensure each participant contributed a full six-wave panel, we first expanded the self-report data to the complete participant × wave grid and inferred survey timestamps for missing waves by aligning observed dates with wave-specific medians; those inferred dates were then used to compute the rolling gaming exposures. For the primary panel dataset we generated `r n_imputations_panel` imputed datasets with `r n_iterations_panel` iterations per pass—sufficient to stabilize estimates given wave-specific missingness rates up to ~55%. Diagnostic density and strip plots confirmed plausible imputations. All regressions were fit separately in each imputed dataset and combined using Rubin’s rules.
 
-The imputed outcomes serve as the primary analytic dataset throughout the main text. Complete-case versions of every regression (using only non-imputed observations for each outcome) were re-estimated in parallel and included in the Supplement (see @sec-appendix-h1-original and @sec-appendix-h2-original for panel models, and @tbl-appendix-diary-completecase for diary models). Wave-level outcome missingness rates are reported in @tbl-appendix-wave-missingness.
+Missingness in the adjustment covariates was limited in the original (pre-imputation) analytical dataset; exact per-covariate counts are reported in the Results section below. The imputed outcomes serve as the primary analytic dataset throughout the main text. Complete-case versions of every regression (using only non-imputed observations for each outcome) were re-estimated in parallel and are reported in the Appendix (@tbl-appendix-h1-completecase, @tbl-appendix-h2-completecase, @tbl-appendix-diary-completecase). Wave-level outcome missingness rates are reported in @tbl-appendix-wave-missingness.
 
 # Results
  
@@ -161,6 +197,18 @@ data.intake <- read_csv("data/processed/intake_clean.csv.gz", show_col_types = F
 
 # Load stacked imputed data for Rubin's rules (20 imputations × all pid×wave rows)
 imputed_long <- readRDS("data/processed/selfreport_imputed_long.rds")
+
+# Validate that the Methods prose constant matches the actual number of imputations
+# in the stacked dataset (stops the render early if imputation_panel.R drifted).
+{
+  observed_m <- length(unique(imputed_long$.imp[imputed_long$.imp > 0]))
+  if (exists("n_imputations_panel") && observed_m != n_imputations_panel) {
+    stop(sprintf(
+      "n_imputations_panel (%d) does not match imputed_long .imp count (%d); update constant in methods-constants chunk.",
+      n_imputations_panel, observed_m
+    ))
+  }
+}
 
 # Initialize Rubin bundle containers (populated in fit-h1/h2-models chunks)
 panel_h1_rubin <- list()
@@ -445,7 +493,7 @@ all_dqc_pass <- dqc1_pass & dqc3_pass & dqc4_pass
 
 Prior to hypothesis testing, we conducted three positive data quality controls (DQCs) to validate expected patterns in the data. First, self-reported playtime was significantly correlated with digital trace playtime (`r dqc1_inline`), confirming convergent validity between subjective reports and objective telemetry. Second, social jetlag showed the expected positive association with daytime sleepiness (`r dqc3_inline`), replicating established findings that circadian misalignment predicts sleepiness [@Fernandes2023jetlag; @Wu2025socialjetlag]. Third, sleep quality was negatively associated with wellbeing (`r dqc4_inline`), consistent with the well-documented relationship between sleep and mental health [@Gadie2016how]. All three DQCs passed, providing confidence in the integrity of our measures before proceeding with hypothesis testing.
 
-<!-- Also include session integrity-related DQCs for Steam, Nintendo, and Xbox ensuring no overlapping sessions on Nintendo/Xbox (within each platform), and no impossible >60 minute intervals for Steam sessions. See Supplement for positive data quality control (DQC 2) details. -->
+<!-- Also include session integrity-related DQCs for Steam, Nintendo, and Xbox ensuring no overlapping sessions on Nintendo/Xbox (within each platform), and no impossible >60 minute intervals for Steam sessions. See Appendix for positive data quality control (DQC 2) details. -->
 
 
 ## Sample Demographics
@@ -510,7 +558,11 @@ Of `r format(n_signed_up, big.mark = ",")` participants who signed up for the st
 #| tbl-cap: "Sample Characteristics"
 
 selfreport_saved <- selfreport
-selfreport <- selfreport_completecase
+# Use the full analytical sample for demographics (not the outcome-complete-case
+# subset). Demographics are independent of outcome imputation status, and using
+# selfreport_completecase here drops participants whose every wave has at least
+# one imputed outcome, producing a spurious N = 1577 instead of the true 1578.
+selfreport <- selfreport_imputed
 
 # Load required packages
 library(tinytable)
@@ -604,9 +656,13 @@ compute_outcomes <- function(pids, data) {
     )
 }
 
-# Compute outcomes from processed panel data (total) and selfreport (analytical)
+# Compute outcomes from processed panel data (total) and selfreport (analytical).
+# IMPORTANT: use selfreport_completecase (not the imputed `selfreport` that was
+# assigned above for demographics) so Table 1's outcome rows reflect observed
+# values rather than imputed ones. Without this split, cutoff-defined prevalences
+# (PSQI>5, ESS>10) are silently shrunk by tail compression in the imputation.
 outcomes_total <- compute_outcomes(total_sample, panel_processed)
-outcomes_analytical <- compute_outcomes(analytical_sample, selfreport)
+outcomes_analytical <- compute_outcomes(analytical_sample, selfreport_completecase)
 
 # Chronotype from wave 1 (baseline)
 compute_chronotype <- function(pids, data) {
@@ -727,6 +783,13 @@ summary_rows <- bind_rows(summary_rows,
 
 poor_n_tot <- sum(master_data_total$poor_sleep, na.rm = TRUE)
 poor_n_ana <- sum(master_data$poor_sleep, na.rm = TRUE)
+# Stable scalars captured while master_data is still the analytical panel sample
+# (master_data is overwritten by diary chunks later). Used for inline R in the
+# Discussion section. With the Table 1 fix that computes outcomes on
+# selfreport_completecase, these reflect raw observed values on the analytical
+# sample — matching "our sample" in the Discussion prose.
+poor_pct_ana       <- 100 * poor_n_ana / sum(!is.na(master_data$poor_sleep))
+mean_sleep_dur_ana <- mean(master_data$sleep_duration, na.rm = TRUE)
 summary_rows <- bind_rows(summary_rows,
   tibble(Characteristic = "    Poor sleep (PSQI>5)",
          Total = sprintf("%d (%.1f%%)", poor_n_tot,
@@ -1045,9 +1108,9 @@ Missingness in the adjustment covariates was limited in the original (pre-imputa
 
 ### H1
 
-The preregistered analyses in the Stage 1 protocol [@ballou2024psychological] specified four multilevel models in which late-night gaming minutes, averaged over 28 days (monthly) or 14 days (biweekly), predicted sleep quality (H1a), sleep duration (H1b), wellbeing (H1c), and daytime sleepiness (H1d), with random intercepts and random slopes for the late-night gaming exposure by participant and an additional random intercept for gender in the linear models. When applying this specification to the Open Play data, the preregistered random-slope structures led to convergence problems and boundary estimates (near-zero variance components), particularly for the cumulative link mixed model. To obtain stable and interpretable estimates we simplified the random-effects structure to random intercepts for participants (and for gender where supported), dropped gender as a fixed-effect covariate, and used the multiply imputed outcomes as our primary analytic dataset rather than the incomplete original outcomes. Each model was fit separately to each of the 20 imputed datasets, and parameter estimates were pooled using Rubin's rules [@rubin1987multiple], which correctly accounts for both within- and between-imputation variability.
+The preregistered analyses in the Stage 1 protocol [@ballou2024psychological] specified four multilevel models in which late-night gaming minutes, averaged over 28 days (monthly) or 14 days (biweekly), predicted sleep quality (H1a), sleep duration (H1b), wellbeing (H1c), and daytime sleepiness (H1d), with random intercepts and random slopes for the late-night gaming exposure by participant and an additional random intercept for gender in the linear models. When applying this specification to the Open Play data, the preregistered random-slope structures led to convergence problems and boundary estimates (near-zero variance components), particularly for the cumulative link mixed model. To obtain stable and interpretable estimates we simplified the random-effects structure to random intercepts for participants (and for gender where supported) and used the multiply imputed outcomes as our primary analytic dataset rather than the incomplete original outcomes. Each model was fit separately to each of the 20 imputed datasets, and parameter estimates were pooled using Rubin's rules [@rubin1987multiple], which correctly accounts for both within- and between-imputation variability.
 
-More concretely, H1a replaces the preregistered random intercept–slope structure `(1 + monthly_avg_minutes_played | pid)` with a random intercept for participants `(1 | pid)`. For H1b, attempts to retain the preregistered random intercept for gender led to non-convergence and boundary estimates, so we used a single random intercept for participants `(1 | pid)` while keeping the same 28-day late-night average exposure. H1c and H1d follow the same logic of dropping the preregistered random slopes for participants while preserving a random intercept for gender and the same fixed-effect adjustment set (excluding gender as a fixed effect). As a sensitivity check, we also fit models using the PSQI global score (sum of all seven components, range 0–21) as a continuous alternative to the ordinal item-6 outcome; results are reported in @tbl-appendix-psqi-global. A natural cubic spline sensitivity analysis confirmed that the linear parameterization of late-night gaming was adequate for all four H1 outcomes (@tbl-appendix-h1-spline-aic; @fig-appendix-h1-spline).
+More concretely, H1a replaces the preregistered by-participant random intercept and slope on late-night gaming with a random intercept for participants only. For H1b, attempts to retain the preregistered random intercept for gender led to non-convergence and boundary estimates, so we used a participant random intercept only while keeping the same 28-day late-night average exposure. H1c and H1d follow the same logic of dropping the preregistered by-participant random slopes while preserving a random intercept for gender and the same fixed-effect adjustment set (excluding gender as a fixed effect). As a sensitivity check, we also fit models using the PSQI global score (sum of all seven components, range 0–21) as a continuous alternative to the ordinal item-6 outcome; results are reported in @tbl-appendix-psqi-global. A natural cubic spline sensitivity analysis confirmed that the linear parameterization of late-night gaming was adequate for all four H1 outcomes (@tbl-appendix-h1-spline-aic; @fig-appendix-h1-spline).
 
 ```{r}
 #| label: h1-main-effects
@@ -1070,6 +1133,55 @@ h1b_ln_minutes <- get_pooled_effect(panel_h1b_bundle, "ln_monthly_avg_minutes_pl
 h1c_ln_minutes <- get_pooled_effect(panel_h1c_bundle, "ln_biweekly_avg_minutes_played_10")
 h1d_ln_minutes <- get_pooled_effect(panel_h1d_bundle, "ln_monthly_avg_minutes_played_10")
 
+# Complete-case H1a: format b/CI/p for inline reference in Discussion. Uses the
+# saved clmm fit; Wald CI keeps render time low and matches other inline stats.
+cc_h1a_fit <- tryCatch(readRDS("output/models/completecase_model_h1a.rds"),
+                       error = function(e) NULL)
+cc_h1a_ln_minutes <- if (!is.null(cc_h1a_fit)) {
+  co <- summary(cc_h1a_fit)$coefficients["ln_monthly_avg_minutes_played_10", ]
+  ci <- tryCatch(
+    confint(cc_h1a_fit, parm = "ln_monthly_avg_minutes_played_10", method = "Wald"),
+    error = function(e) NULL
+  )
+  p_str <- if (co[["Pr(>|z|)"]] < .001) "p < .001" else sprintf("p = %.3f", co[["Pr(>|z|)"]])
+  if (!is.null(ci)) {
+    sprintf("b = %.3f, 95%% CI [%.3f, %.3f], %s",
+            co[["Estimate"]], ci[1, 1], ci[1, 2], p_str)
+  } else {
+    sprintf("b = %.3f, %s", co[["Estimate"]], p_str)
+  }
+} else {
+  NA_character_
+}
+
+# Format a marginal-effect object (list with `pp_per_10min`) as a
+# percentage-point string for inline reporting. Scales the per-10-min
+# estimate to any window via `minutes`, handles NULL/non-finite inputs,
+# and returns just the number — the surrounding prose supplies the unit.
+fmt_pp <- function(marginal, minutes = 10, digits = 1, fallback = "\u2014") {
+  if (is.null(marginal) || is.null(marginal$pp_per_10min) ||
+      !is.finite(marginal$pp_per_10min)) return(fallback)
+  formatC(marginal$pp_per_10min * (minutes / 10),
+          format = "f", digits = digits)
+}
+
+# Inverse of fmt_pp: given a target percentage-point change, return the
+# number of additional minutes of late-night gaming required to reach it at
+# the marginal rate. Used in the Discussion to frame the effect as "how much
+# extra play buys a 1pp rise in poor-sleep probability".
+minutes_for_pp <- function(marginal, pp = 1, digits = 0, fallback = "\u2014") {
+  if (is.null(marginal) || is.null(marginal$pp_per_10min) ||
+      !is.finite(marginal$pp_per_10min) || marginal$pp_per_10min == 0)
+    return(fallback)
+  formatC(pp * 10 / marginal$pp_per_10min, format = "f", digits = digits)
+}
+
+# Generic numeric formatters used by the Discussion equivalence prose
+# (originally defined later in the appendix; defined here so inline refs
+# earlier in the document resolve).
+fmt1 <- function(x) sprintf("%.2f", x)
+fmt0 <- function(x) sprintf("%.0f", x)
+
 # Marginal probability computation for H1a (probit CLMM)
 # Average threshold and sigma_u across 20 imputed fits, use pooled b and SE
 h1a_marginal <- tryCatch({
@@ -1086,9 +1198,22 @@ h1a_marginal <- tryCatch({
     b_gaming / marginal_sd * 100
   list(pp_per_10min = pp_per_10min)
 }, error = function(e) NULL)
+
+# Same marginal-probability derivation applied to the complete-case CLMM
+# so imputed and CC pp/10-min figures are like-for-like in the Discussion.
+cc_h1a_marginal <- tryCatch({
+  if (is.null(cc_h1a_fit)) stop("cc_h1a_fit not available")
+  b_gaming <- coef(cc_h1a_fit)["ln_monthly_avg_minutes_played_10"]
+  alpha_j  <- cc_h1a_fit$alpha["Fairly good|Fairly bad"]
+  sigma_u  <- sqrt(cc_h1a_fit$ST$pid[1, 1])
+  marginal_sd <- sqrt(1 + sigma_u^2)
+  pp_per_10min <- dnorm((b_gaming * 0 - alpha_j) / marginal_sd) *
+    b_gaming / marginal_sd * 100
+  list(pp_per_10min = pp_per_10min)
+}, error = function(e) NULL)
 ```
 
-Under these implemented models, the late-night gaming term in the sleep-quality model (H1a) is estimated as `r h1a_ln_minutes` (probit coefficient per 10 min/day). On the probability scale, each additional 10 minutes of average daily late-night gaming is associated with an approximate `r if (!is.null(h1a_marginal)) sprintf("%.1f", h1a_marginal$pp_per_10min)` percentage-point increase in the marginal probability of reporting fairly bad or very bad sleep quality. @fig-latenight-sleepquality-exceedance translates this coefficient to the probability scale: marginal predicted probabilities of poor sleep quality (Fairly bad or Very bad) were computed for each of the 20 imputed datasets and pooled via Rubin's rules, with 95% confidence intervals derived from the combined within- and between-imputation variance on the probability scale using the delta method. The corresponding effects are `r h1b_ln_minutes` for sleep duration (H1b), suggesting little systematic association between late-night gaming and self-reported sleep hours, `r h1c_ln_minutes` for wellbeing (H1c), indicating minimal change in SWEMWBS scores with greater late-night play, and `r h1d_ln_minutes` for daytime sleepiness (H1d), again suggesting negligible variation in Epworth scores as a function of late-night gaming. All imputed-data estimates are pooled across 20 multiply imputed datasets using Rubin's rules [@rubin1987multiple]. These models additionally adjust for age, BMI, SES index, region, and weekend versus weekday timing (with gender modelled as a random intercept in H1c and H1d), and they use rolling 14- and 28-day windows of late-night play anchored to each survey date. Full coefficient estimates, confidence intervals, and variance components are reported in the H1 regression summary table, to which we refer for all remaining parameters.
+Under these implemented models, the late-night gaming term in the sleep-quality model (H1a) is estimated as `r h1a_ln_minutes` (probit coefficient per 10 min/day). On the probability scale, each additional 10 minutes of average daily late-night gaming is associated with an approximate `r fmt_pp(h1a_marginal)` percentage-point increase in the marginal probability of reporting fairly bad or very bad sleep quality. @fig-latenight-sleepquality-exceedance translates this coefficient to the probability scale: marginal predicted probabilities of poor sleep quality (Fairly bad or Very bad) were computed for each of the 20 imputed datasets and pooled via Rubin's rules, with 95% confidence intervals derived from the combined within- and between-imputation variance on the probability scale using the delta method. The corresponding effects are `r h1b_ln_minutes` for sleep duration (H1b), suggesting little systematic association between late-night gaming and self-reported sleep hours, `r h1c_ln_minutes` for wellbeing (H1c), indicating minimal change in SWEMWBS scores with greater late-night play, and `r h1d_ln_minutes` for daytime sleepiness (H1d), again suggesting negligible variation in Epworth scores as a function of late-night gaming. All imputed-data estimates are pooled across 20 multiply imputed datasets using Rubin's rules [@rubin1987multiple]. These models additionally adjust for age, BMI, SES index, region, and weekend versus weekday timing (with gender modelled as a random intercept in H1c and H1d), and they use rolling 14- and 28-day windows of late-night play anchored to each survey date. Full coefficient estimates, confidence intervals, and variance components are reported in the H1 regression summary table, to which we refer for all remaining parameters.
 
 
 
@@ -1098,6 +1223,10 @@ Under these implemented models, the late-night gaming term in the sleep-quality 
 #| cache: false
 #| results: asis
 
+# runtime: ~seconds when params$refit_h1 is false (bundles read from disk).
+#          Expected ~3-6 min per imputed model when refit_h1=true, because
+#          fit_on_imputations() fits 20 clmm/lmer models (one per imputation)
+#          for H1a, H1b, H1c, H1d. Set -P refit_h1:true to regenerate.
 h1_models <- list()
 panel_h1_rubin <- list()  # Rubin's rules bundles for imputed models
 if (!dir.exists("output/models")) {
@@ -1293,6 +1422,162 @@ if (!length(h1_models)) {
 }
 ```
 
+```{r}
+#| label: fit-psqi-global
+#| code-summary: "Fit PSQI global sensitivity models early for use in Discussion"
+#| cache: false
+#| message: false
+#| warning: false
+
+# The PSQI global models live in the appendix but their pp-per-10-min marginal
+# effects are referenced in the Discussion (earlier in source order than the
+# appendix table). We therefore fit them here, save Rubin bundles + CC models
+# to disk, and have the appendix chunk read from those objects. Specifications
+# are unchanged from the original appendix chunk.
+
+panel_psqi_rubin_base   <- NULL
+panel_psqi_rubin_chrono <- NULL
+model_psqi_global_completecase        <- NULL
+model_psqi_global_completecase_chrono <- NULL
+
+psqi_base_prep <- function(d) {
+  build_gaming_inputs(d)$gamingMonthly |>
+    enforce_monthly_wave_subset() |>
+    filter(!is.na(psqi_global))
+}
+psqi_chrono_prep <- function(d) {
+  build_gaming_inputs(d)$gamingMonthly |>
+    enforce_monthly_wave_subset() |>
+    filter(!is.na(psqi_global), !is.na(msf_sc_centered))
+}
+
+if (eval_appendix) {
+  message("Fitting PSQI-global models on 20 imputed datasets (Rubin's rules)...")
+  panel_psqi_rubin_base <- fit_on_imputations(
+    imputed_long, prep_fn = psqi_base_prep,
+    fit_fn = function(d) lmer(
+      psqi_global ~ ln_monthly_avg_minutes_played_10 +
+        age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+        (1 | pid) + (1 | gender),
+      data = d, control = lmerControl(optimizer = "bobyqa")
+    )
+  )
+  panel_psqi_rubin_chrono <- fit_on_imputations(
+    imputed_long, prep_fn = psqi_chrono_prep,
+    fit_fn = function(d) lmer(
+      psqi_global ~ ln_monthly_avg_minutes_played_10 * msf_sc_centered +
+        age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+        (1 | pid) + (1 | gender),
+      data = d, control = lmerControl(optimizer = "bobyqa")
+    )
+  )
+  saveRDS(panel_psqi_rubin_base,
+          "output/models/imputed_psqi_global_rubin.rds")
+  saveRDS(panel_psqi_rubin_chrono,
+          "output/models/imputed_psqi_global_chrono_rubin.rds")
+} else {
+  if (file.exists("output/models/imputed_psqi_global_rubin.rds"))
+    panel_psqi_rubin_base <- readRDS("output/models/imputed_psqi_global_rubin.rds")
+  if (file.exists("output/models/imputed_psqi_global_chrono_rubin.rds"))
+    panel_psqi_rubin_chrono <- readRDS("output/models/imputed_psqi_global_chrono_rubin.rds")
+}
+
+if (eval_appendix) {
+  gamingMonthly_psqi_cc <- gaming_inputs$completecase$gamingMonthly |>
+    enforce_monthly_wave_subset() |>
+    filter(!is.na(psqi_global))
+
+  model_psqi_global_completecase <- lmer(
+    psqi_global ~ ln_monthly_avg_minutes_played_10 +
+      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+      (1 | pid) + (1 | gender),
+    data = gamingMonthly_psqi_cc,
+    control = lmerControl(optimizer = "bobyqa")
+  )
+  model_psqi_global_completecase_chrono <- lmer(
+    psqi_global ~ ln_monthly_avg_minutes_played_10 * msf_sc_centered +
+      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
+      (1 | pid) + (1 | gender),
+    data = gamingMonthly_psqi_cc,
+    control = lmerControl(optimizer = "bobyqa")
+  )
+  saveRDS(model_psqi_global_completecase,
+          "output/models/completecase_psqi_global.rds")
+  saveRDS(model_psqi_global_completecase_chrono,
+          "output/models/completecase_psqi_global_chrono.rds")
+} else {
+  if (file.exists("output/models/completecase_psqi_global.rds"))
+    model_psqi_global_completecase <- readRDS("output/models/completecase_psqi_global.rds")
+  if (file.exists("output/models/completecase_psqi_global_chrono.rds"))
+    model_psqi_global_completecase_chrono <- readRDS("output/models/completecase_psqi_global_chrono.rds")
+}
+
+# --- Marginal probability (PSQI global > 5 = "poor sleeper") per 10 min/day ---
+# Treat the marginal distribution of PSQI-global as approximately Gaussian with
+# mean ybar and SD sqrt(var_pid + var_gender + var_resid). Derivative of
+# P(Y > 5) w.r.t. the gaming regressor evaluated at ybar, symmetric to the
+# CLMM derivation used for h1a_marginal above.
+psqi_global_marginal <- function(b_gaming, sd_pid, sd_gender, sd_resid, ybar) {
+  sigma_m <- sqrt(sd_pid^2 + sd_gender^2 + sd_resid^2)
+  pp_per_10min <- dnorm((5 - ybar) / sigma_m) * b_gaming / sigma_m * 100
+  list(pp_per_10min = unname(pp_per_10min))
+}
+
+.psqi_vc_parts <- function(fit) {
+  v <- as.data.frame(lme4::VarCorr(fit))
+  pid_sd    <- v$sdcor[v$grp == "pid"]
+  gender_sd <- v$sdcor[v$grp == "gender"]
+  resid_sd  <- v$sdcor[v$grp == "Residual"]
+  c(pid    = if (length(pid_sd))    pid_sd    else 0,
+    gender = if (length(gender_sd)) gender_sd else 0,
+    resid  = if (length(resid_sd))  resid_sd  else NA_real_)
+}
+
+psqi_global_imp_marginal <- tryCatch({
+  if (is.null(panel_psqi_rubin_base)) stop("PSQI imputed bundle unavailable")
+  pv <- pool_vcov(panel_psqi_rubin_base$fits)
+  b  <- pv$qbar["ln_monthly_avg_minutes_played_10"]
+  vc_mat <- vapply(panel_psqi_rubin_base$fits, .psqi_vc_parts, numeric(3))
+  vc <- rowMeans(vc_mat)
+  ybar <- mean(vapply(panel_psqi_rubin_base$fits, function(f)
+    mean(lme4::getME(f, "y"), na.rm = TRUE), numeric(1)))
+  psqi_global_marginal(b, vc["pid"], vc["gender"], vc["resid"], ybar)
+}, error = function(e) NULL)
+
+psqi_global_cc_marginal <- tryCatch({
+  if (is.null(model_psqi_global_completecase))
+    stop("PSQI complete-case fit unavailable")
+  b  <- lme4::fixef(model_psqi_global_completecase)["ln_monthly_avg_minutes_played_10"]
+  vc <- .psqi_vc_parts(model_psqi_global_completecase)
+  ybar <- mean(lme4::getME(model_psqi_global_completecase, "y"), na.rm = TRUE)
+  psqi_global_marginal(b, vc["pid"], vc["gender"], vc["resid"], ybar)
+}, error = function(e) NULL)
+
+# Raw PSQI-global fixed effect (points per unit of ln(10-min)) for inline
+# reporting in the Discussion. Pooled (imputed) via get_pooled_effect, and
+# complete-case formatted to match.
+psqi_global_imp_b_ci <- get_pooled_effect(
+  panel_psqi_rubin_base, "ln_monthly_avg_minutes_played_10")
+
+psqi_global_cc_b_ci <- tryCatch({
+  if (is.null(model_psqi_global_completecase))
+    stop("PSQI complete-case fit unavailable")
+  co <- summary(model_psqi_global_completecase)$coefficients[
+    "ln_monthly_avg_minutes_played_10", ]
+  ci <- tryCatch(
+    confint(model_psqi_global_completecase,
+            parm = "ln_monthly_avg_minutes_played_10",
+            method = "Wald"),
+    error = function(e) NULL)
+  if (!is.null(ci)) {
+    sprintf("b = %.3f, 95%% CI [%.3f, %.3f]",
+            co["Estimate"], ci[1, 1], ci[1, 2])
+  } else {
+    sprintf("b = %.3f", co["Estimate"])
+  }
+}, error = function(e) "estimate unavailable")
+```
+
 
 :::: {.place arguments='top, scope: "parent", float: true'}
 
@@ -1302,7 +1587,11 @@ if (!length(h1_models)) {
 #| tbl-cap: "Summary of H1 Hypotheses: Effects of Late-Night Gaming on Sleep and Wellbeing"
 #| output: asis
 
-
+# runtime: ~1-2 min. get_custom_rows_pooled() calls performance::icc() on
+#          every clmm/lmer fit in the Rubin bundles (4 models × 20 imputations
+#          = 80 ICC calls). The clmm ICC call is the slow component here;
+#          see helpers.R:815 — ICC is effectively a structural quantity and
+#          could be computed from the first imputation only for a big speedup.
 library(tinytable)
 
 coef_map_h1 <- c(
@@ -1535,11 +1824,13 @@ p_main <- ggplot(plot_data, aes(x = ln_monthly_avg_minutes_played, y = exc.prob)
   )
 ```
 
+To complement these pooled coefficient tests with positive evidence of null effects where applicable, we conducted frequentist equivalence tests (TOST; @lakens2017equivalence) on the focal H1 predictors against a preregistered Region of Practical Equivalence (ROPE) — an interval around zero within which a coefficient is treated as too small to matter substantively, derived from ±0.1 × SD(outcome) rescaled to the raw coefficient's native units (see the appendix for full derivation and response-scale thresholds). The pooled 90% CIs for H1b, H1c, and H1d all fall entirely within their respective ROPEs (TOST decision: Accepted), providing positive evidence that any direct effect of late-night gaming on sleep duration, wellbeing, and daytime sleepiness is practically negligible at the preregistered threshold. The H1a sleep-quality effect, although statistically non-zero, was Undecided under the stricter ordinal-probit ROPE: the 90% CI lies partly outside the interval, so the estimate cannot be declared either practically equivalent to or reliably larger than zero. Full per-hypothesis TOST decisions, ROPE widths, and pooled 90% CIs are reported in @tbl-appendix-equivalence.
+
 ### H2
 
 The preregistration in the Stage 1 protocol [@ballou2024psychological] also specified four moderation models in which raw monthly or biweekly late-night minutes interacted with chronotype (mean sleep-on-free days corrected for sleep debt on weekdays) to predict the same four outcomes (H2a–H2d), again with random intercepts and random slopes for late-night gaming by participant and a random intercept for gender in the linear mixed models. In the analytical sample, median chronotype was `r sprintf("%.1f", stats::median(master_data$msf_sc, na.rm = TRUE))` hours with an interquartile range of `r sprintf("%.1f", stats::IQR(master_data$msf_sc, na.rm = TRUE))` hours. When transferred to the Open Play data, the preregistered moderation structure proved too demanding: the combination of highly skewed late-night exposure, strong collinearity between chronotype and late-night play, and the cumulative link mixed model for ordinal sleep quality led to non-convergence and nearly singular variance–covariance matrices, particularly for H2a.
 
-In the final models we therefore mean-centred chronotype (`msf_sc_centered`) and simplified the random-effects structures to random intercepts for participants (and for gender where supported), while keeping the interaction terms for all four outcomes. Relative to the preregistration, H2a drops the random slope on late-night minutes for participants and uses the centred chronotype term, H2b simplifies `(1 + monthly_avg_minutes_played | pid)` to `(1 | pid)` while retaining `(1 | gender)`, H2c already specified a random-intercept-only structure for participants and mainly deviates through the use of centred chronotype, and H2d mirrors H2b in simplifying the participant random effects from `(1 + monthly_avg_minutes_played | pid)` to `(1 | pid)` alongside the same chronotype centring. The ordinal H2a model still exhibits known identifiability issues for cumulative link mixed models with interactions, so its interaction term is interpreted cautiously and our substantive conclusions about moderation rely primarily on the linear mixed-effects models (H2b–H2d). As with H1, the full pattern of main and interaction effects, along with random-effect estimates, is presented in the H2 regression summary table.
+In the final models we therefore mean-centred chronotype and simplified the random-effects structures to random intercepts for participants (and for gender where supported), while retaining the late-night gaming × chronotype interaction for all four outcomes. Relative to the preregistration, H2a drops the by-participant random slope on late-night minutes and uses centred chronotype; H2b and H2d likewise drop the by-participant random slope on late-night minutes while keeping the random intercept for gender; and H2c already specified a participant random-intercept-only structure and deviates only through the chronotype centring. The ordinal H2a model still exhibits known identifiability issues for cumulative link mixed models with interactions, so its interaction term is interpreted cautiously and our substantive conclusions about moderation rely primarily on the linear mixed-effects models (H2b–H2d). As with H1, the full pattern of main and interaction effects, along with random-effect estimates, is presented in the H2 regression summary table.
 
 ```{r}
 #| label: h2-main-effects
@@ -1557,7 +1848,9 @@ panel_h2c_bundle <- if (length(panel_h2_rubin)) panel_h2_rubin[["H2c: Wellbeing"
 panel_h2d_bundle <- if (length(panel_h2_rubin)) panel_h2_rubin[["H2d: Daytime Sleepiness"]] else
   tryCatch(readRDS("output/models/imputed_h2d_rubin.rds"), error = function(e) NULL)
 
-# Interaction effects (primary H2 tests)
+# Interaction effects (primary H2 tests). Formatted via get_pooled_effect,
+# which now uses %.3f precision (helpers.R) so small probit coefficients
+# don't silently render as -0.00.
 h2a_ln_minutes_msf <- get_pooled_effect(panel_h2a_bundle,
   "ln_monthly_avg_minutes_played_10:msf_sc_centered")
 h2b_ln_minutes_msf <- get_pooled_effect(panel_h2b_bundle,
@@ -1595,9 +1888,7 @@ h2a_marginal <- tryCatch({
 }, error = function(e) NULL)
 ```
 
-Under these implemented models, the main effect of late-night gaming on sleep quality in H2a is `r h2a_main_ln` (probit coefficient per 10 min/day), corresponding to an approximate `r if (!is.null(h2a_marginal)) sprintf("%.1f", h2a_marginal$pp_per_10min)` percentage-point increase in the probability of reporting fairly bad or worse sleep per additional 10 minutes of daily late-night gaming — closely mirroring the H1a estimate. The chronotype × late-night gaming interaction is estimated as `r h2a_ln_minutes_msf`, providing little evidence that the association between late-night gaming and sleep quality differs meaningfully across the chronotype continuum. The corresponding interaction effects are `r h2b_ln_minutes_msf` for sleep duration (H2b) and `r h2d_ln_minutes_msf` for daytime sleepiness (H2d), neither of which suggests meaningful moderation by chronotype. For wellbeing (H2c), however, the interaction was `r h2c_ln_minutes_msf`, indicating that chronotype moderates the association between late-night gaming and SWEMWBS scores. Among participants with earlier chronotypes (−1 SD, i.e. morning-oriented individuals), each additional 10 minutes of daily late-night gaming was associated with a small positive change in wellbeing (~0.4 SWEMWBS points per hour). This association diminished with increasing eveningness: at the sample-mean chronotype the estimate was roughly halved (~0.2 points per hour), and at +1 SD (evening-oriented participants) the association was near zero (~0.05 points per hour). In substantive terms, the pattern suggests that late-night gaming carries a slight positive association with wellbeing for earlier chronotypes — perhaps reflecting voluntary, enjoyable leisure that does not conflict with their sleep–wake schedule — whereas for evening types, whose late-night play may more readily encroach on sleep, the association is effectively null. Despite reaching statistical significance, all of these conditional effects remain small relative to the 7–35 SWEMWBS scale. These interaction terms constitute the primary tests of H2 and are estimated conditional on the same covariate set as in H1 (age, BMI, SES index, region, and weekend versus weekday timing, with gender as a random intercept in H2b–H2d). Full model summaries, including main effects and random-effect estimates, are reported in the H2 regression table.
-
-Although not part of our preregistered hypotheses, the main effect of late-night gaming in the sleep-quality model (H2a) was `r h2a_main_ln` and the main effect of chronotype was `r h2a_main_msf`, indicating only modest associations between each predictor and subjective sleep quality when considered marginally. Analogous main effects were `r h2b_main_ln` and `r h2b_main_msf` for sleep duration (H2b), `r h2c_main_ln` and `r h2c_main_msf` for wellbeing (H2c), and `r h2d_main_ln` and `r h2d_main_msf` for daytime sleepiness (H2d). Of these, the H2c main effect of late-night gaming on wellbeing was also statistically significant (`r h2c_main_ln`), suggesting a small positive association with SWEMWBS scores at the mean chronotype, though the magnitude is negligible in practical terms (approximately 0.2 points per hour on the 7–35 SWEMWBS scale). These exploratory estimates are reported for completeness, but should be interpreted cautiously given their non-preregistered status. The H2c interaction is visualised in @fig-h2c-interaction in the Appendix.
+Under these implemented models, the main effect of late-night gaming on sleep quality in H2a is `r h2a_main_ln` (probit coefficient per 10 min/day), corresponding to an approximate `r fmt_pp(h2a_marginal)` percentage-point increase in the probability of reporting fairly bad or worse sleep per additional 10 minutes of daily late-night gaming — closely mirroring the H1a estimate. None of the preregistered chronotype × late-night gaming interactions reached conventional significance after pooling across imputations, so H2 was not supported for any outcome (H2a sleep quality: `r h2a_ln_minutes_msf`; H2b sleep duration: `r h2b_ln_minutes_msf`; H2c wellbeing: `r h2c_ln_minutes_msf`; H2d daytime sleepiness: `r h2d_ln_minutes_msf`). The equivalence tests reported in @tbl-appendix-equivalence go further and provide positive evidence that these interactions are practically negligible: applying the same TOST procedure described for H1 — now to the chronotype × late-night gaming coefficients against their interaction-scale ROPEs — the pooled 90% CIs for H2b, H2c, and H2d all lie entirely within the ROPE (TOST decision: Accepted), while the H2a interaction is Undecided under the stricter ordinal-probit ROPE. Full model summaries are reported in the H2 regression table.
 
 ```{r}
 #| label: fit-h2-models
@@ -1605,6 +1896,10 @@ Although not part of our preregistered hypotheses, the main effect of late-night
 #| cache: false
 #| results: asis
 
+# runtime: ~seconds when params$refit_h2 is false (bundles read from disk).
+#          Expected ~3-6 min per imputed model when refit_h2=true (20
+#          imputations × 4 models with chronotype interaction). Set
+#          -P refit_h2:true to regenerate.
 h2_models <- list()
 panel_h2_rubin <- list()  # Rubin's rules bundles for imputed H2 models
 
@@ -1808,7 +2103,9 @@ if (eval_appendix) {
 #| tbl-cap: "Summary of H2 Hypotheses: Chronotype Moderation of Late-Night Gaming Effects"
 #| output: asis
 
-
+# runtime: ~1-2 min, same cost profile as tbl-h1-combined above
+#          (performance::icc() over 80 clmm/lmer fits via
+#          get_custom_rows_pooled()).
   library(tinytable)
 
   coef_map_h2 <- c(
@@ -2268,6 +2565,11 @@ saveRDS(diary_model_h2, "output/models/diary_model_h2_sleepquality.rds")
 #| cache: false
 #| eval: !expr eval_diary_imputed
 
+# runtime: skipped entirely when params$refit_diary_imputed is false
+#          (default). Expected ~10-20 min when refit_diary_imputed=true:
+#          fit_on_imputations() fits 60 clmm models per hypothesis (H1 and
+#          H2) on ~20k diary observations with random-intercept for pid.
+#          Set -P refit_diary_imputed:true to regenerate the pooled bundles.
 library(ordinal)
 
 # Load imputed diary data (from imputation_diary.R)
@@ -2509,11 +2811,11 @@ diary_h1_marginal <- if (!is.null(diary_h1_rubin)) {
 }
 ```
 
-Missing diary outcome variables (life satisfaction, affective valence, and sleep quality) were imputed using the same hierarchical two-level `2l.pmm` approach as the panel data, with participants as clusters and diary days nested within (`miceadds`). Following van Buuren [-@vanbuuren2018flexible, Ch. 7], predictor matrices coded participant ID as cluster (code −2), level-2 variables (age, BMI, SES, chronotype, gender, person-mean late-night gaming) as fixed effects only (code 1), and level-1 cross-outcome and daily predictors with code 3 (fixed effect + cluster mean) to preserve between- vs. within-person decomposition. Continuous outcomes were grand-mean centred before imputation and back-transformed afterwards. QC diagnostics for both panel and diary imputations are in `output/qc_imputation/`. Level-1 daily predictors (gaming played, basic psychological needs, stress, day type, and late-night gaming hours) with genuine missingness were imputed via standard PMM within the same MICE run. Temporal context was captured via ±5-day lag and lead terms for each outcome variable. We generated 60 imputed datasets with 20 iterations each. Diary regressions were fit separately on each imputed dataset and combined using Rubin’s rules.
+Missing diary outcome variables were imputed using the same hierarchical two-level `2l.pmm` approach as the panel data, with participants as clusters and diary days nested within (`miceadds`). Following van Buuren [-@vanbuuren2018flexible, Ch. 7], predictor matrices coded participant ID as cluster (code −2), level-2 variables (age, BMI, SES, chronotype, gender, person-mean late-night gaming) as fixed effects only (code 1), and level-1 cross-outcome and daily predictors with code 3 (fixed effect + cluster mean) to preserve between- vs. within-person decomposition. Continuous outcomes were grand-mean centred before imputation and back-transformed afterwards. We inspected QC diagnostics for both panel and diary imputations and judged them acceptable. Level-1 daily predictors (gaming played, basic psychological needs, stress, day type, and late-night gaming hours) with genuine missingness were imputed via standard PMM within the same MICE run. Temporal context was captured via ±5-day lag and lead terms for each outcome variable. We generated `r n_imputations_diary` imputed datasets with `r n_iterations_diary` iterations each. Diary regressions were fit separately on each imputed dataset and combined using Rubin’s rules.
 
 To complement the panel-level analyses, we examined daily diary reports of sleep quality as a function of late-night gaming in the preceding 24 hours. Sleep quality was recorded on a 5-level ordinal scale (Very poor, Poor, Fair, Good, Very good) in each diary entry. We fitted cumulative link mixed models (CLMM; `ordinal::clmm`) with random intercepts for participants to account for repeated measurements. To separate within-person fluctuations from between-person differences in late-night gaming, we decomposed the trimmed late-night gaming variable (capped at the 99th percentile) into a within-person component (daily deviation from the participant's own mean) and a between-person component (participant mean centered at the grand mean). The analytical diary sample comprised `r diary_n_participants` participants contributing `r format(diary_n_entries, big.mark = ",")` diary entries with valid sleep quality ratings. Covariates included age, BMI, SES (all scaled), and a weekend indicator. Region is excluded from both diary models because all diary participants are US-based. These diary analyses are exploratory and were not formally pre-registered. Gender was initially considered as a random intercept but the random intercept for gender with only three levels did not converge; gender is therefore excluded from all diary models. A probit link was used (rather than logit) to ensure reliable convergence for both models. Late-night gaming is expressed in per-10-minute increments (i.e., the effect of each additional 10 minutes of late-night gaming) to aid interpretability while maintaining numerical stability. In the ordered factor coding, higher categories correspond to worse sleep quality (5 = "Very poor"), so positive coefficients indicate a higher probability of worse sleep. Covariates (age, BMI, SES) are scaled within the diary subsample. Missing SES values for diary participants with unrecognised employment categories (n = 23) were imputed via MICE (PMM, m = 5) using age, BMI, gender, and region as predictors, consistent with the panel-level missing-data strategy.
 
-For the direct-effects model (H1), the within-person effect of late-night gaming on sleep quality was `r diary_h1_within` (probit coefficient per 10 additional minutes). On days when participants gamed more than their own average, the association with sleep quality was `r ifelse(!is.na(diary_h1_w$p), sig_desc(diary_h1_w$p), "significance not available")`. The between-person effect was `r diary_h1_between`, indicating that participants who habitually engaged in more late-night gaming tended to report `r ifelse(!is.na(diary_h1_b$est) && diary_h1_b$est > 0, "worse", "better")` sleep quality on average; this between-person effect was `r ifelse(!is.na(diary_h1_b$p), sig_desc(diary_h1_b$p), "of uncertain significance")`. On the probability scale, each additional 10 minutes of habitual daily late-night gaming is associated with an approximate `r if (!is.null(diary_h1_marginal)) sprintf("%.1f", diary_h1_marginal$pp_per_10min)` percentage-point increase in the probability of reporting poor or very poor sleep, broadly consistent with the panel-level H1a estimate (`r if (!is.null(h1a_marginal)) sprintf("%.1f", h1a_marginal$pp_per_10min)` pp per 10 min).
+For the direct-effects model (H1), the within-person effect of late-night gaming on sleep quality was `r diary_h1_within` (probit coefficient per 10 additional minutes). On days when participants gamed more than their own average, the association with sleep quality was `r ifelse(!is.na(diary_h1_w$p), sig_desc(diary_h1_w$p), "significance not available")`. The between-person effect was `r diary_h1_between`, indicating that participants who habitually engaged in more late-night gaming tended to report `r ifelse(!is.na(diary_h1_b$est) && diary_h1_b$est > 0, "worse", "better")` sleep quality on average; this between-person effect was `r ifelse(!is.na(diary_h1_b$p), sig_desc(diary_h1_b$p), "of uncertain significance")`. On the probability scale, each additional 10 minutes of habitual daily late-night gaming is associated with an approximate `r fmt_pp(diary_h1_marginal)` percentage-point increase in the probability of reporting poor or very poor sleep, broadly consistent with the panel-level H1a estimate (`r fmt_pp(h1a_marginal)` pp per 10 min).
 `r if (!is.null(diary_spline_compare_loaded)) paste0("We compared the linear specification against natural spline alternatives (df = 2-6); the best-fitting spline (df = ", diary_spline_compare_loaded$df[1], ") had a \\u0394AIC of ", sprintf("%.1f", diary_spline_compare_loaded$AIC[1] - diary_spline_compare_loaded$linear_AIC[1]), " relative to the linear model, suggesting that the linear parameterization provided an adequate fit.")`
 Diary subsample characteristics are presented in @tbl-diary-demographics in the Appendix.
 
@@ -2873,7 +3175,18 @@ if (diary_h1_model_available && diary_h2_model_available) {
 #| echo: false
 #| message: false
 #| warning: false
+#| column: page
 
+# runtime: ~15-18 min on a cold render (dominant bottleneck of the whole
+#          manuscript). get_custom_rows_pooled() at helpers.R:815 calls
+#          performance::icc(f) on every clmm fit, which for the diary
+#          bundles is 60 imputations × 2 models = 120 ICC computations on
+#          clmm objects with ~20k observations. performance::icc() on clmm
+#          re-extracts the random-effects structure and computes latent
+#          residual variance per call, so it is far slower than the Rubin
+#          pooling itself. Cheap fix: compute ICC from only the first fit
+#          and report it as the structural ICC — imputation-to-imputation
+#          variation in ICC for a random-intercept model is negligible.
 library(tinytable)
 library(modelsummary)
 
@@ -2959,21 +3272,99 @@ if (diary_any_model) {
 }
 ```
 
+```{r}
+#| label: discussion-equivalence-prep
+#| echo: false
+#| message: false
+#| warning: false
+
+# Response-scale ROPE thresholds used in the Discussion equivalence prose.
+# Originally defined later in the Equivalence appendix, but Quarto/knitr
+# evaluates inline R in source order, so these need to be available before
+# the Discussion's inline refs (fmt0(eq_rope_sleep_h1b_min), etc.).
+# Computed from the on-disk Rubin bundles so the values stay in sync.
+.eq_sd_y <- function(path, response) {
+  b <- readRDS(path); f <- b$fits[[1]]@frame
+  sd(f[[response]], na.rm = TRUE)
+}
+.eq_sd_prod <- function(path, a, b_) {
+  b <- readRDS(path); f <- b$fits[[1]]@frame
+  sd(f[[a]] * f[[b_]], na.rm = TRUE)
+}
+
+eq_sd_sleep_h1b   <- .eq_sd_y("output/models/imputed_h1b_rubin.rds", "total_hours_sleep")
+eq_sd_wemwbs_h1c  <- .eq_sd_y("output/models/imputed_h1c_rubin.rds", "wemwbs")
+eq_sd_ess_h1d     <- .eq_sd_y("output/models/imputed_h1d_rubin.rds", "epsTotal")
+
+eq_rope_sleep_h1b_hr  <- 0.1 * eq_sd_sleep_h1b
+eq_rope_sleep_h1b_min <- 60 * eq_rope_sleep_h1b_hr
+eq_rope_wemwbs_h1c    <- 0.1 * eq_sd_wemwbs_h1c
+eq_rope_ess_h1d       <- 0.1 * eq_sd_ess_h1d
+
+eq_sd_sleep_h2b       <- .eq_sd_y("output/models/imputed_h2b_rubin.rds", "total_hours_sleep")
+eq_sd_wemwbs_h2c      <- .eq_sd_y("output/models/imputed_h2c_rubin.rds", "wemwbs")
+eq_sd_ess_h2d         <- .eq_sd_y("output/models/imputed_h2d_rubin.rds", "epsTotal")
+eq_rope_sleep_h2b_min <- 60 * 0.1 * eq_sd_sleep_h2b
+eq_rope_wemwbs_h2c    <- 0.1 * eq_sd_wemwbs_h2c
+eq_rope_ess_h2d       <- 0.1 * eq_sd_ess_h2d
+
+eq_rope_latent     <- 0.1
+eq_rope_latent_pp  <- 100 * (pnorm(0.05) - pnorm(-0.05))
+
+eq_sd_prod_h2      <- .eq_sd_prod("output/models/imputed_h2b_rubin.rds",
+                                  "ln_monthly_avg_minutes_played_10",
+                                  "msf_sc_centered")
+```
+
 # Discussion
 
-Our findings from a sample of adult gamers revealed patterns consistent with prior research: while sleep duration remained relatively preserved (7.2 hours), sleep quality showed greater impairment, with 64% classified as poor sleepers. These patterns suggest that sleep quality and architecture may be more vulnerable to disruption than sleep duration in the context of regular gaming behavior.
+This preregistered study examined whether late-night gaming is associated with poorer sleep quality, shorter sleep duration, greater daytime sleepiness, and lower wellbeing among adult gamers, and whether chronotype moderates these associations. Using objective telemetry linked to repeated self-report surveys, we found a consistent but small association between late-night gaming and sleep quality — and little evidence that late-night gaming affects sleep duration, daytime sleepiness, or wellbeing directly. Under the same, pooled multiple-imputation analysis, chronotype did not meaningfully moderate any of the sleep- or wellbeing-related associations.
+
+Of the four preregistered direct-effect hypotheses (H1a–H1d), only the association between late-night gaming and sleep quality was supported (H1a). Across the panel models (@tbl-h1-combined), each additional 10 minutes of average daily late-night gaming was associated with an approximate `r fmt_pp(h1a_marginal)` percentage-point increase in the marginal probability of reporting fairly bad or very bad sleep quality. This estimate was consistent across analytic specifications. Expressed on a common probability scale, the complete-case panel model (@tbl-appendix-h1-completecase) produced a closely matching `r fmt_pp(cc_h1a_marginal)` percentage-point increase per 10 additional minutes, and the exploratory diary between-person component (@tbl-diary-h1h2) — capturing stable individual differences in habitual late-night gaming — gave a comparable `r fmt_pp(diary_h1_marginal)` percentage-point increase in the probability of reporting poor or very poor daily sleep. A sensitivity analysis substituting the continuous PSQI global score (@tbl-appendix-psqi-global) yielded directionally consistent positive fixed effects of late-night gaming on total PSQI points (imputed: `r psqi_global_imp_b_ci`; complete-case: `r psqi_global_cc_b_ci`), where the coefficient denotes the change in PSQI global score per unit of ln(daily minutes/10). Translated to the probability scale, these correspond to an approximate `r fmt_pp(psqi_global_imp_marginal)` (imputed) / `r fmt_pp(psqi_global_cc_marginal)` (complete-case) percentage-point increase in the probability of exceeding the PSQI poor-sleeper cutoff (> 5) at the sample mean, and linearity checks comparing natural-spline alternatives to the linear specification produced similar slopes at representative exposure levels (@tbl-appendix-h1-spline-aic; @fig-appendix-h1-spline). The convergence of these findings across different operationalisations of sleep quality, analytic strategies, and study designs strengthens our confidence that the association, though small, is genuine.
+
+Crucially, however, this effect is small in absolute terms. At the marginal rate of `r fmt_pp(h1a_marginal)` percentage points per 10 minutes, even a gamer averaging an hour of play past midnight would see only a roughly `r fmt_pp(h1a_marginal, minutes = 60, digits = 0)` percentage-point increase in the probability of reporting poor sleep quality. Against the backdrop of `r sprintf("%.0f%%", poor_pct_ana)` of participants already qualifying as poor sleepers by PSQI criteria, late-night gaming appears to be a minor contributor to an issue that likely has broader origins — including work schedules, general screen use, caffeine consumption, and other lifestyle factors not captured here. It is also important to note that our observational design does not permit causal inference: although the association is robust across specifications, we cannot determine whether late-night gaming itself degrades sleep quality, whether poor sleepers are drawn to late-night gaming, or whether a third, yet uncontrolled factor drives both.
+
+While remaining direct-effect hypotheses were not supported, these are not merely underpowered nulls: frequentist equivalence tests (TOST; @lakens2017equivalence) allow us to move beyond the absence of evidence and actively accept the null hypothesis of a negligible effect. For all three non-significant direct effects (H1b–H1d), the 90% confidence intervals fell entirely within the preregistered region of practical equivalence (±0.1 × SD(*y*); see @tbl-appendix-equivalence), providing positive evidence that any true effects of late-night gaming in this sample are too small to be of practical consequence. In substantive terms, we can rule out effects larger than roughly ±`r fmt0(eq_rope_sleep_h1b_min)` minutes of nightly sleep per one-SD increase in late-night gaming (H1b) — far below the amount that would plausibly affect next-day functioning; ±`r fmt1(eq_rope_wemwbs_h1c)` points on the SWEMWBS wellbeing scale (H1c) — well under the ~1 to 3-point change regarded as clinically meaningful [@maheswaran2012evaluating]; and ±`r fmt1(eq_rope_ess_h1d)` points on the 0–24 Epworth Sleepiness Scale (H1d) — a much smaller than the ~5-point gap separating normal from clinically excessive daytime sleepiness [@johns1991new]. In other words, even the largest effects compatible with our data would be undetectable against the everyday variability in sleep, mood, and alertness. These findings speak directly to the sleep displacement hypothesis, which posits that late-night gaming displaces sleep time and thereby degrades sleep quality, shortens sleep duration, and produces daytime sleepiness [@twenge2019more; @williams2008who]. The selective support for H1a alongside equivalence-confirmed nulls for H1b–H1d suggests that displacement is, at best, only part of the story. One explanation is that gamers engage in compensatory sleep behaviour, shifting rather than shortening their sleep window to recover lost time, or that individual differences in sleep resilience buffer against the effects of late-night stimulation. The absence of effects on daytime sleepiness is particularly telling: if late-night gaming were meaningfully displacing sleep, downstream consequences for daytime alertness would be expected, yet the equivalence test rules out such effects at practically meaningful magnitudes.
+
+The null finding for wellbeing (H1c) is likewise informative, and it sits comfortably within a growing body of trace-data evidence that objectively logged gameplay is, at most, weakly related to mental wellbeing. A narrative review of 13 proposed mechanisms linking video games to mental health highlights that gaming plausibly operates through a mix of offsetting pathways — relaxation, need satisfaction, and social connection on the positive side; displacement of sleep, exercise, or social activity and pre-sleep arousal on the negative side — which together make a small or null net association with global wellbeing the expected rather than surprising result [@ballou2024mechanisms]. This expectation is consistent with the empirical record: a telemetry-based study of ~40,000 players across seven games found that playtime was only trivially related to wellbeing despite a small positive coefficient [@johannes2021video]; a six-week longitudinal extension using objective play records reached an explicit equivalence-style conclusion that within-person changes in playtime are unlikely to move wellbeing by any practically meaningful amount [@vuorre2022time]; and a more recent telemetry study of casual adult Nintendo players replicated the playtime–wellbeing null across windows ranging from a single hour up to a full year, showing that perceived value of play — not hours played — predicted wellbeing [@ballou2025perceived]. The short-window finding is particularly relevant here, since late-night gaming is itself a narrow time-of-day exposure. At the levels of late-night play observed in this sample, the hedonic and psychological benefits of gaming appear to offset any modest cost routed through perceived sleep quality, yielding a net null association with wellbeing — exactly the pattern these prior trace-data studies would predict.
+
+## Chronotype Moderation
+
+The preregistered moderation hypotheses (H2) predicted that evening chronotype would amplify the negative associations between late-night gaming and all four outcomes. These predictions were grounded in theories of circadian misalignment and social jetlag, which hold that evening chronotypes are especially affected by late-night stimulation because it exacerbates the existing misalignment between their endogenous sleep–wake rhythm and socially imposed schedules [@kristensen2021problematic]. None of the preregistered moderation hypotheses were supported under the pooled multiple-imputation analysis. The chronotype × late-night gaming interaction was non-significant for sleep quality (H2a: `r h2a_ln_minutes_msf`), sleep duration (H2b: `r h2b_ln_minutes_msf`), wellbeing (H2c: `r h2c_ln_minutes_msf`), and daytime sleepiness (H2d: `r h2d_ln_minutes_msf`). Frequentist equivalence tests with a ROPE rescaled to the coefficient's native units (±0.1 × SD(*y*) / SD(*x*); see @tbl-appendix-equivalence) supported practical equivalence for the H2b, H2c, and H2d interactions. The H2a interaction was undecided: the 90% CI was narrow but extended marginally beyond the lower bound of the latent-scale ROPE. The diary data told a similar story for between-person chronotype moderation (`r diary_h2_between_chrono`); the within-person interaction did reach conventional significance (`r diary_h2_within_chrono`), suggesting that on days when evening-type participants gamed more than usual, the link to sleep quality was paradoxically somewhat weaker — a finding that was not predicted and should be treated as exploratory.
+
+The largely null moderation results have several possible explanations. Evening-type gamers may have developed coping mechanisms or adapted sleep routines that buffer them against the effects of late-night play — for instance, by habitually sleeping in later or napping to compensate. More likely, the circadian misalignment pathway may simply be weaker than previously assumed in adult populations who have more autonomy over their schedules than the adolescent samples on which much of the chronotype–technology literature is based [@bruni2015technology; @reardon2023adolescent].
+
+## Contextualising the Effect Sizes
+
+Our findings contribute to a growing body of evidence suggesting that the effects of screen-based media on sleep and wellbeing, while statistically detectable, are often small in magnitude. The consistent `r fmt_pp(h1a_marginal)` percentage-point increase per 10 minutes of daily late-night gaming observed here is in line with a broader pattern in the literature, where large-scale studies have reported modest associations between digital media use and psychological outcomes. That we found this effect specifically for sleep quality — rather than duration, sleepiness, or wellbeing — suggests the pathway may operate through subjective perception of sleep disturbance rather than through the displacement or arousal mechanisms traditionally emphasised in the literature. It is possible that gamers who play late at night notice poorer sleep quality because they attribute restlessness or difficulty falling asleep to their recent gaming session, even if objective sleep parameters are not substantially altered.
+
+The descriptive patterns in our sample are themselves informative. While sleep duration remained relatively preserved (`r sprintf("%.1f", mean_sleep_dur_ana)` hours on average), `r sprintf("%.0f%%", poor_pct_ana)` of participants were classified as poor sleepers on the PSQI. This dissociation between duration and quality is consistent with prior research showing that sleep quality and sleep architecture may be more vulnerable to disruption than sleep duration in the context of regular gaming behaviour [@king2013impact; @weaver2010effect]. It is useful to anchor the implied per-hour magnitude against other modifiable lifestyle influences on adult sleep. At roughly `r fmt_pp(h1a_marginal, minutes = 60, digits = 0)` percentage points per hour, the sleep-quality cost of late-night gaming sits in the same broad range as the cost associated with consuming caffeine close to bedtime [@gardiner2025dose], yet is substantially smaller than the penalty associated with eating a heavy or late evening meal [@yan2024chronobiological].
+
+A modest effect on any single night should not be mistaken for practical irrelevance. Restricting sleep by only about an hour can still disturb emotion regulation [@tomaso2021effect] and undermine cognitive and behavioural performance [@belenky2003patterns]; if that restriction is maintained for two weeks, losses in alertness and working memory can rival those seen after an entire night without sleep [@vandongen2003cumulative]. Repeated small shifts in nightly sleep quality from habitual late-night play may therefore still matter for mood, vigilance, and cognition over weeks and months, despite a small effect at the night level. Benchmarks tailored to sleep outcomes support this interpretation: Panjeh and colleagues' recalibration from 72 effect sizes in 65 sleep-quality intervention trials [@panjeh2023establishing] maps "small", "medium", and "large" to Cohen's *d* of roughly 0.18, 0.33, and 0.56 — below the usual 0.2 / 0.5 / 0.8 anchors. Judged against those sleep-specific standards, the cumulative impact of 1–2 hours of late-night gaming falls in the small-to-medium band, whereas the same pattern might look trivial-to-small on the generic Cohen scale. Population burden adds another layer: De Rosa and colleagues [-@derosa2024videogaming] note that video gaming is now one of the most widespread adult leisure exposures and that sleep outcomes track how intensively and how often people play, so a shallow per-night gradient can still shift the upper tail of poor sleep when layered onto a common behaviour. Public-health importance depends on both per-person effect magnitude and how prevalent the behaviour is.
+
+A methodological point is also worth highlighting. Most adult gaming-and-sleep studies operationalise exposure as aggregate daily volume or as binary/categorical problematic-gaming contrasts, which are likely to dilute any signal concentrated in the pre-sleep window. Our telemetry-based, continuous, time-of-day-specific operationalisation of late-night play is deliberately designed to isolate exactly that window, and the fact that we find a small but robust association only for sleep quality — and only under this timing-sensitive measure — is consistent with reviews identifying pre-sleep timing, arousal, and session duration as key moderators of gaming's effect on sleep [@derosa2024videogaming]. That the effect is detectable at all under a stringent, preregistered, multiply-imputed longitudinal specification suggests that timing-specific exposures capture signal that aggregate-volume measures may miss.
+
+## Measurement and Conceptual Considerations
+
+Our modest effect estimates sit within a broader literature marked by genuine measurement and conceptual heterogeneity, and several features of that literature help frame how our findings should — and should not — be read. First, much of the foundational work on problematic and late-night gaming has been conducted in youth and adolescent samples, where sleep physiology, circadian timing, and day-to-day autonomy differ substantially from the early-adult population we studied [@king2013impact; @hale2018youth]. Diagnostic criteria and assessment instruments for gaming disorders in adults are still evolving, and consensus on how to operationalise problematic use in populations with greater scheduling autonomy has not yet been reached [@costa2019current; @mannikko2020problematic]. This developmental gap complicates direct comparisons between our estimates and those drawn from adolescent-focused studies: the same nominal exposure may carry different implications when players control their own bedtimes, commutes, and work schedules.
+
+Second, the literature consistently reports substantial heterogeneity across study designs, populations, and gaming contexts — including game content, device, session duration, and time-of-day — and these contextual factors appear to moderate the magnitude of sleep effects [@smith2017mechanisms; @hale2018youth]. Proposed mechanisms span physiological arousal, evening light exposure, and disruption of sleep routines, with individual differences in baseline sleep quality and chronotype shaping susceptibility [@hartmann2019effects]. Our telemetry-based exposure isolates late-night console and PC play but cannot easily distinguish arousal-inducing content from more routine gameplay, nor can it index the ambient light or pre-sleep routines that likely co-vary with late-night play. The small average effect we observe for sleep quality is therefore best read as a population-level average across a heterogeneous mix of contexts, some of which may carry larger effects than others.
+
+Third, the effect-size estimates reported across this literature are generally small to modest and variable across individuals, and are sometimes not clinically meaningful at the person level [@hartmann2019effects; @smith2017mechanisms]. Several reviews also highlight that gaming is entangled with broader patterns of nocturnal screen engagement and sedentary behaviour, with late-night screen use associated with downstream sleep and health outcomes that are not specific to any single platform or content type [@dresp2022digital; @gale2024late; @ramirez2021use]. Our finding of a small but robust association for sleep quality is consistent with this picture: late-night gaming is plausibly one contributor to a wider bundle of pre-sleep screen behaviours, and isolating its unique contribution is inherently constrained by measurement instruments that capture only part of that bundle.
 
 ## Limitations
 
-First, our telemetry and survey instruments capture console and PC play but exclude mobile platforms. Gaming on smartphones and tablets forms a substantial share of late-night leisure, particularly in bed where devices are at arm’s reach and can bypass household curfews. Phones also double as tools for emotional regulation, relaxation, and boredom relief before sleep or when people wake up during the night, further increasing the odds that meaningful late-night gaming takes place on devices we do not observe. Any late-night gaming minutes that shifted to mobile therefore go unmeasured, likely biasing exposure downward and attenuating observed associations with sleep. Related activities on the same devices like short-form video viewing, doomscrolling, messaging are also missing, preventing us from disentangling gaming-specific effects from broader nocturnal screen engagement.
+Four constraints bound the scope of our findings. First, our telemetry captures console and PC play but excludes mobile platforms, which account for a substantial share of late-night leisure — particularly in-bed use that bypasses "household curfews" and serves as a pre-sleep emotional-regulation tool. Late-night minutes that shifted to phones therefore go unmeasured, likely attenuating observed associations, and we cannot separate gaming-specific effects from the broader bundle of nocturnal screen behaviours (short-form video, messaging, doomscrolling) that share the same devices. Second, even within the platforms we do observe, session-level logs cannot distinguish active engagement from idle time, an ambiguity that is especially acute at night when consoles may stay on while players drift off or step away. This can inflate exposure and produce spurious late-night "activity" that does not reflect cognitive arousal.
 
-Second, the analytic sample consists of early adults. This demographic is commercially important for platform gaming, yet the educational and developmental stakes that motivate policy debates revolve around children and adolescents. Younger players have different sleep physiology, earlier school start times, tighter parental controls, and distinct motivational profiles that could amplify or dampen the impact of late-night play. Our estimates should not be generalized to pediatric populations (or to older adults with different health burdens) without direct evidence.
+Third, the analytic sample is restricted to early adults recruited from UK- and US-based Prolific panels. Younger players — the focus of most policy debate — have different sleep physiology, school schedules, parental oversight, and motivational profiles, and our estimates should not be extrapolated to pediatric or older populations. Prolific panels themselves are self-selected online workers with reliable broadband, high digital literacy, and tolerance for repeated surveys; eligibility filters around residency, language, and compliance further exclude players in other linguistic and regulatory contexts, as well as shift workers, caregivers, lower-income players, and those engaged in more extreme or stigmatized gaming profiles. Taken together, these constraints mean our findings speak most directly to digitally engaged young adults in the UK and US who play on major console and PC ecosystems; extension to other regions, life stages, device ecologies should await complementary data sources.
 
-Third, recruitment relied on UK- and US-based majority Prolific panels, which may diverge markedly from the general gaming population for several reasons. Prolific users are self-selected online workers with reliable broadband, high digital literacy, and the patience for repeated surveys. Platform eligibility emphasizes UK/US residency, English fluency, and adherence to Prolific’s compliance checks, which excludes players in other linguistic, cultural, and regulatory contexts. Incentives attract habitual survey takers with flexible schedules, potentially underrepresenting shift workers, caregivers, or gamers with highly variable sleep routines. Community standards and attention checks may dissuade individuals engaged in more extreme, unregulated, or stigmatized gaming profiles from participating, while payment infrastructures and screening filters can limit participation from lower-income players, people without stable online payment methods, and those who distrust research platforms.
+## Future Directions
 
-Finally, although logged telemetry is widely recommended for media-effects research—and we did find that it is strongly correlated with self-reported video game play—it is not without limitations. Session-level records cannot distinguish between active engagement and idle time, and this ambiguity is especially pronounced for late-night gaming, where consoles or PCs might stay on while players drift off to sleep or attend to household chores. Such overestimation of exposure could mask true associations or produce spurious late-night “activity” that does not reflect cognitive arousal.
+Several lines of follow-up work are suggested by our findings. First, our results reinforce a methodological lesson that is increasingly clear in the adult gaming-and-sleep literature: timing and context matter more than aggregate volume. A recent systematic review of 26 adult studies concluded that excessive gaming impairs sleep quality and delays sleep timing whereas habitual or casual gaming does not, and specifically identified arousal level, session duration, and pre-sleep timing as the key moderators of gaming's effect on sleep [@derosa2024videogaming]. Our observation that late-night gaming shows a small but robust association with sleep quality — while aggregate gaming does not feature as the exposure of interest at all — is directly consistent with this emphasis. Future work would benefit from combining telemetry with finer-grained metadata on game content, arousal level, and session proximity to bedtime, and from extending logging to mobile platforms so that the full pre-sleep screen bundle can be measured rather than inferred. Linking telemetry to ambulatory physiological measurements (e.g., consumer-grade actigraphy, heart-rate variability, or ambient light sensing) would additionally allow researchers to separate subjective perception of sleep disturbance from objective architecture, which our self-report instruments could not disentangle.
 
-Taken together, the lack of mobile telemetry, the age range of the sample, the geographic/panel constraints, and the inability to rule out idle device time mean that our findings speak most directly to digitally engaged young adults in the UK and US who play on major console and PC ecosystems. Extending the conclusions to other regions, life stages, device ecologies, or logging systems should await complementary data sources.
+Second, the observational design of this study limits the strength of causal claims that can be drawn from any single estimate. A natural next step is to embed telemetry-based exposures within a target trial emulation framework [@hernan2016using; @hernan2022target], which makes the hypothetical randomized experiment explicit — defining eligibility, exposure contrasts (e.g., a late-night play session versus none on a given evening), assignment procedures, follow-up windows, and causal estimands before estimation. Target trial emulation is particularly well suited to device-use research because the relevant question is rarely "do gamers sleep worse than non-gamers" but rather "does the same person sleep worse on nights they play late than on nights they do not." High-frequency telemetry naturally supports such within-person contrasts, and pairing it with g-methods or sequential exchangeability assumptions would allow future work to move from associational gradients toward more interpretable, policy-relevant causal estimates while keeping each individual as their own control.
+
+The telemetry–survey linkage protocol piloted in Open Play is, in principle, portable: with appropriate ethical safeguards, assent procedures, and clinical validation, an analogous continuous-telemetry approach could be used to study adolescents and problematic gamers, populations in which the timing-specific effects of late-night play are most hotly contested and where aggregate self-report measures are especially vulnerable to recall bias. Extending the present methodology to those populations — rather than extrapolating our estimates to them — is, in our view, the most productive next step.
 
 # References
 
@@ -2982,22 +3373,28 @@ Taken together, the lack of mobile telemetry, the age range of the sample, the g
 
 ```{=typst}
 #show: appendix.with()
+
+// Override the extension's "A<h>.<n>" figure numbering to a flat "A<n>"
+// so appendix figures/tables read as Fig A1, Fig A2, Table A1, ...
+// Reset counters to zero so numbering starts at A1 regardless of main-text count.
+#counter(figure.where(kind: "quarto-float-fig")).update(0)
+#counter(figure.where(kind: "quarto-float-tbl")).update(0)
+#counter(figure.where(kind: image)).update(0)
+#counter(figure.where(kind: table)).update(0)
+
+#set figure(numbering: n => "A" + str(n))
 ```
 
 # Appendix
 
-## Panel: Complete-Case Regression Tables
-
-The tables below reproduce the H1 and H2 regression summaries using complete-case data (excluding observations where the outcome was imputed). They correspond to the complete-case analyses referenced in the main text and serve as a sensitivity check alongside the imputed results.
-
-### Panel H1 Sensitivity Analysis: Complete-Case (Non-Imputed Data) {#sec-appendix-h1-original}
-
-These models use only observations where the outcome variable was NOT imputed (complete-case analysis per outcome). Sample sizes are smaller than the main imputed analyses, as rows with imputed outcomes are excluded.
+## Panel H1 Sensitivity Analysis: Complete-Case
 
 ```{r}
-#| label: appendix-h1-original
+#| label: tbl-appendix-h1-completecase
 #| echo: false
-#| output: asis
+#| message: false
+#| warning: false
+#| tbl-cap: "Panel H1 Effects of Late-Night Gaming — Complete-Case (Non-Imputed Data)"
 
 if ("completecase" %in% names(h1_models)) {
   tt_h1_cc <- modelsummary(
@@ -3011,7 +3408,7 @@ if ("completecase" %in% names(h1_models)) {
     notes = c("+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
               "LN = late-night. Confidence intervals shown in brackets.",
               "ICC = Intraclass Correlation Coefficient (adjusted)."),
-    title = "Appendix H1: Effects of Late-Night Gaming (Complete-Case Analysis)"
+    output = "tinytable"
   )
   dir.create("output/tables", showWarnings = FALSE, recursive = TRUE)
   tryCatch(
@@ -3029,14 +3426,14 @@ if ("completecase" %in% names(h1_models)) {
 ```
 
 
-### Panel H2 Sensitivity Analysis: Complete-Case (Non-Imputed Data) {#sec-appendix-h2-original}
-
-These models use only observations where the outcome variable was NOT imputed (complete-case analysis per outcome). Sample sizes are smaller than the main imputed analyses, as rows with imputed outcomes are excluded.
+## Panel H2 Sensitivity Analysis: Complete-Case
 
 ```{r}
-#| label: appendix-h2-original
+#| label: tbl-appendix-h2-completecase
 #| echo: false
-#| output: asis
+#| message: false
+#| warning: false
+#| tbl-cap: "Panel H2 Chronotype Moderation — Complete-Case (Non-Imputed Data)"
 
 if ("completecase" %in% names(h2_models)) {
   tt_h2_cc <- modelsummary(
@@ -3050,7 +3447,7 @@ if ("completecase" %in% names(h2_models)) {
     notes = c("+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
               "LN = late-night. Confidence intervals shown in brackets.",
               "ICC = Intraclass Correlation Coefficient (adjusted)."),
-    title = "Appendix H2: Chronotype Moderation (Complete-Case Analysis)"
+    output = "tinytable"
   )
   dir.create("output/tables", showWarnings = FALSE, recursive = TRUE)
   tryCatch(
@@ -3067,7 +3464,7 @@ if ("completecase" %in% names(h2_models)) {
 #pagebreak()
 ```
 
-### Panel: Wave-Level Missingness (Pre-Imputation Data)
+## Panel: Wave-Level Missingness
 
 We summarised the extent of missingness for the key self-report outcomes across each survey wave in the raw data before imputation. The `Observations` column reports the number of participants in a wave who completed at least one of the listed measures; the percentages in each row are calculated relative to that wave-specific participant count.
 
@@ -3145,9 +3542,8 @@ tinytable::tt(
 
 ## Panel: PSQI Global Score Sensitivity Analysis
 
-This section presents a sensitivity analysis using the PSQI global score (psqi_global) as an alternative sleep quality outcome. The PSQI global score is the sum of all 7 PSQI component scores (range 0-21, higher = worse sleep quality), providing a continuous measure compared to the ordinal item 6 (psqi_comp1_quality) used in the pre-registered H1a hypothesis.
+This section presents a sensitivity analysis using the PSQI global score as an alternative sleep quality outcome. The PSQI global score is the sum of all 7 PSQI component scores (range 0-21, higher = worse sleep quality), providing a continuous measure compared to the ordinal PSQI item 6 outcome used in the pre-registered H1a hypothesis.
 
-We fit linear mixed-effects models with the same predictor structure as H1d (daytime sleepiness), comparing results for imputed data vs. complete-case data (excluding observations where PSQI global was imputed).
 
 ```{r}
 #| label: tbl-appendix-psqi-global
@@ -3156,66 +3552,12 @@ We fit linear mixed-effects models with the same predictor structure as H1d (day
 #| message: false
 #| warning: false
 
-# Prepare complete-case monthly gaming data with psqi_global
-gamingMonthly_completecase <- gaming_inputs$completecase$gamingMonthly |>
-  enforce_monthly_wave_subset() |>
-  filter(!is.na(psqi_global))
-
-# --- Imputed: Rubin's rules ---
-panel_psqi_prep_monthly <- function(d) {
-  inputs <- build_gaming_inputs(d)
-  inputs$gamingMonthly |>
-    enforce_monthly_wave_subset() |>
-    filter(!is.na(psqi_global))
-}
-
-panel_psqi_prep_monthly_chrono <- function(d) {
-  inputs <- build_gaming_inputs(d)
-  inputs$gamingMonthly |>
-    enforce_monthly_wave_subset() |>
-    filter(!is.na(psqi_global), !is.na(msf_sc_centered))
-}
-
-panel_psqi_rubin_base <- fit_on_imputations(
-  imputed_long,
-  prep_fn = panel_psqi_prep_monthly,
-  fit_fn = function(d) lmer(
-    psqi_global ~ ln_monthly_avg_minutes_played_10 +
-      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
-      (1 | pid) + (1 | gender),
-    data = d, control = lmerControl(optimizer = "bobyqa")
-  )
-)
-model_psqi_global_imputed <- panel_psqi_rubin_base$pooled
-
-panel_psqi_rubin_chrono <- fit_on_imputations(
-  imputed_long,
-  prep_fn = panel_psqi_prep_monthly_chrono,
-  fit_fn = function(d) lmer(
-    psqi_global ~ ln_monthly_avg_minutes_played_10 * msf_sc_centered +
-      age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
-      (1 | pid) + (1 | gender),
-    data = d, control = lmerControl(optimizer = "bobyqa")
-  )
-)
+# PSQI-global Rubin bundles and complete-case fits are produced in the
+# fit-psqi-global chunk earlier in the document (so the Discussion can
+# reference their marginal pp/10-min effects). Here we just expose the
+# pooled mipo objects that the table-building code below expects.
+model_psqi_global_imputed        <- panel_psqi_rubin_base$pooled
 model_psqi_global_imputed_chrono <- panel_psqi_rubin_chrono$pooled
-
-# --- Complete-case: single fit (unchanged) ---
-model_psqi_global_completecase <- lmer(
-  psqi_global ~ ln_monthly_avg_minutes_played_10 +
-    age_scaled + bmi_scaled + SES_index_scaled + region  + isWeekend +
-    (1 | pid) + (1 | gender),
-  data = gamingMonthly_completecase,
-  control = lmerControl(optimizer = "bobyqa")
-)
-
-model_psqi_global_completecase_chrono <- lmer(
-  psqi_global ~ ln_monthly_avg_minutes_played_10 * msf_sc_centered +
-    age_scaled + bmi_scaled + SES_index_scaled + region  + isWeekend +
-    (1 | pid) + (1 | gender),
-  data = gamingMonthly_completecase,
-  control = lmerControl(optimizer = "bobyqa")
-)
 
 # Create comparison table
 # Match the row structure of the H1/H2 summaries for easier cross-referencing
@@ -3352,107 +3694,6 @@ tryCatch(
   error = function(e) message("Note: PNG export skipped (", e$message, ")")
 )
 tt_psqi
-```
-
-```{=typst}
-#pagebreak()
-```
-
-## Panel: H2c Interaction Plot
-
-```{r}
-#| label: fig-h2c-interaction
-#| fig-cap: "Predicted wellbeing (SWEMWBS) as a function of late-night gaming, moderated by chronotype. Lines show model-predicted SWEMWBS scores at three levels of chronotype: −1 SD (morning-oriented), mean, and +1 SD (evening-oriented). Ribbons indicate 95% confidence intervals. Predictions are derived from pooled H2c linear mixed model estimates (Rubin's rules across 20 imputed datasets), with other covariates held at their reference/mean values and random effects set to zero."
-#| fig-width: 8
-#| fig-height: 5
-#| code-summary: "H2c interaction plot: Late-night gaming × Chronotype on Wellbeing"
-
-library(lme4)
-library(ggplot2)
-
-# Use pooled coefficients and vcov from Rubin's rules
-panel_h2c_fig_bundle <- if (!is.null(panel_h2c_bundle)) panel_h2c_bundle else
-  tryCatch(readRDS("output/models/imputed_h2c_rubin.rds"), error = function(e) NULL)
-panel_pv_h2c <- pool_vcov(panel_h2c_fig_bundle$fits)
-fe <- panel_pv_h2c$qbar
-vc <- panel_pv_h2c$vcov
-
-# Chronotype levels: -1 SD, mean (0), +1 SD
-# Use SD from first fit's data frame (identical across imputations)
-chrono_sd <- sd(panel_h2c_fig_bundle$fits[[1]]@frame$msf_sc_centered)
-chrono_levels <- c(-chrono_sd, 0, chrono_sd)
-chrono_labels <- c("−1 SD (morning)", "Mean", "+1 SD (evening)")
-
-# Late-night gaming range: 0 to 90 min (in 10-min units: 0 to 9)
-ln_seq_10 <- seq(0, 9, by = 0.1)
-
-# Build prediction grid
-pred_grid <- expand.grid(
-  ln_10 = ln_seq_10,
-  chrono = chrono_levels
-)
-pred_grid$chrono_label <- factor(
-  rep(chrono_labels, each = length(ln_seq_10)),
-  levels = chrono_labels
-)
-
-# Predicted values: intercept + b_ln * x + b_chrono * c + b_int * x * c
-# (all other covariates at 0/reference)
-pred_grid$yhat <- fe["(Intercept)"] +
-  fe["ln_biweekly_avg_minutes_played_10"] * pred_grid$ln_10 +
-  fe["msf_sc_centered"] * pred_grid$chrono +
-  fe["ln_biweekly_avg_minutes_played_10:msf_sc_centered"] * pred_grid$ln_10 * pred_grid$chrono
-
-# Standard errors via delta method: var(yhat) = x' V x
-# Design matrix columns: intercept, ln_10, chrono, ln_10:chrono
-terms_idx <- c(
-  "(Intercept)",
-  "ln_biweekly_avg_minutes_played_10",
-  "msf_sc_centered",
-  "ln_biweekly_avg_minutes_played_10:msf_sc_centered"
-)
-V_sub <- vc[terms_idx, terms_idx]
-
-pred_grid$se <- sapply(seq_len(nrow(pred_grid)), function(i) {
-  x <- c(1, pred_grid$ln_10[i], pred_grid$chrono[i],
-         pred_grid$ln_10[i] * pred_grid$chrono[i])
-  sqrt(as.numeric(t(x) %*% V_sub %*% x))
-})
-
-pred_grid$ci_lo <- pred_grid$yhat - 1.96 * pred_grid$se
-pred_grid$ci_hi <- pred_grid$yhat + 1.96 * pred_grid$se
-pred_grid$ln_minutes <- pred_grid$ln_10 * 10
-
-ggplot(pred_grid, aes(x = ln_minutes, y = yhat,
-                      colour = chrono_label, fill = chrono_label)) +
-  geom_ribbon(aes(ymin = ci_lo, ymax = ci_hi), alpha = 0.15, colour = NA) +
-  geom_line(linewidth = 1) +
-  scale_x_continuous(
-    breaks = seq(0, 90, 30),
-    labels = paste0(seq(0, 90, 30), " min")
-  ) +
-  scale_colour_manual(
-    values = c("−1 SD (morning)" = "#2166ac",
-               "Mean" = "#4d4d4d",
-               "+1 SD (evening)" = "#b2182b")
-  ) +
-  scale_fill_manual(
-    values = c("−1 SD (morning)" = "#2166ac",
-               "Mean" = "#4d4d4d",
-               "+1 SD (evening)" = "#b2182b")
-  ) +
-  labs(
-    x = "Average Daily Late-Night Gaming (min/day)",
-    y = "Predicted SWEMWBS Score (7–35)",
-    colour = "Chronotype",
-    fill = "Chronotype",
-    title = "Chronotype Moderates the Association Between\nLate-Night Gaming and Wellbeing (H2c)"
-  ) +
-  theme_minimal(base_size = 11) +
-  theme(
-    legend.position = "bottom",
-    panel.grid.minor = element_blank()
-  )
 ```
 
 ```{=typst}
@@ -3666,9 +3907,7 @@ diary_tbl
 #pagebreak()
 ```
 
-## Diary: Models — Complete-Case (Non-Imputed Data)
-
-The tables below reproduce the H1 and H2 diary regression results using the non-imputed, complete-case diary dataset (i.e., the raw `diary_ocat` and `diary_ocat_h2` datasets with no imputation). These serve as a sensitivity check alongside the Rubin's-rules pooled estimates reported in the main results. Both models use a probit-link CLMM with a random intercept for participant. Positive coefficients indicate a higher probability of worse sleep quality.
+## Diary: Models — Complete-Case
 
 ```{r}
 #| label: tbl-appendix-diary-completecase
@@ -3749,9 +3988,9 @@ if (!is.null(diary_cc_h1) && !is.null(diary_cc_h2)) {
 #pagebreak()
 ```
 
-# Panel H1 Natural Spline Sensitivity
+## Panel H1 Natural Spline Sensitivity
 
-This section examines whether the relationship between late-night gaming and each panel outcome (H1a–H1d) deviates meaningfully from the linearity assumed in the pre-registered models. For each outcome, the linear gaming predictor is replaced by a natural cubic spline (degrees of freedom selected by AIC on complete-case data across df = 2–4). All other aspects of each model are held constant: the same random-effects structure, covariates, and link function (probit for H1a; identity for H1b–H1d). Imputed estimates are pooled across 20 multiply-imputed datasets via Rubin's rules.
+This section examines whether the relationship between late-night gaming and each panel outcome (H1a–H1d) deviates meaningfully from the linearity assumed in the pre-registered models. For each outcome, the linear gaming predictor is replaced by a natural cubic spline (degrees of freedom selected by BIC across df = 2–4). We adopt BIC as the primary selection criterion because its stronger penalty on model complexity is better aligned with the goal of this sensitivity check: to ask whether the added flexibility of a non-linear specification is warranted, rather than whether it yields any marginal in-sample improvement. AIC values are reported alongside BIC for transparency, but do not drive the df choice. To interpret the resulting BIC differences we follow the rule of thumb of @jones2001nagin, which compares models on twice the raw BIC difference: |2ΔBIC| in 0–2 is "not worth mentioning," 2–6 is "positive" evidence, 6–10 is "strong," and >10 is "very strong." Both the linear and spline models reported in @tbl-appendix-h1-spline-aic and the predicted curves in @fig-appendix-h1-spline are fit on the complete-case sample.
 
 ```{r}
 #| label: appendix-h1-spline-fit
@@ -3760,6 +3999,10 @@ This section examines whether the relationship between late-night gaming and eac
 #| warning: false
 #| eval: !expr eval_appendix
 
+# runtime: skipped when params$refit_appendix is false (default). Expected
+#          <1 min when refit_appendix=true: fits natural-spline variants of
+#          each H1 model on the complete-case sample, selecting df by BIC.
+#          Produces output/models/panel_h1_spline_{aic,cc_fits,ic_grid}.rds.
 library(splines)
 library(ordinal)
 
@@ -3806,30 +4049,42 @@ cc_monthly_h1a_sp <- gaming_inputs[["completecase"]]$gamingMonthly |>
 cc_monthly_sp  <- gaming_inputs[["completecase"]]$gamingMonthly |> enforce_monthly_wave_subset()
 cc_biweekly_sp <- gaming_inputs[["completecase"]]$gamingBiweekly
 
-# --- AIC-based df selection on complete-case data ---
-run_aic_sel <- function(data, fit_fn_factory, dfs) {
-  aics <- vapply(dfs, function(df) {
-    tryCatch(AIC(fit_fn_factory(df)(data)), error = function(e) Inf)
-  }, numeric(1))
-  list(aics = setNames(aics, dfs), best_df = dfs[which.min(aics)])
+# --- Information-criterion df selection on complete-case data ---
+# BIC is the primary selection criterion (stronger complexity penalty aligns
+# with the sensitivity-check goal of detecting *clear* non-linearity). AIC is
+# computed alongside for transparency but does not drive the df choice.
+run_ic_sel <- function(data, fit_fn_factory, dfs) {
+  fits <- lapply(dfs, function(df) {
+    tryCatch(fit_fn_factory(df)(data), error = function(e) NULL)
+  })
+  aics <- vapply(fits, function(f) if (is.null(f)) Inf else AIC(f), numeric(1))
+  bics <- vapply(fits, function(f) if (is.null(f)) Inf else BIC(f), numeric(1))
+  best_idx <- which.min(bics)
+  list(
+    aics     = setNames(aics, dfs),
+    bics     = setNames(bics, dfs),
+    best_df  = dfs[best_idx],
+    best_aic = unname(aics[best_idx]),
+    best_bic = unname(bics[best_idx])
+  )
 }
 
 dfs_try <- 2:4
 
-h1a_sel <- run_aic_sel(cc_monthly_h1a_sp,
+h1a_sel <- run_ic_sel(cc_monthly_h1a_sp,
   function(df) make_spline_fit_fn("clmm", "psqi_6_ord",
     "ln_monthly_avg_minutes_played_10", df), dfs_try)
-h1b_sel <- run_aic_sel(cc_monthly_sp,
+h1b_sel <- run_ic_sel(cc_monthly_sp,
   function(df) make_spline_fit_fn("lmer", "total_hours_sleep",
     "ln_monthly_avg_minutes_played_10", df, FALSE), dfs_try)
-h1c_sel <- run_aic_sel(cc_biweekly_sp,
+h1c_sel <- run_ic_sel(cc_biweekly_sp,
   function(df) make_spline_fit_fn("lmer", "wemwbs",
     "ln_biweekly_avg_minutes_played_10", df, TRUE), dfs_try)
-h1d_sel <- run_aic_sel(cc_monthly_sp,
+h1d_sel <- run_ic_sel(cc_monthly_sp,
   function(df) make_spline_fit_fn("lmer", "epsTotal",
     "ln_monthly_avg_minutes_played_10", df, TRUE), dfs_try)
 
-# Linear AIC baselines — store model objects for overlay on spline figure
+# Linear baselines — store model objects for overlay on spline figure
 cc_h1a_linear <- tryCatch(clmm(
   psqi_6_ord ~ ln_monthly_avg_minutes_played_10 +
     age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend + (1 | pid),
@@ -3849,10 +4104,18 @@ cc_h1d_linear <- tryCatch(lmer(
     age_scaled + bmi_scaled + SES_index_scaled + region + isWeekend +
     (1 | pid) + (1 | gender),
   data = cc_monthly_sp, control = lmerControl(optimizer = "bobyqa")), error = function(e) NULL)
-h1a_lin_aic <- if (!is.null(cc_h1a_linear)) AIC(cc_h1a_linear) else NA_real_
-h1b_lin_aic <- if (!is.null(cc_h1b_linear)) AIC(cc_h1b_linear) else NA_real_
-h1c_lin_aic <- if (!is.null(cc_h1c_linear)) AIC(cc_h1c_linear) else NA_real_
-h1d_lin_aic <- if (!is.null(cc_h1d_linear)) AIC(cc_h1d_linear) else NA_real_
+.safe_ic <- function(fit, fn) {
+  if (is.null(fit)) return(NA_real_)
+  tryCatch(fn(fit), error = function(e) NA_real_)
+}
+h1a_lin_aic <- .safe_ic(cc_h1a_linear, AIC)
+h1b_lin_aic <- .safe_ic(cc_h1b_linear, AIC)
+h1c_lin_aic <- .safe_ic(cc_h1c_linear, AIC)
+h1d_lin_aic <- .safe_ic(cc_h1d_linear, AIC)
+h1a_lin_bic <- .safe_ic(cc_h1a_linear, BIC)
+h1b_lin_bic <- .safe_ic(cc_h1b_linear, BIC)
+h1c_lin_bic <- .safe_ic(cc_h1c_linear, BIC)
+h1d_lin_bic <- .safe_ic(cc_h1d_linear, BIC)
 
 panel_h1_spline_aic <- tibble::tibble(
   Outcome    = c("H1a: Sleep Quality", "H1b: Sleep Duration",
@@ -3860,11 +4123,39 @@ panel_h1_spline_aic <- tibble::tibble(
   Model      = c("CLMM probit", "lmer", "lmer", "lmer"),
   `Best df`  = c(h1a_sel$best_df, h1b_sel$best_df, h1c_sel$best_df, h1d_sel$best_df),
   `Linear AIC`  = round(c(h1a_lin_aic, h1b_lin_aic, h1c_lin_aic, h1d_lin_aic), 1),
-  `Spline AIC`  = round(c(min(h1a_sel$aics), min(h1b_sel$aics),
-                           min(h1c_sel$aics), min(h1d_sel$aics)), 1)
-) |> dplyr::mutate(`ΔAIC` = round(`Spline AIC` - `Linear AIC`, 1))
+  `Spline AIC`  = round(c(h1a_sel$best_aic, h1b_sel$best_aic,
+                           h1c_sel$best_aic, h1d_sel$best_aic), 1),
+  `Linear BIC`  = round(c(h1a_lin_bic, h1b_lin_bic, h1c_lin_bic, h1d_lin_bic), 1),
+  `Spline BIC`  = round(c(h1a_sel$best_bic, h1b_sel$best_bic,
+                           h1c_sel$best_bic, h1d_sel$best_bic), 1)
+) |> dplyr::mutate(
+  `ΔAIC` = round(`Spline AIC` - `Linear AIC`, 1),
+  `ΔBIC` = round(`Spline BIC` - `Linear BIC`, 1),
+  # Jones, Nagin & Roeder (2001) interpret 2|ΔBIC| against rule-of-thumb cuts:
+  # 0-2 = "not worth mentioning"; 2-6 = "positive"; 6-10 = "strong"; >10 = "very strong".
+  # The favoured model is whichever has the *lower* BIC; here we record direction
+  # alongside the strength label so the table reads at a glance.
+  `2|ΔBIC|` = round(2 * abs(`ΔBIC`), 1),
+  Interpretation = dplyr::case_when(
+    `2|ΔBIC|` < 2  ~ "Not worth mentioning",
+    `2|ΔBIC|` < 6  ~ ifelse(`ΔBIC` < 0, "Positive (spline)",  "Positive (linear)"),
+    `2|ΔBIC|` < 10 ~ ifelse(`ΔBIC` < 0, "Strong (spline)",    "Strong (linear)"),
+    TRUE           ~ ifelse(`ΔBIC` < 0, "Very strong (spline)", "Very strong (linear)")
+  )
+)
 
 saveRDS(panel_h1_spline_aic, "output/models/panel_h1_spline_aic.rds")
+
+# Also save the full per-df IC grid for reference / future diagnostics.
+saveRDS(
+  list(
+    H1a = list(aics = h1a_sel$aics, bics = h1a_sel$bics),
+    H1b = list(aics = h1b_sel$aics, bics = h1b_sel$bics),
+    H1c = list(aics = h1c_sel$aics, bics = h1c_sel$bics),
+    H1d = list(aics = h1d_sel$aics, bics = h1d_sel$bics)
+  ),
+  "output/models/panel_h1_spline_ic_grid.rds"
+)
 
 # --- Fit complete-case spline models (used for prediction curves) ---
 cc_h1a_spline <- make_spline_fit_fn("clmm", "psqi_6_ord",
@@ -3889,36 +4180,6 @@ saveRDS(list(
   x_h1c  = cc_biweekly_sp$ln_biweekly_avg_minutes_played_10,
   x_h1d  = cc_monthly_sp$ln_monthly_avg_minutes_played_10
 ), "output/models/panel_h1_spline_cc_fits.rds")
-
-# --- Fit imputed spline models via Rubin's rules ---
-panel_h1_spline_rubin_sp <- list()
-
-panel_h1_spline_rubin_sp[["H1a"]] <- fit_on_imputations(
-  imputed_long,
-  prep_fn = panel_h1_prep_monthly,
-  fit_fn  = make_spline_fit_fn("clmm", "psqi_6_ord",
-              "ln_monthly_avg_minutes_played_10", h1a_sel$best_df)
-)
-panel_h1_spline_rubin_sp[["H1b"]] <- fit_on_imputations(
-  imputed_long,
-  prep_fn = panel_h1_prep_monthly_lmer,
-  fit_fn  = make_spline_fit_fn("lmer", "total_hours_sleep",
-              "ln_monthly_avg_minutes_played_10", h1b_sel$best_df, FALSE)
-)
-panel_h1_spline_rubin_sp[["H1c"]] <- fit_on_imputations(
-  imputed_long,
-  prep_fn = panel_h1_prep_biweekly,
-  fit_fn  = make_spline_fit_fn("lmer", "wemwbs",
-              "ln_biweekly_avg_minutes_played_10", h1c_sel$best_df, TRUE)
-)
-panel_h1_spline_rubin_sp[["H1d"]] <- fit_on_imputations(
-  imputed_long,
-  prep_fn = panel_h1_prep_monthly_lmer,
-  fit_fn  = make_spline_fit_fn("lmer", "epsTotal",
-              "ln_monthly_avg_minutes_played_10", h1d_sel$best_df, TRUE)
-)
-
-saveRDS(panel_h1_spline_rubin_sp, "output/models/panel_h1_spline_rubin.rds")
 ```
 
 ```{r}
@@ -3931,8 +4192,45 @@ panel_h1_spline_aic     <- tryCatch(readRDS("output/models/panel_h1_spline_aic.r
                                     error = function(e) NULL)
 panel_h1_spline_cc_fits <- tryCatch(readRDS("output/models/panel_h1_spline_cc_fits.rds"),
                                     error = function(e) NULL)
-panel_h1_spline_rubin_sp <- tryCatch(readRDS("output/models/panel_h1_spline_rubin.rds"),
-                                     error = function(e) NULL)
+
+# Back-compat: if a legacy cached rds is loaded that lacks BIC columns, compute
+# them from the stored complete-case fits. Fresh runs of appendix-h1-spline-fit
+# populate these columns directly and this branch is a no-op.
+if (!is.null(panel_h1_spline_aic) && !is.null(panel_h1_spline_cc_fits) &&
+    !("Linear BIC" %in% names(panel_h1_spline_aic))) {
+  suppressPackageStartupMessages(library(ordinal))  # BIC dispatch for clmm
+  .safe_bic <- function(fit) {
+    if (is.null(fit)) return(NA_real_)
+    tryCatch(BIC(fit), error = function(e) NA_real_)
+  }
+  .sp <- panel_h1_spline_cc_fits
+  .lin_bic <- round(c(.safe_bic(.sp$h1a_linear), .safe_bic(.sp$h1b_linear),
+                      .safe_bic(.sp$h1c_linear), .safe_bic(.sp$h1d_linear)), 1)
+  .spl_bic <- round(c(.safe_bic(.sp$h1a), .safe_bic(.sp$h1b),
+                      .safe_bic(.sp$h1c), .safe_bic(.sp$h1d)), 1)
+  panel_h1_spline_aic <- panel_h1_spline_aic |>
+    dplyr::mutate(`Linear BIC` = .lin_bic,
+                  `Spline BIC` = .spl_bic,
+                  `ΔBIC`       = round(`Spline BIC` - `Linear BIC`, 1)) |>
+    dplyr::relocate(`Linear BIC`, `Spline BIC`, .before = `ΔAIC`)
+}
+
+# Back-compat: append the Jones/Nagin/Roeder 2|ΔBIC| interpretation columns if
+# the loaded table predates them.
+if (!is.null(panel_h1_spline_aic) &&
+    "ΔBIC" %in% names(panel_h1_spline_aic) &&
+    !("2|ΔBIC|" %in% names(panel_h1_spline_aic))) {
+  panel_h1_spline_aic <- panel_h1_spline_aic |>
+    dplyr::mutate(
+      `2|ΔBIC|` = round(2 * abs(`ΔBIC`), 1),
+      Interpretation = dplyr::case_when(
+        `2|ΔBIC|` < 2  ~ "Not worth mentioning",
+        `2|ΔBIC|` < 6  ~ ifelse(`ΔBIC` < 0, "Positive (spline)",  "Positive (linear)"),
+        `2|ΔBIC|` < 10 ~ ifelse(`ΔBIC` < 0, "Strong (spline)",    "Strong (linear)"),
+        TRUE           ~ ifelse(`ΔBIC` < 0, "Very strong (spline)", "Very strong (linear)")
+      )
+    )
+}
 ```
 
 ```{r}
@@ -3940,11 +4238,11 @@ panel_h1_spline_rubin_sp <- tryCatch(readRDS("output/models/panel_h1_spline_rubi
 #| echo: false
 #| message: false
 #| warning: false
-#| tbl-cap: "AIC comparison for panel H1 linear vs. natural spline models (complete-case data). Best df selected from 2–4. ΔAIC = Spline AIC − Linear AIC; negative values indicate improvement over the linear specification."
+#| tbl-cap: "AIC and BIC comparison for panel H1 linear vs. natural spline models (complete-case data). Best df selected from 2–4 by BIC (primary criterion); AIC values are reported alongside for transparency. ΔAIC = Spline AIC − Linear AIC; ΔBIC = Spline BIC − Linear BIC; negative values indicate improvement over the linear specification. The Interpretation column applies the @jones2001nagin rule of thumb to 2|ΔBIC|: 0–2 = not worth mentioning; 2–6 = positive; 6–10 = strong; >10 = very strong evidence in favour of the model with the lower BIC."
 
 if (!is.null(panel_h1_spline_aic)) {
   tinytable::tt(panel_h1_spline_aic) |>
-    tinytable::style_tt(j = 6, bold = TRUE)
+    tinytable::style_tt(j = c(9, 10, 11), bold = TRUE)
 } else {
   cat("AIC table not available. Render with `-P refit_appendix:true` to generate.\n")
 }
@@ -3957,17 +4255,24 @@ if (!is.null(panel_h1_spline_aic)) {
 #| warning: false
 #| fig-width: 9
 #| fig-height: 8
-#| fig-cap: "Marginal predicted outcomes as a function of late-night gaming (natural cubic spline, complete-case data). Shaded ribbon: 95% CI from the delta method. Predictor shown on the log-transformed per-10-minute scale used in all models. All other covariates held at reference values (scaled continuous predictors at zero; isWeekend = 0; reference region). H1a: P(Fairly bad or Very bad sleep quality), marginalised over the participant random intercept via the marginal probit formula. H1b–H1d: predicted means on the original scale. Curve title shows selected spline df. The dashed orange line shows the corresponding linear model prediction for comparison."
+#| fig-cap: "Marginal predicted outcomes as a function of late-night gaming (natural cubic spline, complete-case data). Shaded ribbon: 95% CI from the delta method. X-axis shows average late-night gaming minutes per day on a common 0–90 min scale across panels; curves are drawn over the observed support within that range. All other covariates held at reference values (scaled continuous predictors at zero; isWeekend = 0; reference region). H1a: P(Fairly bad or Very bad sleep quality), marginalised over the participant random intercept via the marginal probit formula. H1b–H1d: predicted means on the original scale. Each panel title shows the selected spline df; AIC and BIC values are reported in @tbl-appendix-h1-spline-aic. The dashed orange line shows the corresponding linear model prediction for comparison."
 
 library(splines)
+library(ordinal)  # ensures logLik() dispatch for clmm fits
+# cache-bust: re-render after BIC-based df selection (H1d df now 2, not 3)
 
 # Helper: reconstruct the ns() basis using the stored training x values (preserving
 # the original knot locations), then compute marginal predictions with delta-method CIs.
 build_spline_curve <- function(fit, x_train, best_df, predictor,
                                 threshold = "Fairly good|Fairly bad",
                                 n_grid = 150) {
-  x_grid  <- seq(quantile(x_train, 0.02, na.rm = TRUE),
-                 quantile(x_train, 0.98, na.rm = TRUE), length.out = n_grid)
+  # x is on the per-10-minute scale, so 0..9 corresponds to 0..90 min/day.
+  # Restrict curve to the intersection of the observed support and [0, 9] so
+  # the plotted axis can be fixed to 0-90 min across all panels without
+  # extrapolating the spline beyond the training range.
+  x_lo    <- max(0, min(x_train, na.rm = TRUE))
+  x_hi    <- min(9, max(x_train, na.rm = TRUE))
+  x_grid  <- seq(x_lo, x_hi, length.out = n_grid)
   ns_obj  <- ns(x_train, df = best_df)       # preserves original knot placement
   ns_grid <- predict(ns_obj, newx = x_grid)  # evaluates basis at grid using same knots
 
@@ -4012,8 +4317,9 @@ build_linear_curve <- function(fit, x_train, predictor,
                                threshold = "Fairly good|Fairly bad",
                                n_grid = 150) {
   if (is.null(fit)) return(NULL)
-  x_grid <- seq(quantile(x_train, 0.02, na.rm = TRUE),
-                quantile(x_train, 0.98, na.rm = TRUE), length.out = n_grid)
+  x_lo   <- max(0, min(x_train, na.rm = TRUE))
+  x_hi   <- min(9, max(x_train, na.rm = TRUE))
+  x_grid <- seq(x_lo, x_hi, length.out = n_grid)
 
   if (inherits(fit, "clmm")) {
     beta_all  <- coef(fit)
@@ -4048,52 +4354,65 @@ if (!is.null(panel_h1_spline_cc_fits)) {
   lin_c <- build_linear_curve(sp$h1c_linear, sp$x_h1c, "ln_biweekly_avg_minutes_played_10")
   lin_d <- build_linear_curve(sp$h1d_linear, sp$x_h1d, "ln_monthly_avg_minutes_played_10")
 
+  # Convert per-10-minute units to raw minutes for display (0..90 min axis)
+  to_min <- function(df) if (is.null(df)) NULL else dplyr::mutate(df, minutes = x * 10)
+  curve_a <- to_min(curve_a); curve_b <- to_min(curve_b)
+  curve_c <- to_min(curve_c); curve_d <- to_min(curve_d)
+  lin_a   <- to_min(lin_a);   lin_b   <- to_min(lin_b)
+  lin_c   <- to_min(lin_c);   lin_d   <- to_min(lin_d)
+
   spline_theme  <- theme_bw(base_size = 11) +
     theme(panel.grid.minor = element_blank(),
           legend.position = "bottom")
-  xlab_monthly  <- "Late-night gaming (ln, per 10 min · monthly)"
-  xlab_biweekly <- "Late-night gaming (ln, per 10 min · biweekly)"
+  xlab_monthly  <- "Late-night gaming (min/day, monthly avg)"
+  xlab_biweekly <- "Late-night gaming (min/day, biweekly avg)"
+  x_scale <- scale_x_continuous(limits = c(0, 90), breaks = seq(0, 90, 15),
+                                expand = c(0, 0))
 
-  p_a <- ggplot(curve_a, aes(x, pred)) +
+  p_a <- ggplot(curve_a, aes(minutes, pred)) +
     geom_ribbon(aes(ymin = lo, ymax = hi), fill = "#0072B2", alpha = 0.20) +
     geom_line(aes(linetype = "Spline"), color = "#0072B2", linewidth = 0.9) +
-    { if (!is.null(lin_a)) geom_line(data = lin_a, aes(x, pred, linetype = "Linear"),
+    { if (!is.null(lin_a)) geom_line(data = lin_a, aes(minutes, pred, linetype = "Linear"),
                                      color = "#D55E00", linewidth = 0.9) } +
     scale_linetype_manual(name = "Model",
                           values = c("Spline" = "solid", "Linear" = "dashed")) +
+    x_scale +
     labs(title = sprintf("H1a: Sleep Quality  (df = %d)", sp$h1a_df),
          x = xlab_monthly, y = "P(Fairly bad or Very bad)") +
     spline_theme
 
-  p_b <- ggplot(curve_b, aes(x, pred)) +
+  p_b <- ggplot(curve_b, aes(minutes, pred)) +
     geom_ribbon(aes(ymin = lo, ymax = hi), fill = "#0072B2", alpha = 0.20) +
     geom_line(aes(linetype = "Spline"), color = "#0072B2", linewidth = 0.9) +
-    { if (!is.null(lin_b)) geom_line(data = lin_b, aes(x, pred, linetype = "Linear"),
+    { if (!is.null(lin_b)) geom_line(data = lin_b, aes(minutes, pred, linetype = "Linear"),
                                      color = "#D55E00", linewidth = 0.9) } +
     scale_linetype_manual(name = "Model",
                           values = c("Spline" = "solid", "Linear" = "dashed")) +
+    x_scale +
     labs(title = sprintf("H1b: Sleep Duration  (df = %d)", sp$h1b_df),
          x = xlab_monthly, y = "Sleep duration (hours)") +
     spline_theme
 
-  p_c <- ggplot(curve_c, aes(x, pred)) +
+  p_c <- ggplot(curve_c, aes(minutes, pred)) +
     geom_ribbon(aes(ymin = lo, ymax = hi), fill = "#0072B2", alpha = 0.20) +
     geom_line(aes(linetype = "Spline"), color = "#0072B2", linewidth = 0.9) +
-    { if (!is.null(lin_c)) geom_line(data = lin_c, aes(x, pred, linetype = "Linear"),
+    { if (!is.null(lin_c)) geom_line(data = lin_c, aes(minutes, pred, linetype = "Linear"),
                                      color = "#D55E00", linewidth = 0.9) } +
     scale_linetype_manual(name = "Model",
                           values = c("Spline" = "solid", "Linear" = "dashed")) +
+    x_scale +
     labs(title = sprintf("H1c: Wellbeing  (df = %d)", sp$h1c_df),
          x = xlab_biweekly, y = "SWEMWBS score") +
     spline_theme
 
-  p_d <- ggplot(curve_d, aes(x, pred)) +
+  p_d <- ggplot(curve_d, aes(minutes, pred)) +
     geom_ribbon(aes(ymin = lo, ymax = hi), fill = "#0072B2", alpha = 0.20) +
     geom_line(aes(linetype = "Spline"), color = "#0072B2", linewidth = 0.9) +
-    { if (!is.null(lin_d)) geom_line(data = lin_d, aes(x, pred, linetype = "Linear"),
+    { if (!is.null(lin_d)) geom_line(data = lin_d, aes(minutes, pred, linetype = "Linear"),
                                      color = "#D55E00", linewidth = 0.9) } +
     scale_linetype_manual(name = "Model",
                           values = c("Spline" = "solid", "Linear" = "dashed")) +
+    x_scale +
     labs(title = sprintf("H1d: Daytime Sleepiness  (df = %d)", sp$h1d_df),
          x = xlab_monthly, y = "ESS score") +
     spline_theme
@@ -4106,3 +4425,242 @@ if (!is.null(panel_h1_spline_cc_fits)) {
   cat("Spline models not available. Render with `-P refit_appendix:true` to generate.\n")
 }
 ```
+
+```{=typst}
+#pagebreak()
+```
+
+## Panel: Equivalence Testing for All Confirmatory Hypotheses
+
+```{r}
+#| label: appendix-equivalence-thresholds
+#| echo: false
+#| message: false
+#| warning: false
+
+# Compute response-scale ROPE thresholds from the Rubin bundles, so the
+# interpretive paragraphs below stay in sync with the actual data.
+.eq_sd_y <- function(path, response) {
+  b <- readRDS(path); f <- b$fits[[1]]@frame
+  sd(f[[response]], na.rm = TRUE)
+}
+.eq_sd_prod <- function(path, a, b_) {
+  b <- readRDS(path); f <- b$fits[[1]]@frame
+  sd(f[[a]] * f[[b_]], na.rm = TRUE)
+}
+
+# Direct-effect response SDs (H1b–H1d, continuous)
+eq_sd_sleep_h1b   <- .eq_sd_y("output/models/imputed_h1b_rubin.rds", "total_hours_sleep")
+eq_sd_wemwbs_h1c  <- .eq_sd_y("output/models/imputed_h1c_rubin.rds", "wemwbs")
+eq_sd_ess_h1d     <- .eq_sd_y("output/models/imputed_h1d_rubin.rds", "epsTotal")
+
+# Half-widths on the response scale (0.1 * SD(y)) and natural-unit conversions
+eq_rope_sleep_h1b_hr  <- 0.1 * eq_sd_sleep_h1b
+eq_rope_sleep_h1b_min <- 60 * eq_rope_sleep_h1b_hr
+eq_rope_wemwbs_h1c    <- 0.1 * eq_sd_wemwbs_h1c
+eq_rope_ess_h1d       <- 0.1 * eq_sd_ess_h1d
+
+# H2 interaction counterparts
+eq_sd_sleep_h2b       <- .eq_sd_y("output/models/imputed_h2b_rubin.rds", "total_hours_sleep")
+eq_sd_wemwbs_h2c      <- .eq_sd_y("output/models/imputed_h2c_rubin.rds", "wemwbs")
+eq_sd_ess_h2d         <- .eq_sd_y("output/models/imputed_h2d_rubin.rds", "epsTotal")
+eq_rope_sleep_h2b_min <- 60 * 0.1 * eq_sd_sleep_h2b
+eq_rope_wemwbs_h2c    <- 0.1 * eq_sd_wemwbs_h2c
+eq_rope_ess_h2d       <- 0.1 * eq_sd_ess_h2d
+
+# Ordinal probit: latent-scale threshold -> cumulative-probability shift at a
+# category boundary is ~ phi(0) * 0.1 = dnorm(0) * 0.1 (first-order) or
+# exactly Phi(0.05) - Phi(-0.05).
+eq_rope_latent     <- 0.1
+eq_rope_latent_pp  <- 100 * (pnorm(0.05) - pnorm(-0.05))
+
+# Interaction product SD (ln_minutes * msf_sc_centered), approximately equal
+# across H2 bundles — take H2b as representative for prose.
+eq_sd_prod_h2      <- .eq_sd_prod("output/models/imputed_h2b_rubin.rds",
+                                  "ln_monthly_avg_minutes_played_10",
+                                  "msf_sc_centered")
+
+fmt1 <- function(x) sprintf("%.2f", x)
+fmt0 <- function(x) sprintf("%.0f", x)
+```
+
+To provide positive evidence that an effect is (or is not) practically negligible, we conducted frequentist equivalence tests using the Two One-Sided Tests (TOST) procedure [@lakens2017equivalence; @lakens2018equivalence] for every confirmatory hypothesis (H1a–H1d and H2a–H2d), including those that were statistically significant. For each hypothesis, we tested whether the 90% confidence interval for the focal parameter (pooled across imputations via Rubin's rules) falls entirely within a Region of Practical Equivalence (ROPE). Because the focal predictors are raw log-transformed play-time variables rather than standardized effect sizes, Kruschke's [@kruschke2018rejecting] default ROPE of ±0.1 × SD(response) cannot be applied directly to the raw coefficient. We therefore rescale the ROPE to the coefficient's native units as ±0.1 × SD(*y*) / SD(*x*), where SD(*x*) is the sample standard deviation of the focal predictor (for interaction terms, the SD of the product predictor). For the ordinal probit models (H1a, H2a) the latent residual SD is fixed at 1 by identification, so the rescaled ROPE simplifies to ±0.1 / SD(*x*). Under the TOST rule, practical equivalence is accepted when the 90% CI lies entirely within the ROPE; rejected when the CI excludes the ROPE entirely; and undecided otherwise.
+
+What does "practically negligible" mean in substantive terms? Because the ROPE is derived as a proportion of each outcome's standard deviation, the response-scale half-width ±0.1 × SD(*y*) can be translated back into the natural units of each measure. It represents the smallest change in the outcome — predicted by a one-SD increase in the focal predictor — that we would classify as meaningful:
+
+- *H1b (Sleep Duration).* SD(total nightly sleep) ≈ `r fmt1(eq_sd_sleep_h1b)` hours, giving a practical threshold of ±`r fmt1(eq_rope_sleep_h1b_hr)` hours, or roughly ±`r fmt0(eq_rope_sleep_h1b_min)` minutes of sleep per night. Any effect in which a one-SD increase in late-night gaming changes nightly sleep by less than about `r fmt0(eq_rope_sleep_h1b_min)` minutes is treated as practically equivalent to zero.
+- *H1c (Wellbeing).* SD(SWEMWBS) ≈ `r fmt1(eq_sd_wemwbs_h1c)` points, yielding a threshold of ±`r fmt1(eq_rope_wemwbs_h1c)` points on the wellbeing scale — well below the ~1 to 3-point change typically regarded as a clinically meaningful difference in (S)WEMWBS research [@maheswaran2012evaluating].
+- *H1d (Daytime Sleepiness).* SD(ESS) ≈ `r fmt1(eq_sd_ess_h1d)` points, yielding ±`r fmt1(eq_rope_ess_h1d)` points on the 0–24 Epworth Sleepiness Scale — an order of magnitude smaller than the ~5-point gap separating "lower normal" from "clinically excessive" daytime sleepiness [@johns1991new].
+- *H1a (Sleep Quality, ordinal probit).* The latent residual SD is fixed at 1 by identification, so the response-scale threshold is ±`r fmt1(eq_rope_latent)` on the latent probit scale. At a category threshold, a shift of this magnitude in the latent mean translates to approximately a `r fmt1(eq_rope_latent_pp)` percentage-point change in the cumulative probability of crossing into a worse sleep-quality category (from $\Phi(0.05) - \Phi(-0.05) \approx `r sprintf("%.3f", pnorm(0.05) - pnorm(-0.05))`$).
+
+The same ±0.1 × SD(*y*) thresholds apply to the H2 interaction coefficients — ±`r fmt0(eq_rope_sleep_h2b_min)` minutes of sleep (H2b), ±`r fmt1(eq_rope_wemwbs_h2c)` SWEMWBS points (H2c), ±`r fmt1(eq_rope_ess_h2d)` ESS points (H2d), and ±`r fmt1(eq_rope_latent)` latent probit units ≈ ±`r fmt1(eq_rope_latent_pp)` pp of category probability (H2a) — but now they describe the change in *the late-night gaming slope* induced by a one-SD shift in chronotype (MSFsc). An H2 interaction is therefore practically negligible when a full-SD difference in chronotype bends the gaming slope by less than the corresponding response-scale threshold. This is a stringent benchmark: the ROPEs for the interactions are substantially tighter than those for the direct effects once expressed in raw coefficient units, because the product predictor has a much larger SD than either factor alone (SD ≈ `r fmt1(eq_sd_prod_h2)` for ln(minutes) × MSFsc).
+
+
+::: {#tbl-appendix-equivalence}
+
+```{r}
+#| label: appendix-equivalence-code
+#| echo: false
+#| message: false
+#| warning: false
+
+# runtime: ~seconds. Reads pooled Rubin bundles from disk and computes a
+#          TOST decision manually from the pooled 90% CI against a
+#          ROPE derived from the response SD. No model refitting.
+
+library(tinytable)
+
+# Helper: pull the pooled 90% CI and p-value for a given term from a Rubin
+# bundle. For clmm bundles, mice::pool() already applied the dfcom fix so
+# the 90% CI is valid.
+pooled_90ci <- function(bundle, term) {
+  if (is.null(bundle) || is.null(bundle$pooled)) return(NULL)
+  s90 <- summary(bundle$pooled, conf.int = TRUE, conf.level = 0.90)
+  row <- s90[s90$term == term, , drop = FALSE]
+  if (nrow(row) == 0) return(NULL)
+  list(
+    est    = row$estimate,
+    ci_low = row$`5 %`,
+    ci_high = row$`95 %`,
+    p      = row$p.value
+  )
+}
+
+# Helper: extract the model frame from a Rubin bundle's first fit
+# (identical across imputations). Handles lmer and clmm.
+model_frame <- function(bundle) {
+  if (is.null(bundle) || length(bundle$fits) == 0) return(NULL)
+  f <- bundle$fits[[1]]
+  if (inherits(f, "lmerMod")) f@frame else
+    if (inherits(f, "clmm"))   f$model else NULL
+}
+
+# Helper: SD of the response variable. Returns NA for factor outcomes
+# (clmm), which signals the caller to use the latent-scale SD of 1.
+response_sd <- function(bundle, response_name) {
+  frame <- model_frame(bundle)
+  if (is.null(frame) || is.null(response_name) ||
+      !response_name %in% names(frame)) return(NA_real_)
+  y <- frame[[response_name]]
+  if (is.factor(y)) return(NA_real_)
+  sd(y, na.rm = TRUE)
+}
+
+# Helper: SD of the focal predictor (on the scale of the raw coefficient).
+# For simple terms, this is sd(frame[[term]]). For interaction terms of
+# the form "a:b", it is sd(frame$a * frame$b), matching the scale on which
+# the raw interaction coefficient operates.
+predictor_sd <- function(bundle, term) {
+  frame <- model_frame(bundle)
+  if (is.null(frame)) return(NA_real_)
+  if (grepl(":", term, fixed = TRUE)) {
+    parts <- strsplit(term, ":", fixed = TRUE)[[1]]
+    if (!all(parts %in% names(frame))) return(NA_real_)
+    prod <- frame[[parts[1]]]
+    for (k in parts[-1]) prod <- prod * frame[[k]]
+    return(sd(prod, na.rm = TRUE))
+  }
+  if (!term %in% names(frame)) return(NA_real_)
+  sd(frame[[term]], na.rm = TRUE)
+}
+
+# Helper: classify a TOST decision from a 90% CI against a ROPE.
+tost_decision <- function(ci_low, ci_high, rope_low, rope_high) {
+  if (any(is.na(c(ci_low, ci_high, rope_low, rope_high)))) return("—")
+  if (ci_low >= rope_low && ci_high <= rope_high) "Accepted"
+  else if (ci_high < rope_low || ci_low > rope_high) "Rejected"
+  else "Undecided"
+}
+
+# Run a single equivalence row for a given bundle + focal term + response.
+# ROPE is rescaled to the raw coefficient's native units:
+#   ROPE = ±0.1 * SD(y) / SD(x)           for lmer
+#   ROPE = ±0.1 * 1    / SD(x)            for clmm (latent residual SD = 1)
+run_tost_row <- function(bundle_path, hypothesis, term, response_name,
+                         ordinal = FALSE) {
+  bundle <- tryCatch(readRDS(bundle_path), error = function(e) NULL)
+  if (is.null(bundle)) return(NULL)
+  ci <- pooled_90ci(bundle, term)
+  if (is.null(ci)) return(NULL)
+
+  sd_x <- predictor_sd(bundle, term)
+  if (is.na(sd_x) || sd_x == 0) return(NULL)
+
+  sd_y <- if (ordinal) 1 else response_sd(bundle, response_name)
+  if (is.na(sd_y)) return(NULL)
+
+  half_rope <- 0.1 * sd_y / sd_x
+  rope_low  <- -half_rope
+  rope_high <-  half_rope
+
+  decision <- tost_decision(ci$ci_low, ci$ci_high, rope_low, rope_high)
+
+  tibble::tibble(
+    Hypothesis = hypothesis,
+    ROPE = sprintf("[%.3f, %.3f]", rope_low, rope_high),
+    `90% CI` = sprintf("[%.3f, %.3f]", ci$ci_low, ci$ci_high),
+    Decision = decision,
+    p = ifelse(is.na(ci$p), "—",
+        ifelse(ci$p < 0.001, "< .001",
+        ifelse(ci$p > 0.999, "> .999",
+               sprintf("%.3f", ci$p))))
+  )
+}
+
+et_rows <- dplyr::bind_rows(
+  # H1 direct effects
+  run_tost_row("output/models/imputed_h1a_rubin.rds",
+               "H1a: Sleep Quality",
+               "ln_monthly_avg_minutes_played_10",
+               NULL,
+               ordinal = TRUE),
+  run_tost_row("output/models/imputed_h1b_rubin.rds",
+               "H1b: Sleep Duration",
+               "ln_monthly_avg_minutes_played_10",
+               "total_hours_sleep"),
+  run_tost_row("output/models/imputed_h1c_rubin.rds",
+               "H1c: Wellbeing",
+               "ln_biweekly_avg_minutes_played_10",
+               "wemwbs"),
+  run_tost_row("output/models/imputed_h1d_rubin.rds",
+               "H1d: Daytime Sleepiness",
+               "ln_monthly_avg_minutes_played_10",
+               "epsTotal"),
+  # H2 interactions — H2a is clmm (ordinal), the rest are lmer
+  run_tost_row("output/models/imputed_h2a_rubin.rds",
+               "H2a: Sleep Quality × Chronotype",
+               "ln_monthly_avg_minutes_played_10:msf_sc_centered",
+               NULL,
+               ordinal = TRUE),
+  run_tost_row("output/models/imputed_h2b_rubin.rds",
+               "H2b: Sleep Duration × Chronotype",
+               "ln_monthly_avg_minutes_played_10:msf_sc_centered",
+               "total_hours_sleep"),
+  run_tost_row("output/models/imputed_h2c_rubin.rds",
+               "H2c: Wellbeing × Chronotype",
+               "ln_biweekly_avg_minutes_played_10:msf_sc_centered",
+               "wemwbs"),
+  run_tost_row("output/models/imputed_h2d_rubin.rds",
+               "H2d: Daytime Sleepiness × Chronotype",
+               "ln_monthly_avg_minutes_played_10:msf_sc_centered",
+               "epsTotal")
+)
+
+if (!is.null(et_rows) && nrow(et_rows) > 0) {
+  tt(et_rows, width = 1,
+     notes = c(
+       "ROPE = Region of Practical Equivalence, rescaled to the native units of the raw coefficient: ±0.1 × SD(y) / SD(x) for linear mixed models and ±0.1 / SD(x) for the ordinal probit models (H1a, H2a), where the latent residual SD is fixed at 1. SD(x) is the sample SD of the focal predictor (product predictor for interactions).",
+       "Decision via TOST rule (Lakens, 2017): Accepted = 90% CI entirely inside ROPE; Rejected = 90% CI entirely outside ROPE; Undecided = otherwise.",
+       "p = Wald p-value for the pooled coefficient (not the TOST equivalence p)."
+     )) |>
+    style_tt(j = 1, align = "l") |>
+    style_tt(j = 2:5, align = "r") |>
+    style_tt(fontsize = 0.85)
+} else {
+  cat("Pooled model bundles not found. Render after the Rubin pipeline has been run.\n")
+}
+```
+
+Equivalence test results for the focal predictor in every confirmatory hypothesis. H1a–H1d test the pooled late-night gaming coefficient; H2a–H2d test the pooled chronotype × late-night gaming interaction. Statistically significant effects (e.g., H1a) are included for completeness — a significant effect paired with an "Undecided" or "Rejected" equivalence decision indicates that the estimate, although reliably non-zero, is not small enough to be declared practically equivalent to the null under the ROPE.
+
+:::

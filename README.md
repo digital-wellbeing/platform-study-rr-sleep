@@ -27,19 +27,29 @@ The manuscript is automatically built and deployed whenever changes are pushed t
 ```
 .
 ├── manuscript.qmd           # Main manuscript source (Quarto)
-├── helpers.R                # Analysis helper functions
-├── imputation.R             # Multiple imputation procedures
-├── preprocess_data.R        # Data preprocessing pipeline
+├── helpers.R                # Analysis helper functions (sourced by manuscript)
+├── preprocess_data.R        # Data preprocessing pipeline (sourced by manuscript)
 ├── bibliography.bib         # References
-├── _quarto.yml             # Quarto configuration
-├── _extensions/            # Quarto extensions (preprint template)
-├── _freeze/                # Quarto freeze cache (speeds up rendering)
-├── data/                   # Data files
-│   ├── processed/          # Processed datasets (committed)
-│   └── *.csv.gz            # Raw survey data
-├── output/                 # Analysis outputs
-│   └── models/             # Pre-fitted model objects (.rds)
-└── R/                      # Exploratory/helper scripts
+├── appendix-prefix.html     # Quarto HTML include (appendix navigation)
+├── _quarto.yml              # Quarto configuration
+├── _extensions/             # Quarto extensions (preprint template)
+├── _freeze/                 # Quarto freeze cache (speeds up rendering)
+├── data/                    # Data files
+│   ├── processed/           # Processed datasets (committed)
+│   ├── codebook.xlsx        # Variable codebook
+│   └── *.csv.gz             # Raw survey data
+├── docs/                    # Project documentation
+│   ├── Stage 1.pdf          # Accepted Stage 1 Registered Report
+│   └── design_table.md      # Study design reference table
+├── output/                  # Analysis outputs
+│   ├── models/              # Pre-fitted model objects (.rds)
+│   ├── tables/              # Rendered tables
+│   └── supplement/          # Supplementary materials
+└── R/                       # Analysis scripts and exploratory notebooks
+    ├── imputation_diary.R   # Diary multiple imputation pipeline
+    ├── imputation_panel.R   # Panel multiple imputation pipeline
+    ├── qc_imputation.R      # Imputation quality-control diagnostics
+    └── diary.qmd            # Exploratory diary analysis notebook
 ```
 
 ## Local Development

@@ -19,7 +19,7 @@ library(glue)
 
 # Source imputation helpers without auto-running the pipeline
 Sys.setenv(RUN_IMPUTATION_ON_SOURCE = "0")
-source("imputation_panel.R")
+source("R/imputation_panel.R")
 Sys.setenv(RUN_IMPUTATION_ON_SOURCE = "1")
 
 # Function to rename PSQI columns to match Questionnaires package format
@@ -1016,7 +1016,7 @@ preprocess_all_data <- function() {
 
   # Source the imputation helper functions (prevent auto-run)
   Sys.setenv(RUN_IMPUTATION_ON_SOURCE = "0")
-  source("imputation_panel.R")
+  source("R/imputation_panel.R")
   Sys.setenv(RUN_IMPUTATION_ON_SOURCE = "1")  # Reset
 
   # Expand to full wave grid

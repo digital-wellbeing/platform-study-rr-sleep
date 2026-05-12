@@ -1,0 +1,75 @@
+=== Multiple Imputation Summary ===
+
+Number of imputations (m): 20
+Number of iterations: 20
+Number of participants: 1577
+
+Variables imputed:
+  total_hours_sleep_w2: 470 (29.8%) missing
+  total_hours_sleep_w4: 673 (42.7%) missing
+  total_hours_sleep_w6: 880 (55.8%) missing
+  epsTotal_w2: 471 (29.9%) missing
+  epsTotal_w4: 668 (42.4%) missing
+  epsTotal_w6: 887 (56.2%) missing
+  psqi_comp1_quality_w2: 457 (29.0%) missing
+  psqi_comp1_quality_w4: 662 (42.0%) missing
+  psqi_comp1_quality_w6: 875 (55.5%) missing
+  psqi_comp2_latency_w2: 457 (29.0%) missing
+  psqi_comp2_latency_w4: 662 (42.0%) missing
+  psqi_comp2_latency_w6: 875 (55.5%) missing
+  psqi_comp3_duration_w2: 457 (29.0%) missing
+  psqi_comp3_duration_w4: 662 (42.0%) missing
+  psqi_comp3_duration_w6: 875 (55.5%) missing
+  psqi_comp4_efficiency_w2: 458 (29.0%) missing
+  psqi_comp4_efficiency_w4: 663 (42.0%) missing
+  psqi_comp4_efficiency_w6: 875 (55.5%) missing
+  psqi_comp5_problems_w2: 457 (29.0%) missing
+  psqi_comp5_problems_w4: 662 (42.0%) missing
+  psqi_comp5_problems_w6: 875 (55.5%) missing
+  psqi_comp6_medication_w2: 457 (29.0%) missing
+  psqi_comp6_medication_w4: 662 (42.0%) missing
+  psqi_comp6_medication_w6: 875 (55.5%) missing
+  psqi_comp7_tired_w2: 457 (29.0%) missing
+  psqi_comp7_tired_w4: 662 (42.0%) missing
+  psqi_comp7_tired_w6: 875 (55.5%) missing
+  wemwbs_w2: 454 (28.8%) missing
+  wemwbs_w3: 529 (33.5%) missing
+  wemwbs_w4: 660 (41.9%) missing
+  wemwbs_w5: 739 (46.9%) missing
+  wemwbs_w6: 871 (55.2%) missing
+
+Survey completion dates inferred for 3221 records (1038 participants) to enable gaming exposure windows.
+
+Observed vs imputed summary statistics:
+  total_hours_sleep_w2: observed = 7.19 ± 1.21 (n = 1107), imputed = 7.21 ± 1.31 (n = 9400), diff = 0.02
+  total_hours_sleep_w4: observed = 7.19 ± 1.15 (n = 904), imputed = 7.23 ± 1.21 (n = 13460), diff = 0.04
+  total_hours_sleep_w6: observed = 7.20 ± 1.18 (n = 697), imputed = 7.19 ± 1.19 (n = 17600), diff = -0.01
+  epsTotal_w2: observed = 5.59 ± 3.71 (n = 1106), imputed = 5.44 ± 3.74 (n = 9420), diff = -0.15
+  epsTotal_w4: observed = 5.55 ± 3.90 (n = 909), imputed = 5.45 ± 3.74 (n = 13360), diff = -0.09
+  epsTotal_w6: observed = 5.51 ± 4.00 (n = 690), imputed = 5.52 ± 3.95 (n = 17740), diff = 0.01
+  psqi_comp1_quality_w2: observed = 1.30 ± 0.64 (n = 1120), imputed = 1.25 ± 0.61 (n = 9140), diff = -0.05
+  psqi_comp1_quality_w4: observed = 1.31 ± 0.67 (n = 915), imputed = 1.27 ± 0.67 (n = 13240), diff = -0.04
+  psqi_comp1_quality_w6: observed = 1.25 ± 0.69 (n = 702), imputed = 1.26 ± 0.70 (n = 17500), diff = 0.01
+  psqi_comp2_latency_w2: observed = 1.55 ± 0.91 (n = 1120), imputed = 1.55 ± 0.93 (n = 9140), diff = -0.01
+  psqi_comp2_latency_w4: observed = 1.52 ± 0.92 (n = 915), imputed = 1.53 ± 0.91 (n = 13240), diff = 0.01
+  psqi_comp2_latency_w6: observed = 1.44 ± 0.93 (n = 702), imputed = 1.45 ± 0.92 (n = 17500), diff = 0.02
+  psqi_comp3_duration_w2: observed = 0.65 ± 0.74 (n = 1120), imputed = 0.61 ± 0.71 (n = 9140), diff = -0.04
+  psqi_comp3_duration_w4: observed = 0.65 ± 0.71 (n = 915), imputed = 0.63 ± 0.68 (n = 13240), diff = -0.02
+  psqi_comp3_duration_w6: observed = 0.64 ± 0.74 (n = 702), imputed = 0.62 ± 0.74 (n = 17500), diff = -0.02
+  psqi_comp4_efficiency_w2: observed = 0.57 ± 0.92 (n = 1119), imputed = 0.60 ± 0.94 (n = 9160), diff = 0.02
+  psqi_comp4_efficiency_w4: observed = 0.58 ± 0.92 (n = 914), imputed = 0.61 ± 0.95 (n = 13260), diff = 0.03
+  psqi_comp4_efficiency_w6: observed = 0.54 ± 0.89 (n = 702), imputed = 0.60 ± 0.96 (n = 17500), diff = 0.05
+  psqi_comp5_problems_w2: observed = 1.22 ± 0.52 (n = 1120), imputed = 1.18 ± 0.52 (n = 9140), diff = -0.04
+  psqi_comp5_problems_w4: observed = 1.19 ± 0.50 (n = 915), imputed = 1.19 ± 0.51 (n = 13240), diff = -0.00
+  psqi_comp5_problems_w6: observed = 1.17 ± 0.50 (n = 702), imputed = 1.12 ± 0.53 (n = 17500), diff = -0.05
+  psqi_comp6_medication_w2: observed = 0.37 ± 0.84 (n = 1120), imputed = 0.40 ± 0.86 (n = 9140), diff = 0.03
+  psqi_comp6_medication_w4: observed = 0.35 ± 0.82 (n = 915), imputed = 0.36 ± 0.82 (n = 13240), diff = 0.01
+  psqi_comp6_medication_w6: observed = 0.32 ± 0.77 (n = 702), imputed = 0.38 ± 0.82 (n = 17500), diff = 0.06
+  psqi_comp7_tired_w2: observed = 1.14 ± 0.75 (n = 1120), imputed = 1.14 ± 0.75 (n = 9140), diff = 0.00
+  psqi_comp7_tired_w4: observed = 1.07 ± 0.76 (n = 915), imputed = 1.09 ± 0.73 (n = 13240), diff = 0.02
+  psqi_comp7_tired_w6: observed = 1.02 ± 0.76 (n = 702), imputed = 1.03 ± 0.75 (n = 17500), diff = 0.00
+  wemwbs_w2: observed = 23.07 ± 5.20 (n = 1123), imputed = 23.41 ± 4.90 (n = 9080), diff = 0.34
+  wemwbs_w3: observed = 23.28 ± 5.15 (n = 1048), imputed = 22.97 ± 5.15 (n = 10580), diff = -0.31
+  wemwbs_w4: observed = 22.98 ± 5.54 (n = 917), imputed = 23.17 ± 5.34 (n = 13200), diff = 0.19
+  wemwbs_w5: observed = 23.38 ± 5.34 (n = 838), imputed = 23.70 ± 4.97 (n = 14780), diff = 0.33
+  wemwbs_w6: observed = 23.59 ± 5.46 (n = 706), imputed = 23.49 ± 5.51 (n = 17420), diff = -0.10

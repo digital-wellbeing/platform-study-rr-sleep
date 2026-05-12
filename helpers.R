@@ -229,11 +229,12 @@ recode_sleep_quality <- function(x) {
 #' @param label_if_exp Label to use if exponentiated (default: "OR")
 #' @param label_if_b Label to use if not exponentiated (default: "b")
 #' @return Formatted string with estimate, CI, and p-value
-get_h1_effect <- function(path, term, exponentiate = FALSE, label_if_exp = "OR", label_if_b = "b") {
-  if (!file.exists(path)) {
-    return("estimate unavailable")
+get_h1_effect <- function(path = NULL, term, model = NULL, exponentiate = FALSE, label_if_exp = "OR", label_if_b = "b") {
+  m <- model
+  if (is.null(m)) {
+    if (is.null(path) || !file.exists(path)) return("estimate unavailable")
+    m <- readRDS(path)
   }
-  m <- readRDS(path)
   mp <- parameters::model_parameters(m, exponentiate = exponentiate)
   row <- mp[mp$Parameter == term, , drop = FALSE]
   if (nrow(row) == 0) {
@@ -266,9 +267,9 @@ get_h1_effect <- function(path, term, exponentiate = FALSE, label_if_exp = "OR",
   label <- if (isTRUE(exponentiate)) label_if_exp else label_if_b
 
   if (nzchar(p_txt)) {
-    sprintf("%s = %.2f, 95%% CI [%.2f, %.2f], %s", label, est, ci_low, ci_high, p_txt)
+    sprintf("%s = %.3f, 95%% CI [%.3f, %.3f], %s", label, est, ci_low, ci_high, p_txt)
   } else {
-    sprintf("%s = %.2f, 95%% CI [%.2f, %.2f]", label, est, ci_low, ci_high)
+    sprintf("%s = %.3f, 95%% CI [%.3f, %.3f]", label, est, ci_low, ci_high)
   }
 }
 
@@ -320,54 +321,11 @@ load_h1_models_from_disk <- function(version_label) {
 #' @param label_if_exp Label to use if exponentiated (default: "OR")
 #' @param label_if_b Label to use if not exponentiated (default: "b")
 #' @return Formatted string with estimate, CI, and p-value
-get_h2_interaction <- function(path, term, exponentiate = FALSE, label_if_exp = "OR", label_if_b = "b") {
-  if (!file.exists(path)) {
-    return("estimate unavailable")
-  }
-  m <- readRDS(path)
-
-  if (inherits(m, "clm") || inherits(m, "clmm")) {
-    coef_table <- as.data.frame(coef(summary(m)))
-    coef_table$Parameter <- rownames(coef_table)
-    row <- coef_table[coef_table$Parameter == term, , drop = FALSE]
-
-    if (nrow(row) == 0) {
-      return("estimate unavailable")
-    }
-
-    est <- as.numeric(row[["Estimate"]])
-    se <- as.numeric(row[["Std. Error"]])
-    p_val <- suppressWarnings(as.numeric(row[["Pr(>|z|)"]]))
-
-    if (!is.finite(est) || !is.finite(se)) {
-      return("estimate unavailable")
-    }
-
-    crit <- stats::qnorm(0.975)
-    ci_low <- est - crit * se
-    ci_high <- est + crit * se
-
-    if (isTRUE(exponentiate)) {
-      est <- exp(est)
-      ci_low <- exp(ci_low)
-      ci_high <- exp(ci_high)
-    }
-
-    p_txt <- if (is.na(p_val)) {
-      ""
-    } else if (p_val < 0.001) {
-      "p < .001"
-    } else {
-      sprintf("p = %.3f", p_val)
-    }
-
-    label <- if (isTRUE(exponentiate)) label_if_exp else label_if_b
-
-    if (nzchar(p_txt)) {
-      return(sprintf("%s = %.2f, 95%% CI [%.2f, %.2f], %s", label, est, ci_low, ci_high, p_txt))
-    }
-
-    return(sprintf("%s = %.2f, 95%% CI [%.2f, %.2f]", label, est, ci_low, ci_high))
+get_h2_interaction <- function(path = NULL, term, model = NULL, exponentiate = FALSE, label_if_exp = "OR", label_if_b = "b") {
+  m <- model
+  if (is.null(m)) {
+    if (is.null(path) || !file.exists(path)) return("estimate unavailable")
+    m <- readRDS(path)
   }
 
   mp <- parameters::model_parameters(m, exponentiate = exponentiate)
@@ -401,9 +359,9 @@ get_h2_interaction <- function(path, term, exponentiate = FALSE, label_if_exp = 
   label <- if (isTRUE(exponentiate)) label_if_exp else label_if_b
 
   if (nzchar(p_txt)) {
-    sprintf("%s = %.2f, 95%% CI [%.2f, %.2f], %s", label, est, ci_low, ci_high, p_txt)
+    sprintf("%s = %.3f, 95%% CI [%.3f, %.3f], %s", label, est, ci_low, ci_high, p_txt)
   } else {
-    sprintf("%s = %.2f, 95%% CI [%.2f, %.2f]", label, est, ci_low, ci_high)
+    sprintf("%s = %.3f, 95%% CI [%.3f, %.3f]", label, est, ci_low, ci_high)
   }
 }
 
@@ -809,9 +767,9 @@ get_pooled_effect <- function(bundle, term, exponentiate = FALSE,
   }
 
   if (nzchar(p_txt)) {
-    sprintf("%s = %.2f, 95%% CI [%.2f, %.2f], %s", label, est, ci_low, ci_high, p_txt)
+    sprintf("%s = %.3f, 95%% CI [%.3f, %.3f], %s", label, est, ci_low, ci_high, p_txt)
   } else {
-    sprintf("%s = %.2f, 95%% CI [%.2f, %.2f]", label, est, ci_low, ci_high)
+    sprintf("%s = %.3f, 95%% CI [%.3f, %.3f]", label, est, ci_low, ci_high)
   }
 }
 
@@ -853,19 +811,29 @@ get_custom_rows_pooled <- function(model_bundles) {
     }, error = function(e) NA_integer_)
     participant_df[[model_name]] <- as.character(n_part[1])
 
-    # ICC: average across fits
+    # ICC: average across fits. performance::icc() returns a scalar NA (atomic)
+    # when it cannot compute variance components — e.g. on singular lmer fits
+    # where (1|gender) has near-zero variance. The scalar NA must be handled
+    # before the $ICC_adjusted accessor, or the $ operator raises on atomic
+    # vectors and the outer tryCatch turns the entire column into NA. When
+    # some but not all imputations yield a valid ICC, average over the valid
+    # ones; when none do, return NA.
     icc_value <- tryCatch({
       icc_vals <- vapply(bundle$fits, function(f) {
-        icc_result <- performance::icc(f)
-        if (!is.null(icc_result$ICC_adjusted)) {
+        icc_result <- tryCatch(performance::icc(f), error = function(e) NA)
+        if (!inherits(icc_result, "icc")) return(NA_real_)
+        if (!is.null(icc_result$ICC_adjusted) &&
+            !is.na(icc_result$ICC_adjusted)) {
           icc_result$ICC_adjusted
-        } else if (!is.null(icc_result$ICC_conditional)) {
+        } else if (!is.null(icc_result$ICC_conditional) &&
+                   !is.na(icc_result$ICC_conditional)) {
           icc_result$ICC_conditional
         } else {
           NA_real_
         }
       }, numeric(1))
-      sprintf("%.2f", mean(icc_vals, na.rm = TRUE))
+      if (all(is.na(icc_vals))) NA_character_
+      else sprintf("%.2f", mean(icc_vals, na.rm = TRUE))
     }, error = function(e) NA_character_)
     icc_df[[model_name]] <- as.character(icc_value[1])
   }
