@@ -56,8 +56,8 @@ format:
   preprint-typst:
     wordcount: true
     citeproc: false
-    # Common options - uncomment to use
-    theme: jou                   # Journal theme (2-column)
+    # Single-column layout (omit `theme: jou` which would force 2-column).
+    # Other available themes: `dracula` (dark colour scheme, still single-column).
     # line-number: true            # Line numbering
     # fontsize: 11pt               # Font size
     # leading: 0.6em               # Line spacing
@@ -1609,6 +1609,20 @@ psqi_global_cc_b_ci <- tryCatch({
     sprintf("b = %.3f", co["Estimate"])
   }
 }, error = function(e) "estimate unavailable")
+
+# Implied PSQI-global change for a contrast matched to the ~3-hour shift used
+# by Yan et al. (2024): from ~10 min/day to ~3 h/day (180 min/day) of
+# late-night gaming. Predictor units are 10-minute blocks, so the contrast is
+# (180 - 10) / 10 = 17 units; multiply by the pooled fixed-effect coefficient.
+psqi_contrast_low_min  <- 10
+psqi_contrast_high_min <- 180
+psqi_contrast_units    <- (psqi_contrast_high_min - psqi_contrast_low_min) / 10
+
+psqi_global_imp_contrast <- tryCatch({
+  if (is.null(panel_psqi_rubin_base)) stop("PSQI imputed bundle unavailable")
+  pv <- pool_vcov(panel_psqi_rubin_base$fits)
+  unname(pv$qbar["ln_monthly_avg_minutes_played_10"] * psqi_contrast_units)
+}, error = function(e) NA_real_)
 ```
 
 
@@ -3444,23 +3458,17 @@ The largely null moderation results have several possible explanations. Evening-
 
 ## Contextualising the Effect Sizes
 
-### At the individual night level
-
 Viewed at the per-person, per-night scale, the association is small in absolute terms. At the marginal rate of `r fmt_pp(h1a_marginal)` percentage points per 10 minutes, even a gamer averaging an hour of play past 11pm would see only a roughly `r fmt_pp(h1a_marginal, minutes = 60, digits = 0)` percentage-point increase in the probability of reporting poor sleep quality. Against the backdrop of `r sprintf("%.0f%%", poor_pct_ana)` of participants already qualifying as poor sleepers by PSQI criteria, late-night gaming appears to be a minor per-person contributor to an issue with broader origins — including work schedules, general screen use, caffeine consumption, and other lifestyle factors not captured here.
 
 The descriptive patterns in our sample reinforce this reading. While sleep duration remained relatively preserved (`r sprintf("%.1f", mean_sleep_dur_ana)` hours on average), `r sprintf("%.0f%%", poor_pct_ana)` of participants were classified as poor sleepers on the PSQI. This dissociation between duration and quality further undermines a displacement account — if gaming were simply pushing sleep later and shortening it, elevated poor-sleeper prevalence would be expected to co-occur with shorter mean duration, yet only the former is apparent. The pattern is more consistent with arousal or attentional mechanisms that degrade perceived sleep quality without substantially reducing its length [@king2013impact; @weaver2010effect].
 
-It is useful to anchor the implied per-hour magnitude against other modifiable lifestyle influences on adult sleep. At roughly `r fmt_pp(h1a_marginal, minutes = 60, digits = 0)` percentage points per hour, the sleep-quality cost of late-night gaming is in the same broad range as the perceived sleep-quality cost reported for a high (400 mg) dose of caffeine consumed within four hours of bedtime [@gardiner2025dose]. This comparison is most directly interpretable for our exploratory diary substudy, which used a structurally similar single-item nightly sleep-quality rating; there, the between-person estimate (`r fmt_pp(diary_h1_marginal)` percentage points per 10 min of habitual late-night gaming) aligned closely with the panel PSQI result. A comparable benchmark on the continuous PSQI scale comes from @yan2024chronobiological, who report a ≈0.39-point higher PSQI total score for adults in the latest vs earliest tertile of last-meal time (a ≈3-hour shift). For a contrast of similar practical magnitude in our data — moving from ~10 min/day to ~3 h/day of late-night gaming — the panel PSQI sensitivity model implies a ≈0.26-point increase, of comparable order but somewhat smaller, suggesting that the per-person sleep-quality penalty of habitual late-night gaming sits below that of habitually late evening meal timing.
+It is useful to anchor the implied per-hour magnitude against other modifiable lifestyle influences on adult sleep. At roughly `r fmt_pp(h1a_marginal, minutes = 60, digits = 0)` percentage points per hour, the sleep-quality cost of late-night gaming is in the same broad range as the perceived sleep-quality cost reported for a high (400 mg) dose of caffeine consumed within four hours of bedtime [@gardiner2025dose]. This comparison is most directly interpretable for our exploratory diary substudy, which used a structurally similar single-item nightly sleep-quality rating; there, the between-person estimate (`r fmt_pp(diary_h1_marginal)` percentage points per 10 min of habitual late-night gaming) aligned closely with the panel PSQI result. A comparable benchmark on the continuous PSQI scale comes from @yan2024chronobiological, who report a ≈0.39-point higher PSQI total score for adults in the latest vs earliest tertile of last-meal time (a ≈3-hour shift). For a contrast of similar practical magnitude in our data — moving from ~`r psqi_contrast_low_min` min/day to ~`r sprintf("%g", psqi_contrast_high_min/60)` h/day of late-night gaming — the panel PSQI sensitivity model implies a ≈`r sprintf("%.2f", psqi_global_imp_contrast)`-point increase, of comparable order but somewhat smaller, suggesting that the per-person sleep-quality penalty of habitual late-night gaming sits below that of habitually late evening meal timing.
 
 That we found this effect specifically for sleep quality — rather than duration, sleepiness, or wellbeing — suggests the pathway may operate through subjective perception of sleep disturbance rather than through the displacement or arousal mechanisms traditionally emphasised in the literature. It is possible that gamers who play late at night notice poorer sleep quality because they attribute restlessness or difficulty falling asleep to their recent gaming session. Because our sleep measures are all self-reported, we cannot distinguish such an attributional process from a genuine change in sleep architecture; wearable-based ambulatory measurement would be needed to adjudicate.
-
-### At the population and cumulative level
 
 A small per-night effect can nonetheless carry weight when it is sustained over time and aggregated across a common behaviour. Restricting sleep by only about an hour can still disturb emotion regulation [@tomaso2021effect] and undermine cognitive and behavioural performance [@belenky2003patterns]; if that restriction is maintained for two weeks, losses in alertness and working memory can rival those seen after an entire night without sleep [@vandongen2003cumulative]. Repeated small shifts in nightly sleep quality from habitual late-night play may therefore matter for mood, vigilance, and cognition over weeks and months, even if any single night looks unremarkable. Benchmarks tailored to sleep outcomes support this interpretation: Panjeh and colleagues' recalibration from 72 effect sizes in 65 sleep-quality intervention trials [@panjeh2023establishing] maps "small", "medium", and "large" to Cohen's *d* of roughly 0.18, 0.33, and 0.56 — below the usual 0.2 / 0.5 / 0.8 anchors. Judged against those sleep-specific standards, the cumulative impact of 1–2 hours of late-night gaming falls in the small-to-medium band, whereas the same pattern might look trivial-to-small on the generic Cohen scale.
 
 Population burden adds another layer. De Rosa and colleagues [-@derosa2024videogaming] note that video gaming is now one of the most widespread adult leisure exposures and that sleep outcomes track how intensively and how often people play, so a shallow per-night gradient can still shift the upper tail of poor sleep when layered onto a common behaviour. Public-health importance depends on both per-person effect magnitude and how prevalent the behaviour is — and on this combined view, our findings sit alongside a broader literature reporting statistically detectable but per-person modest associations between digital media use and psychological outcomes.
-
-### Why timing-specific measurement matters
 
 A key gap in the existing literature is the near-complete absence of timing-specific measurement: @kristensen2021problematic noted that none of the studies in their systematic review registered the time of day gaming took place. Most adult gaming-and-sleep studies consequently operationalise exposure as aggregate daily volume or as binary/categorical problematic-gaming contrasts, which are likely to dilute any signal concentrated in the pre-sleep window. Our telemetry-based, continuous, time-of-day-specific operationalisation of late-night play is deliberately designed to isolate exactly that window, and the fact that we find a small but robust association only for sleep quality — and only under this timing-sensitive measure — is consistent with reviews identifying pre-sleep timing, arousal, and session duration as key moderators of gaming's effect on sleep [@derosa2024videogaming]. That the effect is detectable at all under a stringent, preregistered, multiply-imputed longitudinal specification suggests that timing-specific exposures capture signal that aggregate-volume measures may miss.
 
@@ -3480,11 +3488,9 @@ Third, the analytic sample is restricted to early adults recruited from UK- and 
 
 ## Future Directions
 
-Several lines of follow-up work are suggested by our findings. First, our results reinforce a methodological lesson that is increasingly clear in the adult gaming-and-sleep literature: timing and context matter more than aggregate volume. A recent systematic review of 26 adult studies concluded that excessive gaming impairs sleep quality and delays sleep timing whereas habitual or casual gaming does not, and specifically identified arousal level, session duration, and pre-sleep timing as the key moderators of gaming's effect on sleep [@derosa2024videogaming]. Our observation that late-night gaming shows a small but robust association with sleep quality — while aggregate gaming does not feature as the exposure of interest at all — is directly consistent with this emphasis.
-
 Future work would benefit from combining telemetry with finer-grained metadata on game content, arousal level, and session proximity to bedtime, and from extending logging to mobile platforms so that the full pre-sleep screen bundle can be measured rather than inferred. Linking telemetry to ambulatory physiological measurements (e.g., consumer-grade actigraphy, heart-rate variability, or ambient light sensing) would additionally allow researchers to separate subjective perception of sleep disturbance from objective architecture, which our self-report instruments could not disentangle.
 
-Second, the observational design of this study limits the strength of causal claims that can be drawn from any single estimate. A natural next step is to embed telemetry-based exposures within a target trial emulation framework [@hernan2016using; @hernan2022target], which makes the hypothetical randomized experiment explicit — defining eligibility, exposure contrasts (e.g., a late-night play session versus none on a given evening), assignment procedures, follow-up windows, and causal estimands before estimation. Target trial emulation is particularly well suited to device-use research because the relevant question is rarely "do gamers sleep worse than non-gamers" but rather "does the same person sleep worse on nights they play late than on nights they do not." High-frequency telemetry naturally supports such within-person contrasts, and pairing it with g-methods or sequential exchangeability assumptions would allow future work to move from associational gradients toward more interpretable, policy-relevant causal estimates while keeping each individual as their own control.
+Second, the observational design of this study limits the strength of causal claims that can be drawn from any single estimate. One natural next step is to embed telemetry-based exposures within a target trial emulation framework [@hernan2016using; @hernan2022target], which makes the hypothetical randomized experiment explicit — defining eligibility, exposure contrasts (e.g., a late-night play session versus none on a given evening), assignment procedures, follow-up windows, and causal estimands before estimation. Target trial emulation is particularly well suited to device-use research because the relevant question is rarely "do gamers sleep worse than non-gamers" but rather "does the same person sleep worse on nights they play late than on nights they do not." High-frequency telemetry naturally supports such within-person contrasts, and pairing it with g-methods or sequential exchangeability assumptions would allow future work to move from associational gradients toward more interpretable, policy-relevant causal estimates while keeping each individual as their own control.
 
 The telemetry–survey linkage protocol piloted in Open Play is, in principle, portable: with appropriate ethical safeguards, assent procedures, and clinical validation, an analogous continuous-telemetry approach could be used to study adolescents and problematic gamers, populations in which the timing-specific effects of late-night play are most hotly contested and where aggregate self-report measures are especially vulnerable to recall bias. Extending the present methodology to those populations — rather than extrapolating our estimates to them — is, in our view, the most productive next step.
 
