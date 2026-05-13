@@ -20,9 +20,11 @@ This repository contains the analysis and manuscript for a **Stage 1 Registered 
 
 ## View the Manuscript
 
-**[Read the latest manuscript online](https://platform-study-rr-sleep.netlify.app/)**
+- **[Read online (HTML)](https://platform-study-rr-sleep.netlify.app/)**
+- **[Download PDF](https://platform-study-rr-sleep.netlify.app/manuscript.pdf)**
+- **[Download Word (DOCX)](https://platform-study-rr-sleep.netlify.app/manuscript.docx)**
 
-The manuscript is automatically built and deployed whenever changes are pushed to the main branch.
+All three formats are rebuilt and republished whenever the `sync-manuscript` workflow runs (manual trigger).
 
 ## Repository Structure
 

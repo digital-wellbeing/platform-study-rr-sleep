@@ -127,6 +127,9 @@ jobs:
           if [ -d manuscript_files ]; then
             cp -r manuscript_files _site/manuscript_files
           fi
+          # Co-host the docx and pdf for direct download from the manuscript URL
+          [ -f manuscript.pdf ]  && cp manuscript.pdf  _site/manuscript.pdf  || echo "(no pdf to host)"
+          [ -f manuscript.docx ] && cp manuscript.docx _site/manuscript.docx || echo "(no docx to host)"
           ls -lah _site
 
       - name: Deploy to Netlify
