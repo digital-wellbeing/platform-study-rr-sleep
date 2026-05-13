@@ -1,0 +1,764 @@
+---
+title: "Diary preprocessing"
+format:
+  html:
+    df-print: paged
+    code-fold: true
+    code-summary: "Show code"
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+## Setup
+
+```{r setup}
+library(tidyverse)
+library(lubridate)
+library(here)
+library(splines)
+
+if (!requireNamespace("ordinal", quietly = TRUE)) {
+  warning("ordinal not installed; CLMM chunks will be skipped.")
+} else {
+  library(ordinal)
+}
+
+recode_sleep_quality <- function(x) {
+  lvls <- c("Very poor", "Poor", "Fair", "Good", "Very good")
+  out <- factor(x, levels = lvls, ordered = TRUE)
+  as.integer(out)
+}
+```
+
+## Load raw diary and time-use data
+
+```{r load-data, cache=TRUE}
+survey_raw <- read_csv(
+  here::here("data", "raw", "survey_daily.csv.gz"),
+  show_col_types = FALSE
+)
+
+timeuse_raw <- read_csv(
+  here::here("data", "raw", "timeuse.csv.gz"),
+  show_col_types = FALSE
+)
+
+gaming_sessions_raw <- read_csv(
+  here::here("data", "processed", "gaming_sessions.csv.gz"),
+  show_col_types = FALSE
+)
+```
+
+## Enforce ≥10h between consecutive diary responses (per participant)
+
+```{r enforce-gap}
+survey_diaries <- survey_raw %>%
+  mutate(
+    diary_ts = ymd_hms(date, tz = "UTC"),
+    diary_day = as_date(diary_ts),
+    wave_id = as.integer(wave),
+    sleep_quality_num = recode_sleep_quality(sleep_diary_quality)
+  ) %>%
+  arrange(pid, diary_ts) %>%
+  group_by(pid) %>%
+  mutate(
+    gap_hours = as.numeric(difftime(diary_ts, lag(diary_ts), units = "hours")),
+    keep_entry = is.na(gap_hours) | gap_hours >= 10
+  ) %>%
+  filter(keep_entry) %>%
+  ungroup()
+
+survey_diaries %>%
+  count(keep_entry, name = "n_entries")
+```
+
+## Prep time-use diaries and derive sleep metrics
+
+The time-use diaries span from 04:00 on the previous calendar day to 04:00 on
+the target `date`. Sleep can appear in two segments because of this boundary.
+
+```{r prep-timeuse, cache=TRUE}
+timeuse <- timeuse_raw %>%
+  filter(quality_flag == "Good quality") %>%
+  mutate(
+    # Time-use diary reflects "yesterday" relative to the recorded date
+    diary_day = ymd(date),
+    wave_id = as.integer(daily_wave),
+    start_ts = ymd_hms(start_time, tz = "UTC"),
+    end_ts = ymd_hms(end_time, tz = "UTC")
+  ) %>%
+  arrange(pid, wave_id, start_ts) %>%
+  group_by(pid, wave_id) %>%
+  # Collapse adjacent segments with the same activity (helps for sleep runs)
+  mutate(activity_run = cumsum(activity != lag(activity, default = first(activity)))) %>%
+  group_by(pid, wave_id, activity_run, activity) %>%
+  summarise(
+    diary_day = min(diary_day, na.rm = TRUE),
+    start_ts = min(start_ts, na.rm = TRUE),
+    end_ts = max(end_ts, na.rm = TRUE),
+    .groups = "drop_last"
+  ) %>%
+  ungroup() %>%
+  # Compute duration from clock time (HH:MM), ignoring date, wrap across midnight
+  mutate(
+    start_minutes = hour(start_ts) * 60 + minute(start_ts) + second(start_ts) / 60,
+    end_minutes = hour(end_ts) * 60 + minute(end_ts) + second(end_ts) / 60,
+    duration_minutes_raw = end_minutes - start_minutes,
+    duration_minutes = case_when(
+      is.na(start_minutes) | is.na(end_minutes) ~ NA_real_,
+      duration_minutes_raw < 0 ~ duration_minutes_raw + 24 * 60,
+      TRUE ~ duration_minutes_raw
+    ),
+    duration_hours = duration_minutes / 60
+  )
+
+sleep_summary <- timeuse %>%
+  filter(activity == "Sleep") %>%
+  arrange(pid, wave_id, start_ts) %>%
+  group_by(pid, wave_id) %>%
+  summarise(
+    n_sleep_segments = n(),
+    sleep_duration_hours = sum(duration_hours, na.rm = TRUE),
+    # Bedtime: last sleep segment start within the diary window (prev 04:00 -> target 04:00)
+    bedtime_utc = max(start_ts, na.rm = TRUE),
+    # Wake-up: end-time of the first (earliest) sleep run in the diary window
+    wakeup_utc = first(end_ts),
+    diary_day = min(diary_day, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    n_sleep_segments = if_else(n_sleep_segments > 10, NA_integer_, n_sleep_segments),
+    sleep_duration_hours = if_else(n_sleep_segments > 10, NA_real_, sleep_duration_hours),
+    bedtime_utc = if_else(n_sleep_segments > 10, as.POSIXct(NA), bedtime_utc),
+    wakeup_utc = if_else(n_sleep_segments > 10, as.POSIXct(NA), wakeup_utc),
+    bedtime_hm = if_else(is.na(bedtime_utc), NA_character_, format(bedtime_utc, "%H:%M", tz = "UTC")),
+    wakeup_hm = if_else(is.na(wakeup_utc), NA_character_, format(wakeup_utc, "%H:%M", tz = "UTC"))
+  )
+
+# Remove sleep duration outliers beyond 3 SD (computed across kept values)
+sleep_duration_stats <- sleep_summary %>%
+  summarise(
+    mu = mean(sleep_duration_hours, na.rm = TRUE),
+    sigma = sd(sleep_duration_hours, na.rm = TRUE)
+  )
+
+if (!is.na(sleep_duration_stats$sigma) && sleep_duration_stats$sigma > 0) {
+  sleep_summary <- sleep_summary %>%
+    mutate(
+      sleep_duration_hours = if_else(
+        abs(sleep_duration_hours - sleep_duration_stats$mu) > 3 * sleep_duration_stats$sigma,
+        NA_real_,
+        sleep_duration_hours
+      )
+    )
+}
+```
+
+## Late-night gaming in prior 24h
+
+```{r late-night-gaming, cache=TRUE}
+gaming_sessions <- gaming_sessions_raw %>%
+  mutate(
+    # sessionStart/End are UTC timestamps; latenightMinutes already computed in local time.
+    # We scale latenightMinutes by the fraction of the session that overlaps the 24h UTC window,
+    # avoiding any additional local/UTC conversion.
+    session_start = ymd_hms(sessionStart, tz = "UTC", quiet = TRUE),
+    session_end = ymd_hms(sessionEnd, tz = "UTC", quiet = TRUE),
+    latenightMinutes = replace_na(latenightMinutes, 0)
+  ) %>%
+  filter(!is.na(session_start), !is.na(session_end), session_end > session_start)
+
+late_night_by_diary <- survey_diaries %>%
+  select(pid, wave_id, diary_ts) %>%
+  left_join(gaming_sessions, by = "pid") %>%
+  filter(
+    session_end > diary_ts - hours(24),
+    session_start <= diary_ts
+  ) %>%
+  mutate(
+    overlap_minutes = pmax(
+      0,
+      as.numeric(
+        difftime(
+          pmin(session_end, diary_ts),
+          pmax(session_start, diary_ts - hours(24)),
+          units = "mins"
+        )
+      )
+    ),
+    session_minutes = as.numeric(difftime(session_end, session_start, units = "mins")),
+    overlap_frac = if_else(session_minutes > 0, overlap_minutes / session_minutes, 0),
+    late_night_minutes_overlap = latenightMinutes * overlap_frac
+  ) %>%
+  group_by(pid, wave_id) %>%
+  summarise(
+    late_night_gaming_hours_24h = sum(late_night_minutes_overlap, na.rm = TRUE) / 60,
+    .groups = "drop"
+  )
+```
+
+
+## Chronotype lookup (baseline MCTQ)
+
+```{r chronotype-lookup, cache=TRUE}
+chronotype_lookup <- here::here("data", "processed", "selfreport.csv.gz") %>%
+  read_csv(show_col_types = FALSE) %>%
+  filter(wave == 1) %>%
+  distinct(pid, msf_sc_numeric, msf_sc_centered, mctq_fd_alarm_clock_used) %>%
+  mutate(
+    chronotype_hours = msf_sc_numeric,
+    chronotype_centered = msf_sc_centered,
+    no_alarm_free = mctq_fd_alarm_clock_used == "No"
+  ) %>%
+  select(pid, chronotype_hours, chronotype_centered, no_alarm_free)
+```
+
+## Covariate lookup (baseline demographics)
+
+```{r covariate-lookup, cache=TRUE}
+intake_raw <- read_csv(
+  here::here("data", "raw", "survey_intake.csv.gz"),
+  show_col_types = FALSE
+)
+
+# Use the earliest intake per participant (if multiple exist)
+covariate_lookup <- intake_raw %>%
+  mutate(intake_ts = ymd_hms(date, tz = "UTC", quiet = TRUE)) %>%
+  arrange(pid, intake_ts) %>%
+  group_by(pid) %>%
+  slice_head(n = 1) %>%
+  ungroup() %>%
+  transmute(
+    pid,
+    region = country,
+    gender = na_if(gender, "NA"),
+    age = suppressWarnings(as.numeric(age)),
+    height_raw = suppressWarnings(as.numeric(height)),
+    weight_raw = suppressWarnings(as.numeric(weight)),
+    edu_level = na_if(edu_level, "NA"),
+    employment = na_if(employment, "NA")
+  ) %>%
+  mutate(
+    # Height: if < 100 assume inches, else cm
+    height_m = case_when(
+      is.na(height_raw) ~ NA_real_,
+      height_raw < 100 ~ height_raw * 0.0254,
+      TRUE ~ height_raw / 100
+    ),
+    # Weight: if > 150 assume pounds, else kg
+    weight_kg = case_when(
+      is.na(weight_raw) ~ NA_real_,
+      weight_raw > 150 ~ weight_raw * 0.45359237,
+      TRUE ~ weight_raw
+    ),
+    bmi = weight_kg / (height_m^2),
+    bmi = if_else(is.finite(bmi) & bmi >= 10 & bmi <= 70, bmi, NA_real_),
+    edu_score = case_when(
+      is.na(edu_level) ~ NA_real_,
+      str_detect(str_to_lower(edu_level), "no formal") ~ 1,
+      str_detect(str_to_lower(edu_level), "secondary|high school|gcse") ~ 2,
+      str_detect(str_to_lower(edu_level), "some college|associate") ~ 3,
+      str_detect(str_to_lower(edu_level), "bachelor") ~ 4,
+      str_detect(str_to_lower(edu_level), "post-graduate|postgraduate|master|phd|doctor") ~ 5,
+      TRUE ~ NA_real_
+    ),
+    emp_score = case_when(
+      is.na(employment) ~ NA_real_,
+      str_detect(str_to_lower(employment), "full-time|full time|self-employed") ~ 4,
+      str_detect(str_to_lower(employment), "part-time|part time") ~ 3,
+      str_detect(str_to_lower(employment), "student") ~ 2,
+      str_detect(str_to_lower(employment), "retired") ~ 2,
+      str_detect(str_to_lower(employment), "not currently employed|unemployed") ~ 1,
+      TRUE ~ NA_real_
+    ),
+    SES_index = edu_score + emp_score,
+    age_scaled = as.numeric(scale(age)),
+    bmi_scaled = as.numeric(scale(bmi)),
+    SES_index_scaled = as.numeric(scale(SES_index)),
+    region = factor(region),
+    gender = factor(gender)
+  ) %>%
+  select(pid, age_scaled, bmi_scaled, SES_index_scaled, region, gender)
+```
+
+
+## Assemble long diary dataframe
+
+`diary_long` keeps the requested diary fields and appends sleep metrics derived
+from the matched time-use entries.
+
+```{r assemble-long}
+diary_long <- survey_diaries %>%
+  select(
+    pid,
+    wave_id,
+    day = diary_day,
+    playing_last_24h = played24hr,
+    affect = affective_valence,
+    lifesat = life_sat,
+    sleep_quality = sleep_diary_quality,
+    sleep_quality_num
+  ) %>%
+  left_join(sleep_summary, by = c("pid", "wave_id")) %>%
+  left_join(chronotype_lookup, by = "pid") %>%
+  left_join(covariate_lookup, by = "pid") %>%
+  left_join(late_night_by_diary, by = c("pid", "wave_id")) %>%
+  mutate(
+    late_night_gaming_hours_24h = replace_na(late_night_gaming_hours_24h, 0),
+    # Define "weekend" as Friday/Saturday based on the diary calendar date
+    # With week_start = 1 => Mon=1 ... Fri=5, Sat=6, Sun=7
+    is_weekend = wday(day, week_start = 1) %in% c(5, 6)
+  )
+
+diary_long %>%
+  glimpse()
+
+```
+
+## Ordinal CLM: late-night gaming → sleep quality (no random effects)
+
+```{r clm-ordinal, eval=requireNamespace("ordinal", quietly = TRUE)}
+# Keep observations with recorded sleep quality and trim extreme late-night hours
+gender_levels <- sort(unique(na.omit(diary_long$gender)))
+if (length(gender_levels) < 2) gender_levels <- c(gender_levels, "other_gender")
+
+diary_ocat <- diary_long %>%
+  filter(!is.na(sleep_quality_num)) %>%
+  mutate(
+    sleep_quality_num = pmax(pmin(as.integer(sleep_quality_num), 5L), 1L),
+    late_night_minutes_trim = pmin(
+      late_night_gaming_hours_24h * 60,
+      quantile(late_night_gaming_hours_24h * 60, 0.99, na.rm = TRUE)
+    ),
+    sleep_quality_ord = factor(
+      sleep_quality_num,
+      levels = 1:5,
+      labels = c("Very poor", "Poor", "Fair", "Good", "Very good"),
+      ordered = TRUE
+    ),
+    # Keep 2 levels even if the filtered data contains only weekends or only weekdays
+    is_weekend = factor(as.logical(is_weekend), levels = c(FALSE, TRUE)),
+    gender = factor(gender, levels = gender_levels)
+  )
+
+# Decompose late-night gaming into within-person and between-person components
+# - between-person: participant mean (centered at grand mean)
+# - within-person: deviation from participant mean
+diary_ocat <- diary_ocat %>%
+  group_by(pid) %>%
+  mutate(
+    late_night_pid_mean = mean(late_night_minutes_trim, na.rm = TRUE),
+    late_night_within = late_night_minutes_trim - late_night_pid_mean
+  ) %>%
+  ungroup() %>%
+  mutate(
+    late_night_between = late_night_pid_mean - mean(late_night_pid_mean, na.rm = TRUE)
+  )
+
+# Grand mean of participant means (used to map total minutes -> within/between for plotting)
+grand_mean_pid <- mean(diary_ocat$late_night_pid_mean, na.rm = TRUE)
+
+# Build covariate set for downstream prediction grid construction
+covariate_terms <- c()
+if (sum(!is.na(diary_ocat$age_scaled)) > 0) covariate_terms <- c(covariate_terms, "age_scaled")
+if (sum(!is.na(diary_ocat$bmi_scaled)) > 0) covariate_terms <- c(covariate_terms, "bmi_scaled")
+if (sum(!is.na(diary_ocat$SES_index_scaled)) > 0) covariate_terms <- c(covariate_terms, "SES_index_scaled")
+if (sum(!is.na(diary_ocat$gender)) > 0) covariate_terms <- c(covariate_terms, "gender")
+if (sum(!is.na(diary_ocat$is_weekend)) > 0) covariate_terms <- c(covariate_terms, "is_weekend")
+
+pred_covariates <- diary_ocat %>%
+  summarise(
+    age_scaled = median(age_scaled, na.rm = TRUE),
+    bmi_scaled = median(bmi_scaled, na.rm = TRUE),
+    SES_index_scaled = median(SES_index_scaled, na.rm = TRUE),
+    gender = names(sort(table(gender), decreasing = TRUE))[1],
+    is_weekend = as.logical(names(sort(table(is_weekend), decreasing = TRUE))[1])
+  )
+
+# Compare CLMs: linear vs spline on the within-person component
+fixed_terms_linear <- c("late_night_within", "late_night_between", covariate_terms)
+clm_formula_linear <- as.formula(
+  paste("sleep_quality_ord ~", paste(fixed_terms_linear, collapse = " + "))
+)
+
+ocat_clm_linear <- clm(
+  clm_formula_linear,
+  data = diary_ocat,
+  link = "logit",
+  Hess = TRUE
+)
+
+# Sweep spline dfs and choose best by AIC
+df_candidates <- 2:6
+spline_fits <- map(
+  df_candidates,
+  \(df) {
+    f <- as.formula(
+      paste(
+        "sleep_quality_ord ~",
+        paste(
+          c(sprintf("splines::ns(late_night_within, df = %d)", df), "late_night_between", covariate_terms),
+          collapse = " + "
+        )
+      )
+    )
+    mod <- clm(f, data = diary_ocat, link = "logit", Hess = TRUE)
+    list(df = df, formula = f, model = mod)
+  }
+)
+
+spline_compare <- tibble(
+  df = map_int(spline_fits, "df"),
+  AIC = map_dbl(spline_fits, \(x) AIC(x$model)),
+  BIC = map_dbl(spline_fits, \(x) BIC(x$model)),
+  logLik = map_dbl(spline_fits, \(x) as.numeric(logLik(x$model)))
+) %>%
+  arrange(AIC) %>%
+  mutate(deltaAIC = AIC - min(AIC))
+
+spline_compare
+
+best_df <- spline_compare$df[which.min(spline_compare$AIC)]
+best_spline <- spline_fits[[which(df_candidates == best_df)]]$model
+ocat_clm_spline <- best_spline
+spline_label <- paste0("Spline (df=", best_df, ")")
+
+model_compare_clm <- tibble(
+  model = c("linear", spline_label),
+  AIC = c(AIC(ocat_clm_linear), AIC(ocat_clm_spline)),
+  BIC = c(BIC(ocat_clm_linear), BIC(ocat_clm_spline)),
+  logLik = c(as.numeric(logLik(ocat_clm_linear)), as.numeric(logLik(ocat_clm_spline)))
+)
+model_compare_clm
+
+anova(ocat_clm_linear, ocat_clm_spline)
+
+ocat_clm <- if (AIC(ocat_clm_spline) < AIC(ocat_clm_linear)) ocat_clm_spline else ocat_clm_linear
+```
+
+```{r clm-ordinal-probs, fig.width=7, fig.height=4, eval=requireNamespace("ordinal", quietly = TRUE)}
+# Predicted category probabilities across the observed range
+late_night_minutes_seq <- seq(
+  min(diary_ocat$late_night_minutes_trim, na.rm = TRUE),
+  max(diary_ocat$late_night_minutes_trim, na.rm = TRUE),
+  length.out = 120
+)
+
+# Build a prediction grid
+pred_grid <- tibble(late_night_minutes_trim = late_night_minutes_seq) %>%
+  mutate(
+    # Express predictions as a function of total minutes by holding between-person effect at 0
+    # (average participant mean), so within = total - grand_mean_pid.
+    late_night_within = late_night_minutes_trim - grand_mean_pid,
+    late_night_between = 0,
+    age_scaled = pred_covariates$age_scaled,
+    bmi_scaled = pred_covariates$bmi_scaled,
+    SES_index_scaled = pred_covariates$SES_index_scaled
+  )
+if ("gender" %in% covariate_terms) {
+  pred_grid$gender <- factor(pred_covariates$gender, levels = levels(diary_ocat$gender))
+}
+if ("is_weekend" %in% covariate_terms) {
+  pred_grid$is_weekend <- factor(pred_covariates$is_weekend, levels = levels(diary_ocat$is_weekend))
+}
+
+# Use CLM for probabilities (predict() support is robust)
+prob_mat <- predict(ocat_clm, newdata = pred_grid, type = "prob")$fit
+colnames(prob_mat) <- paste0("cat_", seq_len(ncol(prob_mat)))
+
+pred_prob <- bind_cols(pred_grid, as_tibble(prob_mat)) %>%
+  pivot_longer(
+    starts_with("cat_"),
+    names_to = "sleep_quality_num",
+    names_prefix = "cat_",
+    values_to = "prob"
+  ) %>%
+  mutate(sleep_quality_num = as.integer(sleep_quality_num))
+
+ggplot(pred_prob, aes(x = late_night_minutes_trim, y = prob, color = factor(sleep_quality_num))) +
+  geom_line(size = 1) +
+  scale_color_manual(
+    values = c(
+      "1" = "#1b9e77",
+      "2" = "#d95f02",
+      "3" = "#7570b3", # boosted contrast for category 3
+      "4" = "#e7298a",
+      "5" = "#66a61e"
+    ),
+    name = "Sleep quality\n(1=Very poor ... 5=Very good)"
+  ) +
+  labs(
+    title = "Predicted sleep quality probabilities vs. late-night gaming (trimmed) — CLM",
+    x = "Late-night gaming minutes in prior 24h (99th pct. trimmed)",
+    y = "Probability"
+  ) +
+  theme_minimal()
+```
+
+```{r clm-poor-sleep-prob, fig.width=7, fig.height=4, eval=requireNamespace("ordinal", quietly = TRUE)}
+# Predicted probability of "poor sleep" (Very poor OR Poor), comparing linear vs spline CLMs
+
+# Grid over total late-night minutes (trimmed)
+late_night_minutes_seq <- seq(
+  min(diary_ocat$late_night_minutes_trim, na.rm = TRUE),
+  max(diary_ocat$late_night_minutes_trim, na.rm = TRUE),
+  length.out = 160
+)
+
+# To express predictions as a function of total minutes, we set the participant mean
+# to the grand mean (=> between = 0) so within = total - grand_mean_pid.
+grand_mean_pid <- mean(diary_ocat$late_night_pid_mean, na.rm = TRUE)
+
+pred_grid_poor <- tibble(late_night_minutes_trim = late_night_minutes_seq) %>%
+  mutate(
+    late_night_within = late_night_minutes_trim - grand_mean_pid,
+    late_night_between = 0,
+    age_scaled = pred_covariates$age_scaled,
+    bmi_scaled = pred_covariates$bmi_scaled,
+    SES_index_scaled = pred_covariates$SES_index_scaled
+  )
+if ("gender" %in% covariate_terms) {
+  pred_grid_poor$gender <- factor(pred_covariates$gender, levels = levels(diary_ocat$gender))
+}
+if ("is_weekend" %in% covariate_terms) {
+  pred_grid_poor$is_weekend <- factor(pred_covariates$is_weekend, levels = levels(diary_ocat$is_weekend))
+}
+
+lvls <- levels(diary_ocat$sleep_quality_ord)
+poor_idx <- which(lvls %in% c("Very poor", "Poor"))
+
+prob_linear <- predict(ocat_clm_linear, newdata = pred_grid_poor, type = "prob")$fit
+prob_spline <- predict(ocat_clm_spline, newdata = pred_grid_poor, type = "prob")$fit
+
+pred_poor <- tibble(
+  late_night_minutes_trim = late_night_minutes_seq,
+  p_poor_linear = rowSums(prob_linear[, poor_idx, drop = FALSE]),
+  p_poor_spline = rowSums(prob_spline[, poor_idx, drop = FALSE])
+) %>%
+  pivot_longer(
+    cols = starts_with("p_poor_"),
+    names_to = "model",
+    values_to = "p_poor"
+  ) %>%
+  mutate(
+    model = recode(model, p_poor_linear = "Linear", p_poor_spline = spline_label)
+  )
+
+ggplot(pred_poor, aes(x = late_night_minutes_trim, y = p_poor, color = model)) +
+  geom_line(linewidth = 1) +
+  scale_color_manual(values = setNames(c("#2c7fb8", "#d95f02"), c("Linear", spline_label))) +
+  labs(
+    title = "Predicted probability of poor sleep vs. late-night gaming (trimmed)",
+    subtitle = "Poor sleep = Very poor or Poor; between-person effect held at 0 (average participant mean)",
+    x = "Late-night gaming minutes in prior 24h (99th pct. trimmed)",
+    y = "Predicted probability"
+  ) +
+  theme_minimal()
+```
+
+```{r clm-poor-sleep-within-between, fig.width=8, fig.height=4.5, eval=requireNamespace("ordinal", quietly = TRUE)}
+# Plot within- and between-subject effects separately (poor sleep = Very poor OR Poor)
+
+lvls <- levels(diary_ocat$sleep_quality_ord)
+poor_idx <- which(lvls %in% c("Very poor", "Poor"))
+
+within_seq <- seq(
+  min(diary_ocat$late_night_within, na.rm = TRUE),
+  max(diary_ocat$late_night_within, na.rm = TRUE),
+  length.out = 160
+)
+
+pid_mean_seq <- seq(
+  min(diary_ocat$late_night_pid_mean, na.rm = TRUE),
+  max(diary_ocat$late_night_pid_mean, na.rm = TRUE),
+  length.out = 160
+)
+
+pred_grid_within <- tibble(late_night_within = within_seq) %>%
+  mutate(
+    late_night_between = 0,
+    age_scaled = pred_covariates$age_scaled,
+    bmi_scaled = pred_covariates$bmi_scaled,
+    SES_index_scaled = pred_covariates$SES_index_scaled
+  )
+
+pred_grid_between <- tibble(late_night_pid_mean = pid_mean_seq) %>%
+  mutate(
+    late_night_between = late_night_pid_mean - grand_mean_pid,
+    late_night_within = 0,
+    age_scaled = pred_covariates$age_scaled,
+    bmi_scaled = pred_covariates$bmi_scaled,
+    SES_index_scaled = pred_covariates$SES_index_scaled
+  )
+
+if ("gender" %in% covariate_terms) {
+  pred_grid_within$gender <- factor(pred_covariates$gender, levels = levels(diary_ocat$gender))
+  pred_grid_between$gender <- factor(pred_covariates$gender, levels = levels(diary_ocat$gender))
+}
+if ("is_weekend" %in% covariate_terms) {
+  pred_grid_within$is_weekend <- factor(pred_covariates$is_weekend, levels = levels(diary_ocat$is_weekend))
+  pred_grid_between$is_weekend <- factor(pred_covariates$is_weekend, levels = levels(diary_ocat$is_weekend))
+}
+
+prob_within_linear <- predict(ocat_clm_linear, newdata = pred_grid_within, type = "prob")$fit
+prob_within_spline <- predict(ocat_clm_spline, newdata = pred_grid_within, type = "prob")$fit
+prob_between_linear <- predict(ocat_clm_linear, newdata = pred_grid_between, type = "prob")$fit
+prob_between_spline <- predict(ocat_clm_spline, newdata = pred_grid_between, type = "prob")$fit
+
+plot_df <- bind_rows(
+  tibble(
+    effect = "Within-person (deviation from own mean)",
+    x = within_seq,
+    x_label = "Within-person late-night gaming (minutes, centered at person mean)",
+    model = "Linear",
+    p_poor = rowSums(prob_within_linear[, poor_idx, drop = FALSE])
+  ),
+  tibble(
+    effect = "Within-person (deviation from own mean)",
+    x = within_seq,
+    x_label = "Within-person late-night gaming (minutes, centered at person mean)",
+    model = spline_label,
+    p_poor = rowSums(prob_within_spline[, poor_idx, drop = FALSE])
+  ),
+  tibble(
+    effect = "Between-person (participant mean)",
+    x = pid_mean_seq,
+    x_label = "Participant mean late-night gaming (minutes, trimmed)",
+    model = "Linear",
+    p_poor = rowSums(prob_between_linear[, poor_idx, drop = FALSE])
+  ),
+  tibble(
+    effect = "Between-person (participant mean)",
+    x = pid_mean_seq,
+    x_label = "Participant mean late-night gaming (minutes, trimmed)",
+    model = spline_label,
+    p_poor = rowSums(prob_between_spline[, poor_idx, drop = FALSE])
+  )
+)
+
+ggplot(plot_df, aes(x = x, y = p_poor, color = model)) +
+  geom_line(linewidth = 1) +
+  facet_wrap(~ effect, scales = "free_x") +
+  scale_color_manual(values = setNames(c("#2c7fb8", "#d95f02"), c("Linear", spline_label))) +
+  labs(
+    title = "Predicted probability of poor sleep: within- vs between-person effects",
+    subtitle = "Poor sleep = Very poor or Poor; other covariates held at typical values",
+    x = NULL,
+    y = "Predicted probability"
+  ) +
+  theme_minimal()
+```
+
+```{r clm-ordinal-marginals, cache=TRUE, eval=requireNamespace("ordinal", quietly = TRUE) && requireNamespace("marginaleffects", quietly = TRUE)}
+# Marginal effect (derivative) of late-night gaming on category probabilities
+# Computed on the CLM.
+library(marginaleffects)
+
+meff <- slopes(
+  ocat_clm,
+  variables = "late_night_within",
+  newdata = pred_grid,
+  type = "prob"
+)
+meff
+
+plot_slopes(
+  ocat_clm,
+  variables = "late_night_within",
+  condition = "late_night_minutes_trim",
+  newdata = pred_grid,
+  type = "prob"
+)
+```
+
+## Descriptive plots for sanity checks
+
+```{r sanity-plots, fig.width=7, fig.height=26}
+library(scales)
+
+p_playing <- diary_long %>%
+  count(playing_last_24h) %>%
+  ggplot(aes(x = playing_last_24h, y = n, fill = playing_last_24h)) +
+  geom_col(width = 0.6, show.legend = FALSE) +
+  labs(
+    title = "Played in last 24h",
+    x = NULL,
+    y = "Count"
+  )
+
+p_affect <- diary_long %>%
+  filter(!is.na(affect)) %>%
+  ggplot(aes(x = affect)) +
+  geom_histogram(binwidth = 5, fill = "#3182bd", color = "white") +
+  labs(title = "Affect", x = "Score", y = "Count")
+
+p_lifesat <- diary_long %>%
+  filter(!is.na(lifesat)) %>%
+  ggplot(aes(x = lifesat)) +
+  geom_histogram(binwidth = 5, fill = "#31a354", color = "white") +
+  labs(title = "Life satisfaction", x = "Score", y = "Count")
+
+p_sleep_quality <- diary_long %>%
+  filter(!is.na(sleep_quality)) %>%
+  ggplot(aes(x = sleep_quality)) +
+  geom_bar(fill = "#756bb1") +
+  labs(title = "Sleep quality", x = NULL, y = "Count") +
+  coord_flip()
+
+p_sleep_duration <- diary_long %>%
+  filter(!is.na(sleep_duration_hours)) %>%
+  ggplot(aes(x = sleep_duration_hours)) +
+  geom_histogram(binwidth = 0.5, fill = "#fd8d3c", color = "white") +
+  labs(title = "Sleep duration", x = "Hours", y = "Count")
+
+p_bedtime <- diary_long %>%
+  filter(!is.na(bedtime_utc)) %>%
+  mutate(bedtime_hour = hour(bedtime_utc) + minute(bedtime_utc) / 60) %>%
+  ggplot(aes(x = bedtime_hour)) +
+  geom_histogram(binwidth = 0.5, fill = "#636363", color = "white") +
+  scale_x_continuous(labels = label_number(accuracy = 1)) +
+  labs(title = "Bedtime (UTC)", x = "Hour of day", y = "Count")
+
+p_diary_counts <- diary_long %>%
+  count(pid, name = "n_diaries") %>%
+  ggplot(aes(x = n_diaries)) +
+  geom_histogram(binwidth = 1, fill = "#6baed6", color = "white") +
+  labs(
+    title = "Number of diaries completed per participant",
+    x = "Diaries per participant",
+    y = "Count of participants"
+  )
+
+p_sleep_segments <- sleep_summary %>%
+  filter(!is.na(n_sleep_segments), n_sleep_segments <= 10) %>%
+  ggplot(aes(x = n_sleep_segments)) +
+  geom_histogram(binwidth = 1, fill = "#9ecae1", color = "white") +
+  scale_x_continuous(breaks = 1:10) +
+  labs(
+    title = "Sleep segments per diary (time-use)",
+    x = "Number of sleep segments",
+    y = "Count of diaries"
+  )
+
+p_late_night <- diary_long %>%
+  filter(!is.na(late_night_gaming_hours_24h)) %>%
+  ggplot(aes(x = late_night_gaming_hours_24h)) +
+  geom_density(fill = "#fdae6b", alpha = 0.7, adjust = 1.1, na.rm = TRUE) +
+  labs(
+    title = "Late-night gaming in prior 24h",
+    x = "Hours (late-night window)",
+    y = "Density"
+  )
+
+p_playing
+p_affect
+p_lifesat
+p_sleep_quality
+p_sleep_duration
+p_bedtime
+p_diary_counts
+p_sleep_segments
+p_late_night
+```

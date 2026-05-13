@@ -1,0 +1,177 @@
+name: Sync manuscript to Google Docs
+
+on:
+  # Manual trigger only — pushes do not auto-fire CI to keep Actions
+  # billing predictable. Run from the Actions tab or via:
+  #   gh workflow run sync-manuscript.yml --ref main
+  workflow_dispatch:
+
+env:
+  DOC_ID: REDACTED_DOC_ID
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write service account key
+        env:
+          TRACKDOWN_SA_KEY: ${{ secrets.TRACKDOWN_SA_KEY }}
+        run: echo "$TRACKDOWN_SA_KEY" > /tmp/sa-key.json
+
+      - name: Diagnose SA key (safe — no private key)
+        run: |
+          set -e
+          SIZE=$(wc -c < /tmp/sa-key.json | tr -d ' ')
+          echo "file size: ${SIZE} bytes"
+          if [ "$SIZE" -lt 100 ]; then
+            echo "::error::SA key file is suspiciously small (${SIZE} bytes). The TRACKDOWN_SA_KEY secret is probably empty or missing."
+            exit 1
+          fi
+          if ! python3 -c 'import json,sys; json.load(open("/tmp/sa-key.json"))' 2>/dev/null; then
+            echo "::error::SA key file is not valid JSON."
+            head -c 200 /tmp/sa-key.json; echo
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json
+          k = json.load(open("/tmp/sa-key.json"))
+          print("type        :", k.get("type"))
+          print("project_id  :", k.get("project_id"))
+          print("client_email:", k.get("client_email"))
+          print("has private_key:", bool(k.get("private_key")))
+          PY
+
+      - name: Set up Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          # Avoid r-version: renv — it reads exact patch (e.g. 4.5.3) from
+          # renv.lock and silently falls back to source build if that exact
+          # binary isn't prebuilt for ubuntu-noble, hanging Set up R for
+          # hours. Pin to series and let r-lib pick the newest prebuilt
+          # patch; renv::restore tolerates patch mismatches within a series.
+          r-version: '4.5'
+          use-public-rspm: true
+
+      - name: Install system dependencies for R packages
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            cmake gdal-bin libcurl4-openssl-dev libfontconfig1-dev \
+            libfreetype6-dev libgdal-dev libpng-dev libudunits2-dev \
+            libx11-dev libxml2-dev libssl-dev libgit2-dev \
+            libharfbuzz-dev libfribidi-dev libtiff-dev libjpeg-dev \
+            pandoc
+
+      - name: Restore R packages via renv
+        uses: r-lib/actions/setup-renv@v2
+
+      - name: Cache Quarto freeze + knitr chunk cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            _freeze
+            manuscript_cache
+            manuscript_files
+          # Per-run primary key so the cache *always* saves at end of job.
+          # Restore-keys fallback always matches the most recent cache, so
+          # we never start cold once one cache exists. knitr handles chunk-
+          # level invalidation internally (hash of code + inputs), so we
+          # don't need to invalidate the whole cache when the qmd changes.
+          key: quarto-cache-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            quarto-cache-
+
+      # docx is the critical output (gets pushed to Google Doc). HTML and
+      # PDF are best-effort — if their format-specific renderers hit a
+      # template bug (e.g. typst NormalTok), we still want the docx to
+      # reach Google.
+      - name: Render DOCX
+        run: quarto render manuscript.qmd --to docx
+
+      - name: Render HTML
+        continue-on-error: true
+        run: quarto render manuscript.qmd --to html
+
+      - name: Render PDF (typst)
+        continue-on-error: true
+        run: quarto render manuscript.qmd --to preprint-typst
+
+      - name: List rendered outputs
+        run: |
+          ls -lah manuscript.docx
+          ls -lah manuscript.html 2>/dev/null || echo "(html not produced)"
+          ls -lah manuscript.pdf 2>/dev/null || echo "(pdf not produced)"
+
+      - name: Upload rendered artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: manuscript-rendered
+          path: |
+            manuscript.docx
+            manuscript.html
+            manuscript.pdf
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Prepare Netlify site directory
+        if: hashFiles('manuscript.html') != ''
+        run: |
+          mkdir -p _site
+          cp manuscript.html _site/index.html
+          if [ -d manuscript_files ]; then
+            cp -r manuscript_files _site/manuscript_files
+          fi
+          ls -lah _site
+
+      - name: Deploy to Netlify
+        if: hashFiles('manuscript.html') != ''
+        uses: nwtgck/actions-netlify@v3
+        with:
+          publish-dir: _site
+          production-deploy: true
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+
+      - name: Push docx to Google Doc
+        env:
+          DOC_ID: ${{ env.DOC_ID }}
+        run: |
+          library(httr2)
+          library(gargle)
+
+          tok <- credentials_service_account(
+            path = "/tmp/sa-key.json",
+            scopes = "https://www.googleapis.com/auth/drive"
+          )
+          access_token <- tok$credentials$access_token
+          doc_id <- Sys.getenv("DOC_ID")
+          docx_mime <- "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+          resp <- request(sprintf(
+              "https://www.googleapis.com/upload/drive/v3/files/%s",
+              doc_id
+            )) |>
+            req_method("PATCH") |>
+            req_url_query(uploadType = "media") |>
+            req_auth_bearer_token(access_token) |>
+            req_headers(`Content-Type` = docx_mime) |>
+            req_body_file("manuscript.docx") |>
+            req_perform()
+
+          stopifnot(resp_status(resp) < 300)
+          body <- resp_body_json(resp)
+          cat(sprintf("Updated doc: %s (id=%s, mimeType=%s, size=%s bytes)\n",
+                      body$name, body$id, body$mimeType,
+                      file.info("manuscript.docx")$size))
+        shell: Rscript {0}
+
+      - name: Clean up
+        if: always()
+        run: rm -f /tmp/sa-key.json

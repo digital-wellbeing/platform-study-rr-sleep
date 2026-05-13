@@ -1,0 +1,4 @@
+=== Diary Imputation QC Summary ===
+
+Source: data/processed/diary_imputed.rds
+m=60, iterations=20, rows=16131

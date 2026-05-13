@@ -1,0 +1,38 @@
+=== Multilevel Multiple Imputation Summary (2l.pmm, two-pass) ===
+
+Number of imputations (m): 20
+Number of iterations per pass: 20
+
+--- BIWEEKLY pass ---
+Rows: 9468 | Participants: 1578
+  wemwbs: 3259 (34.4%) missing
+
+Observed vs imputed:
+  wemwbs: obs = -0.00 +/- 5.25, imp = 0.05 +/- 4.82, diff = 0.05
+
+--- MONTHLY pass ---
+Rows: 4734 | Participants: 1578
+  total_hours_sleep: 2026 (42.8%) missing
+  epsTotal: 2029 (42.9%) missing
+  psqi_comp1_quality: 1997 (42.2%) missing
+  psqi_comp2_latency: 1997 (42.2%) missing
+  psqi_comp3_duration: 1997 (42.2%) missing
+  psqi_comp4_efficiency: 1999 (42.2%) missing
+  psqi_comp5_problems: 1997 (42.2%) missing
+  psqi_comp6_medication: 1997 (42.2%) missing
+  psqi_comp7_tired: 1997 (42.2%) missing
+  Passive: psqi_global 
+
+Observed vs imputed:
+  total_hours_sleep: obs = -0.01 +/- 1.18, imp = 0.42 +/- 1.07, diff = 0.42
+  epsTotal: obs = -0.01 +/- 3.85, imp = -0.33 +/- 3.76, diff = -0.32
+  psqi_comp1_quality: obs = 0.00 +/- 0.66, imp = -1.29 +/- 0.03, diff = -1.29
+  psqi_comp2_latency: obs = 0.00 +/- 0.92, imp = -1.50 +/- 0.12, diff = -1.50
+  psqi_comp3_duration: obs = 0.00 +/- 0.73, imp = -0.59 +/- 0.26, diff = -0.60
+  psqi_comp4_efficiency: obs = -0.00 +/- 0.91, imp = -0.46 +/- 0.39, diff = -0.46
+  psqi_comp5_problems: obs = 0.00 +/- 0.51, imp = -0.85 +/- 0.73, diff = -0.85
+  psqi_comp6_medication: obs = -0.01 +/- 0.82, imp = 0.08 +/- 0.80, diff = 0.08
+  psqi_comp7_tired: obs = 0.00 +/- 0.75, imp = -0.45 +/- 0.90, diff = -0.45
+
+
+Survey dates inferred: 3226 records (1039 participants)
