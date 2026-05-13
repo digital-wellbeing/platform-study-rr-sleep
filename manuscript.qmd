@@ -20,7 +20,7 @@ affiliations:
   - id: 2
     name: Second University
 abstract: |
-  Late-night gaming has been linked to disrupted sleep and poorer wellbeing, but most evidence relies on self-reported play time in adolescent samples and rarely tests chronotype as a moderator in adults. Using the Open Play dataset—a three-month longitudinal study of adult gamers in the UK and US that paired session-level digital-trace data from Nintendo, Xbox, and Steam with biweekly panel and daily-diary self-reports—this Registered Report tested whether late-night gaming (23:00–06:00) predicted (H1a) poorer sleep quality, (H1b) shorter sleep duration, (H1c) greater daytime sleepiness, and (H1d) lower mental wellbeing, and whether these associations were amplified among individuals with more evening-leaning chronotypes (H2). Outcomes were assessed with the PSQI, ESS, and SWEMWBS across six biweekly waves; chronotype was indexed by the MCTQ-derived MSF~sc~. Only H1a was supported: each additional 10 minutes of daily late-night gaming was associated with an approximate 0.9 percentage-point increase in the probability of reporting poor sleep quality, consistent across imputed, complete-case, and exploratory diary specifications. TOST equivalence tests accepted the null for H1b–H1d, bounding any true effects below ±7 minutes of nightly sleep, ±0.38 Epworth points, and ±0.53 SWEMWBS points per one-SD (≈36 min/day) increase in late-night gaming. None of the H2 chronotype × late-night gaming interactions reached significance in the pooled imputation models; equivalence tests accepted the null for H2b–H2d, with H2a undecided. The findings do not support the sleep-displacement account, which is primarily concerned with reduced sleep duration as equivalence tests ruled out meaningful effects on sleep duration, daytime sleepiness, wellbeing, and chronotype-based vulnerability. The small but robust association with subjective sleep quality is more consistent with arousal or attribution mechanisms than with sleep displacement per se.
+  Late-night gaming has been linked to disrupted sleep and poorer wellbeing, but most evidence relies on self-reported play time in adolescent samples and rarely tests chronotype as a moderator in adults. Using the Open Play dataset—a three-month longitudinal study of adult gamers in the UK and US that paired session-level digital-trace data from Nintendo, Xbox, and Steam with biweekly panel and daily-diary self-reports—this Registered Report tested whether late-night gaming (23:00–06:00) predicted (H1a) poorer sleep quality, (H1b) shorter sleep duration, (H1c) greater daytime sleepiness, and (H1d) lower mental wellbeing, and whether these associations were amplified among individuals with more evening-leaning chronotypes (H2). Outcomes were assessed with the PSQI, ESS, and SWEMWBS across six biweekly waves; chronotype was indexed by the MCTQ-derived MSF~sc~. Only H1a was supported: each additional 10 minutes of daily late-night gaming was associated with an approximate 0.9 percentage-point increase in the probability of reporting poor sleep quality, consistent across imputed, complete-case, and exploratory diary specifications. With a smallest effect size of interest set to ±0.1 × SD of the outcome, TOST equivalence tests accepted the null for H1b–H1d, bounding any true effects below ±7 minutes of nightly sleep, ±0.38 Epworth points, and ±0.53 SWEMWBS points per one-SD (≈36 min/day) increase in late-night gaming. None of the H2 chronotype × late-night gaming interactions reached significance in the pooled imputation models; equivalence tests accepted the null for H2b–H2d, with H2a undecided. The findings do not support the sleep-displacement account, which is primarily concerned with reduced sleep duration as equivalence tests ruled out meaningful effects on sleep duration, daytime sleepiness, wellbeing, and chronotype-based vulnerability. The small but robust association with subjective sleep quality is more consistent with arousal or attribution mechanisms than with sleep displacement per se.
 categories: [late-night gaming, sleep quality, sleep duration, daytime sleepiness, mental wellbeing, chronotype, digital trace data, registered report]
 authornote: |
   Author notes go here.
@@ -62,6 +62,42 @@ format:
     # fontsize: 11pt               # Font size
     # leading: 0.6em               # Line spacing
     # first-line-indent: 1.8em     # Paragraph indent
+    include-in-header:
+      # Pandoc emits #NormalTok(...), #KeywordTok(...) etc. for inline code
+      # syntax-highlight tokens, but the mvuorre/preprint typst template
+      # doesn't define them — typst compilation fails with `unknown
+      # variable: NormalTok`. Define them all as passthrough stubs so
+      # inline code renders as plain text in the PDF.
+      text: |
+        #let NormalTok(body) = body
+        #let KeywordTok(body) = body
+        #let StringTok(body) = body
+        #let CommentTok(body) = body
+        #let DataTypeTok(body) = body
+        #let FunctionTok(body) = body
+        #let VariableTok(body) = body
+        #let ControlFlowTok(body) = body
+        #let BuiltInTok(body) = body
+        #let OperatorTok(body) = body
+        #let SpecialCharTok(body) = body
+        #let CharTok(body) = body
+        #let DecValTok(body) = body
+        #let BaseNTok(body) = body
+        #let FloatTok(body) = body
+        #let ConstantTok(body) = body
+        #let AttributeTok(body) = body
+        #let AlertTok(body) = body
+        #let AnnotationTok(body) = body
+        #let DocumentationTok(body) = body
+        #let WarningTok(body) = body
+        #let ErrorTok(body) = body
+        #let PreprocessorTok(body) = body
+        #let ImportTok(body) = body
+        #let InformationTok(body) = body
+        #let OtherTok(body) = body
+        #let RegionMarkerTok(body) = body
+        #let VerbatimStringTok(body) = body
+        #let SpecialStringTok(body) = body
   docx:
     toc: false
     number-sections: false
