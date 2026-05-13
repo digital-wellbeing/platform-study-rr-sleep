@@ -46,6 +46,12 @@ jobs:
 
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          # Pin to match local renders. Quarto 1.9.x changed the typst
+          # writer to emit #wideblock(side: "both") and #NormalTok(...)
+          # calls that mvuorre/preprint doesn't define, breaking the PDF
+          # render. 1.8.27 matches local and is known to render cleanly.
+          version: '1.8.27'
 
       - name: Set up R
         uses: r-lib/actions/setup-r@v2
