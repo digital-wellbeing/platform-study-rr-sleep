@@ -98,6 +98,11 @@ format:
         #let RegionMarkerTok(body) = body
         #let VerbatimStringTok(body) = body
         #let SpecialStringTok(body) = body
+        // Quarto's typst writer emits #wideblock(...) for content that
+        // would span columns in a multi-column layout. The mvuorre/preprint
+        // template doesn't define it for single-column. Pass through.
+        #let wideblock(body) = body
+        #let narrowblock(body) = body
   docx:
     toc: false
     number-sections: false
