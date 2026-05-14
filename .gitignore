@@ -1,0 +1,44 @@
+# ── Quarto build outputs ─────────────────────────────────────────────────────
+manuscript.html
+manuscript.pdf
+manuscript.docx
+manuscript_cache/
+manuscript_files/
+.quarto/
+_freeze/*/execute-results/
+
+# R/ exploratory notebook outputs
+R/diary.html
+R/diary_cache/
+R/diary_files/
+R/session_timing_analysis_cache/
+R/session_timing_analysis_files/
+R/output/
+
+# renv – library is local-only; lock file is committed
+renv/library/
+renv/staging/
+
+# macOS
+.DS_Store
+
+# Dev tooling (not part of the analysis)
+.playwright-mcp/
+.claude/
+CLAUDE.md
+
+# Large output artefacts (pre-fitted models and figures are committed separately)
+# Uncomment the line below if you want to exclude them:
+# output/models/
+
+# Per-paper Zotero-style notes generated for manual import (not part of analysis)
+output/zotero_notes/
+
+# QC imputation strip plot — regenerable, ~500 MB, exceeds GitHub file size limit
+output/qc_imputation/diary/strip.pdf
+
+/.quarto/
+**/*.quarto_ipynb
+
+# Local Netlify folder
+.netlify

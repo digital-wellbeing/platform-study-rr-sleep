@@ -1,0 +1,211 @@
+- The project is out-of-sync -- use `renv::status()` for details.
+[31m
+
+processing file: manuscript.qmd
+[39m1/69                                        
+2/69 [load-libraries]                       
+3/69                                        
+4/69 [load-data]                            
+5/69                                        
+6/69 [prepare gaming data]                  
+7/69                                        
+8/69 [data-quality-controls]                
+9/69                                        
+10/69 [sample-attrition]                     
+11/69                                        
+12/69 [tbl-demographics]                     
+13/69                                        
+14/69 [fig-raincloud]                        
+15/69                                        
+16/69 [covariate-missingness]                
+17/69                                        
+18/69 [h1-main-effects]                      
+19/69                                        
+20/69 [fit-h1-models]                        
+21/69                                        
+22/69 [tbl-h1-combined]                      
+23/69                                        
+24/69 [fig-latenight-sleepquality-exceedance]
+25/69                                        
+26/69 [h2-main-effects]                      
+27/69                                        
+28/69 [fit-h2-models]                        
+29/69                                        
+30/69 [tbl-h2-combined]                      
+31/69                                        
+32/69 [diary-data-prep]                      
+33/69                                        
+34/69 [fit-diary-h1-model]                   
+35/69                                        
+36/69 [fit-diary-h2-model]                   
+37/69                                        
+38/69 [fit-diary-imputed-models]             
+39/69                                        
+40/69 [diary-imputed-load]                   
+41/69                                        
+42/69 [diary-main-effects]                   
+43/69                                        
+44/69 [fig-diary-sleepquality]               
+45/69                                        
+46/69 [tbl-diary-h1h2]                       
+47/69                                        
+48/69 [appendix-h1-original]                 
+49/69                                        
+50/69 [appendix-h2-original]                 
+51/69                                        
+52/69 [appendix-wave-missingness]            
+53/69                                        
+54/69 [tbl-appendix-psqi-global]             
+55/69                                        
+56/69 [fig-h2c-interaction]                  
+57/69                                        
+58/69 [tbl-diary-demographics]               
+59/69                                        
+60/69 [tbl-appendix-diary-completecase]      
+61/69                                        
+62/69 [appendix-h1-spline-fit]               
+63/69                                        
+64/69 [appendix-h1-spline-load]              
+65/69                                        
+66/69 [tbl-appendix-h1-spline-aic]           
+67/69                                        
+68/69 [fig-appendix-h1-spline]               
+69/69                                        
+[31moutput file: manuscript.knit.md
+
+[39m[1mpandoc [22m
+  to: html
+  output-file: manuscript.html
+  standalone: true
+  embed-resources: true
+  section-divs: true
+  html-math-method: katex
+  wrap: none
+  default-image-extension: png
+  toc: true
+  variables: {}
+  
+[1mmetadata[22m
+  document-css: false
+  link-citations: true
+  date-format: long
+  lang: en
+  toc-location: left
+  theme: cosmo
+  title: Late-Night Gaming, Sleep and Wellbeing
+  subtitle: The Pri(n)ce of Playing Past Bedtime
+  running-head: Late-Night Gaming
+  author:
+    - name: Tamás A. Földes
+      email: tamas.foldes@oii.ox.ac.uk
+      orcid: 0000-0002-0623-9149
+      url: https://example.com
+      corresponding: true
+      affiliation:
+        - ref: 1
+    - name: Second Author
+      affiliation:
+        - ref: 2
+  affiliations:
+    - id: 1
+      name: First University
+      department: Department Name
+    - id: 2
+      name: Second University
+  abstract: |
+    Your abstract goes here. This will appear prominently at the top of your document.
+  categories:
+    - keyword1
+    - keyword2
+    - keyword3
+  authornote: |
+    Author notes go here.
+  date: last-modified
+  bibliography:
+    - bibliography.bib
+  
+[WARNING] Citeproc: citation appendix-h1-original not found
+[WARNING] Citeproc: citation appendix-h2-original not found
+[WARNING] Citeproc: citation appendix-wave-missingness not found
+- The project is out-of-sync -- use `renv::status()` for details.
+[31m
+
+processing file: manuscript.qmd
+[39m1/69                                        
+2/69 [load-libraries]                       
+3/69                                        
+4/69 [load-data]                            
+5/69                                        
+6/69 [prepare gaming data]                  
+7/69                                        
+8/69 [data-quality-controls]                
+9/69                                        
+10/69 [sample-attrition]                     
+11/69                                        
+12/69 [tbl-demographics]                     
+13/69                                        
+14/69 [fig-raincloud]                        
+15/69                                        
+16/69 [covariate-missingness]                
+17/69                                        
+18/69 [h1-main-effects]                      
+19/69                                        
+20/69 [fit-h1-models]                        
+21/69                                        
+22/69 [tbl-h1-combined]                      
+23/69                                        
+24/69 [fig-latenight-sleepquality-exceedance]
+25/69                                        
+26/69 [h2-main-effects]                      
+27/69                                        
+28/69 [fit-h2-models]                        
+29/69                                        
+30/69 [tbl-h2-combined]                      
+31/69                                        
+32/69 [diary-data-prep]                      
+33/69                                        
+34/69 [fit-diary-h1-model]                   
+35/69                                        
+36/69 [fit-diary-h2-model]                   
+37/69                                        
+38/69 [fit-diary-imputed-models]             
+39/69                                        
+40/69 [diary-imputed-load]                   
+41/69                                        
+42/69 [diary-main-effects]                   
+43/69                                        
+44/69 [fig-diary-sleepquality]               
+45/69                                        
+46/69 [tbl-diary-h1h2]                       
+47/69                                        
+48/69 [appendix-h1-original]                 
+49/69                                        
+50/69 [appendix-h2-original]                 
+51/69                                        
+52/69 [appendix-wave-missingness]            
+53/69                                        
+54/69 [tbl-appendix-psqi-global]             
+55/69                                        
+56/69 [fig-h2c-interaction]                  
+57/69                                        
+58/69 [tbl-diary-demographics]               
+59/69                                        
+60/69 [tbl-appendix-diary-completecase]      
+61/69                                        
+62/69 [appendix-h1-spline-fit]               
+63/69                                        
+64/69 [appendix-h1-spline-load]              
+65/69                                        
+66/69 [tbl-appendix-h1-spline-aic]           
+67/69                                        
+68/69 [fig-appendix-h1-spline]               
+69/69                                        
+[31moutput file: manuscript.knit.md
+
+[39m[31mError in readLines(con, warn = FALSE) : cannot open the connection
+Calls: .main ... partition_yaml_front_matter -> grep -> is.factor -> read_utf8 -> readLines
+In addition: Warning message:
+In readLines(con, warn = FALSE) :
+  cannot open file 'manuscript.qmd': No such file or directory
+[39m[31mExecution halted
+[39m[33mWARN: Error encountered when rendering files[39m
