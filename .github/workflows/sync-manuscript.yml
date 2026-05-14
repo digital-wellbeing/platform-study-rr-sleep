@@ -6,9 +6,6 @@ on:
   #   gh workflow run sync-manuscript.yml --ref main
   workflow_dispatch:
 
-env:
-  DOC_ID: REDACTED_DOC_ID
-
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -150,7 +147,7 @@ jobs:
 
       - name: Push docx to Google Doc
         env:
-          DOC_ID: ${{ env.DOC_ID }}
+          DOC_ID: ${{ secrets.TRACKDOWN_DOC_ID }}
         run: |
           library(httr2)
           library(gargle)
