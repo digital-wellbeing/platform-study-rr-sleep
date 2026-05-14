@@ -3,7 +3,7 @@
 ### Chronotype, Sleep, and Wellbeing in Adult Gamers
 
 [![Render & Sync](https://github.com/digital-wellbeing/platform-study-rr-sleep/actions/workflows/sync-manuscript.yml/badge.svg)](https://github.com/digital-wellbeing/platform-study-rr-sleep/actions/workflows/sync-manuscript.yml)
-[![Netlify Status](https://api.netlify.com/api/v1/badges/101ac278-d531-4261-9273-004bb10df7f7/deploy-status)](https://app.netlify.com/sites/platform-study-rr-sleep/deploys)
+[![Sync manuscript](https://github.com/digital-wellbeing/platform-study-rr-sleep/actions/workflows/sync-manuscript.yml/badge.svg?branch=main)](https://github.com/digital-wellbeing/platform-study-rr-sleep/actions/workflows/sync-manuscript.yml)
 
 ## About
 
