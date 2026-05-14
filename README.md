@@ -53,8 +53,7 @@ All three formats are rebuilt and republished whenever the `sync-manuscript` wor
 └── R/                       # Analysis scripts and exploratory notebooks
     ├── imputation_diary.R   # Diary multiple imputation pipeline
     ├── imputation_panel.R   # Panel multiple imputation pipeline
-    ├── qc_imputation.R      # Imputation quality-control diagnostics
-    └── diary.qmd            # Exploratory diary analysis notebook
+    └── qc_imputation.R      # Imputation quality-control diagnostics
 ```
 
 ## Local Development
