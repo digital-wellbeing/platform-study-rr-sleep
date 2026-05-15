@@ -1,0 +1,30 @@
+project:
+  title: "Quarto preprint"
+  pre-render: R/restore_figure_supporting.R
+
+execute:
+  freeze: auto
+
+# Shared knitr cache across all output formats.
+# Without this, knitr defaults to manuscript_cache/<format>/ so each format
+# (html, typst, docx) executes R code independently.  Pinning cache.path to a
+# single directory means HTML populates the cache on the first pass and typst/
+# docx reuse it, cutting render time for subsequent formats from ~23 min to the
+# time needed only to re-render plots and assemble the document (~1-3 min).
+# The directory is gitignored via the existing "manuscript_cache/" rule.
+knitr:
+  opts_chunk:
+    cache.path: "manuscript_cache/"
+
+format:
+  html:
+    toc: true
+    toc-location: left
+    theme: cosmo
+    code-fold: false
+    html-math-method: katex
+  pdf:
+    documentclass: article
+    toc: false
+    number-sections: true
+    colorlinks: true

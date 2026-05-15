@@ -1,0 +1,5 @@
+=== Panel Imputation QC Summary ===
+
+Source: data/processed/selfreport_imputed.rds
+Biweekly pass: m=20, rows=9468
+Monthly pass: m=20, rows=4734

@@ -1,0 +1,13 @@
+=== Observed vs Imputed Summary (panel_monthly) ===
+
+m = 20 imputations, 20 iterations
+
+  total_hours_sleep: obs = -0.01 +/- 1.18 [-3.70, 3.47] | imp = 0.42 +/- 1.07 [-3.70, 3.47] | diff = 0.42
+  epsTotal: obs = -0.01 +/- 3.85 [-5.57, 18.43] | imp = -0.33 +/- 3.76 [-5.57, 18.43] | diff = -0.32
+  psqi_comp1_quality: obs = 0.00 +/- 0.66 [-1.29, 1.71] | imp = -1.29 +/- 0.03 [-1.29, 0.71] | diff = -1.29
+  psqi_comp2_latency: obs = 0.00 +/- 0.92 [-1.51, 1.49] | imp = -1.50 +/- 0.12 [-1.51, 1.49] | diff = -1.50
+  psqi_comp3_duration: obs = 0.00 +/- 0.73 [-0.64, 2.36] | imp = -0.59 +/- 0.26 [-0.64, 2.36] | diff = -0.60
+  psqi_comp4_efficiency: obs = -0.00 +/- 0.91 [-0.57, 2.43] | imp = -0.46 +/- 0.39 [-0.57, 2.43] | diff = -0.46
+  psqi_comp5_problems: obs = 0.00 +/- 0.51 [-1.19, 1.81] | imp = -0.85 +/- 0.73 [-1.19, 1.81] | diff = -0.85
+  psqi_comp6_medication: obs = -0.01 +/- 0.82 [-0.36, 2.64] | imp = 0.08 +/- 0.80 [-0.36, 2.64] | diff = 0.08
+  psqi_comp7_tired: obs = 0.00 +/- 0.75 [-1.09, 1.91] | imp = -0.45 +/- 0.90 [-1.09, 1.91] | diff = -0.45 

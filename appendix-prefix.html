@@ -1,0 +1,98 @@
+<script>
+// appendix-prefix.js
+// Renumber HTML floats whose id starts with fig-appendix- or tbl-appendix-
+// to use an "A" prefix (A1, A2, ...), independent per kind, and rewrite any
+// cross-references to those ids. Runs at DOM load time because Quarto's
+// HTML post-processor injects caption text after Lua filters run.
+// Typst/PDF output handles the same via the preprint extension's
+// appendix.with() plus an inline `{=typst}` override in the .qmd.
+(function () {
+  function run() {
+    var figMap = {};
+    var tblMap = {};
+    var nFig = 0;
+    var nTbl = 0;
+
+    // Pass 1: assign sequential A-numbers in document order.
+    var floats = document.querySelectorAll('.quarto-float[id]');
+    floats.forEach(function (el) {
+      var id = el.id;
+      if (id.indexOf('fig-appendix-') === 0) {
+        nFig += 1;
+        figMap[id] = 'A' + nFig;
+      } else if (id.indexOf('tbl-appendix-') === 0) {
+        nTbl += 1;
+        tblMap[id] = 'A' + nTbl;
+      }
+    });
+
+    // Helper: replace "Figure <digits>" or "Table <digits>" in a text node.
+    function rewriteTextNode(node, newNum) {
+      if (!node || node.nodeType !== Node.TEXT_NODE) return false;
+      var m = node.nodeValue.match(/^(\s*)(Figure|Table)\s+(\d+)(.*)$/s);
+      if (m) {
+        node.nodeValue = m[1] + m[2] + ' ' + newNum + m[4];
+        return true;
+      }
+      return false;
+    }
+
+    // Pass 2: rewrite the figcaption of each registered float.
+    function rewriteCaption(id, newNum) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      // The figcaption is inside the float element; prefer the first one.
+      var cap = el.querySelector('figcaption');
+      if (!cap) return;
+      // Walk child nodes; the prefix "Figure N" / "Table N" normally lives in
+      // the first text node, but if it doesn't, fall back to a regex over
+      // the caption's full textContent preserving child structure.
+      var handled = false;
+      for (var i = 0; i < cap.childNodes.length; i++) {
+        if (rewriteTextNode(cap.childNodes[i], newNum)) {
+          handled = true;
+          break;
+        }
+      }
+      if (!handled) {
+        // Fallback: brute-force regex over innerHTML.
+        cap.innerHTML = cap.innerHTML.replace(
+          /(Figure|Table)\s+\d+/,
+          '$1 ' + newNum
+        );
+      }
+    }
+    Object.keys(figMap).forEach(function (id) { rewriteCaption(id, figMap[id]); });
+    Object.keys(tblMap).forEach(function (id) { rewriteCaption(id, tblMap[id]); });
+
+    // Pass 3: rewrite cross-reference links to those ids.
+    // Quarto emits link bodies like "Table&nbsp;5" / "Figure&nbsp;4". We match
+    // against textContent (which normalises entities to actual NBSP chars)
+    // and rewrite by replacing only the trailing digit run, preserving the
+    // non-breaking space that Quarto inserts between the label and the number.
+    var links = document.querySelectorAll(
+      'a[href^="#fig-appendix-"], a[href^="#tbl-appendix-"]'
+    );
+    links.forEach(function (a) {
+      var id = a.getAttribute('href').slice(1);
+      var newNum = figMap[id] || tblMap[id];
+      if (!newNum) return;
+      var text = a.textContent;
+      // Match "Figure" or "Table", any whitespace (including U+00A0), then digits.
+      var m = text.match(/^(Figure|Table)(\s+)(\d+)(.*)$/);
+      if (m) {
+        a.textContent = m[1] + m[2] + newNum + m[4];
+      }
+    });
+
+    // Pass 4: TOC / list-of-figures style references (rare; safe no-op if
+    // there are none). Covered by pass 3 since Quarto uses <a> links.
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', run);
+  } else {
+    run();
+  }
+})();
+</script>

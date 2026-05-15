@@ -1,0 +1,29 @@
+=== Date Imputation Summary ===
+
+Dates inferred: 3226 records across 1039 participants
+
+Overall records by date source:
+  Inferred: 3226 records (1039 participants)
+  Observed: 6242 records (1578 participants)
+
+
+Records by wave and date source:
+  Wave 1 (Observed): 1578 records
+  Wave 2 (Inferred): 453 records
+  Wave 2 (Observed): 1125 records
+  Wave 3 (Inferred): 517 records
+  Wave 3 (Observed): 1061 records
+  Wave 4 (Inferred): 658 records
+  Wave 4 (Observed): 920 records
+  Wave 5 (Inferred): 732 records
+  Wave 5 (Observed): 846 records
+  Wave 6 (Inferred): 866 records
+  Wave 6 (Observed): 712 records
+
+
+Exposure summary (biweekly gaming):
+  ln_biweekly_avg_minutes_played | Inferred: n=3226, mean=15.50, sd=32.98, median=0.00, IQR=[0.00, 14.50]
+  ln_biweekly_avg_minutes_played | Observed: n=6242, mean=23.07, sd=40.52, median=4.64, IQR=[0.00, 27.67]
+  total_biweekly_avg_minutes_played | Inferred: n=3226, mean=76.47, sd=108.86, median=26.06, IQR=[0.00, 112.92]
+  total_biweekly_avg_minutes_played | Observed: n=6242, mean=111.15, sd=122.01, median=71.60, IQR=[16.86, 162.87]
+

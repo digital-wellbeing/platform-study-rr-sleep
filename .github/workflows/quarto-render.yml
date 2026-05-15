@@ -1,0 +1,57 @@
+name: Quarto PR Check
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - name: Install R packages
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::tidyverse
+            any::lme4
+            any::marginaleffects
+            any::emmeans
+            any::glmmTMB
+            any::mice
+            any::ordinal
+            any::modelsummary
+            any::tinytable
+            any::litedown
+            any::lubridate
+            any::data.table
+            any::mctq
+            any::glue
+            any::parameters
+            any::performance
+            any::withr
+            any::report
+            any::ggdist
+            any::patchwork
+            any::ggpattern
+            any::zoo
+            any::future
+            any::future.apply
+            any::ragg
+            github::lcbc-uio/questionnaires
+
+      - name: Render HTML
+        run: quarto render manuscript.qmd --to html
+
+      - name: Render PDF (typst)
+        run: quarto render manuscript.qmd --to preprint-typst

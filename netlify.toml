@@ -1,0 +1,4 @@
+[[redirects]]
+  from = "/"
+  to = "/manuscript.html"
+  status = 301
