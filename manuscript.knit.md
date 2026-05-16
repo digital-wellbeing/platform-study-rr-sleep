@@ -189,66 +189,204 @@ Of 34,922 participants who signed up for the study, 1,948 completed at least one
 ::: {#tbl-demographics .cell tbl-cap='Sample Characteristics'}
 ::: {.cell-output-display}
 
-+--------------------------------+---------------+---------------+
-| Characteristic                 | Total         | Analytical    |
-+================================+===============+===============+
-| **A. Sociodemographics**       |               |               |
-+--------------------------------+---------------+---------------+
-| N                              | 1948          | 1578          |
-+--------------------------------+---------------+---------------+
-| Age                            | 26.8 (5.0)    | 27.1 (5.1)    |
-+--------------------------------+---------------+---------------+
-| Gender                         |               |               |
-+--------------------------------+---------------+---------------+
-|  Woman                         | 518 (26.6%)   | 444 (28.1%)   |
-+--------------------------------+---------------+---------------+
-|  Man                           | 1211 (62.2%)  | 1035 (65.6%)  |
-+--------------------------------+---------------+---------------+
-|  Other                         | 111 (5.7%)    | 99 (6.3%)     |
-+--------------------------------+---------------+---------------+
-| Region                         |               |               |
-+--------------------------------+---------------+---------------+
-|  UK                            | 719 (36.9%)   | 672 (42.6%)   |
-+--------------------------------+---------------+---------------+
-|  US                            | 1121 (57.5%)  | 906 (57.4%)   |
-+--------------------------------+---------------+---------------+
-| BMI (kg/m²)                    | 22.0 (7.0)    | 22.1 (7.0)    |
-+--------------------------------+---------------+---------------+
-| SES index                      | 2.27 (0.54)   | 2.26 (0.54)   |
-+--------------------------------+---------------+---------------+
-| **B. Chronotype**              |               |               |
-+--------------------------------+---------------+---------------+
-| No alarm on free days          | 1240 (74.4%)  | 1141 (74.5%)  |
-+--------------------------------+---------------+---------------+
-|  MCTQ-MSFsc (HH:MM)¹           | 06:00 (03:23) | 05:52 (03:05) |
-+--------------------------------+---------------+---------------+
-| **C. Gaming**                  |               |               |
-+--------------------------------+---------------+---------------+
-| Gaming (min/day)¹              | 59.6 (138.3)  | 83.7 (137.2)  |
-+--------------------------------+---------------+---------------+
-| LN gaming (min/day)¹           | 4.4 (24.1)    | 9.3 (30.7)    |
-+--------------------------------+---------------+---------------+
-| % nights LN gaming             | 13.3 (16.3)   | 16.4 (16.7)   |
-+--------------------------------+---------------+---------------+
-| **D. Outcomes**                |               |               |
-+--------------------------------+---------------+---------------+
-| Sleep (h)                      | 7.2 (1.2)     | 7.2 (1.1)     |
-+--------------------------------+---------------+---------------+
-| PSQI global                    | 6.7 (2.9)     | 6.7 (2.8)     |
-+--------------------------------+---------------+---------------+
-|  Sleep quality                 | 1.3 (0.6)     | 1.3 (0.6)     |
-+--------------------------------+---------------+---------------+
-|  Poor sleep (PSQI>5)           | 793 (63.8%)   | 754 (63.8%)   |
-+--------------------------------+---------------+---------------+
-| ESS                            | 5.6 (3.5)     | 5.6 (3.5)     |
-+--------------------------------+---------------+---------------+
-|  Excessive sleepiness (ESS>10) | 126 (10.2%)   | 120 (10.2%)   |
-+--------------------------------+---------------+---------------+
-| SWEMWBS                        | 23.2 (5.0)    | 23.2 (5.0)    |
-+================================+===============+===============+
-| Values are M (SD) unless noted. ¹ Mdn (IQR). LN = late-night.  |
-+================================+===============+===============+
-Table: Sample Characteristics
+```{=html}
+<!-- preamble start -->
+
+    <script src="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.js"></script>
+
+    <script>
+      // Create table-specific functions using external factory
+      const tableFns_ppushexdxpgvg9qzvsuc = TinyTable.createTableFunctions("tinytable_ppushexdxpgvg9qzvsuc");
+      // tinytable span after
+      window.addEventListener('load', function () {
+          var cellsToStyle = [
+            // tinytable style arrays after
+          { positions: [ { i: '27', j: 2 }, { i: '27', j: 3 } ], css_id: 'tinytable_css_0oasqm9tvgv49k2dfc0f',}, 
+          { positions: [ { i: '2', j: 2 }, { i: '3', j: 2 }, { i: '4', j: 2 }, { i: '5', j: 2 }, { i: '6', j: 2 }, { i: '7', j: 2 }, { i: '8', j: 2 }, { i: '9', j: 2 }, { i: '10', j: 2 }, { i: '11', j: 2 }, { i: '12', j: 2 }, { i: '14', j: 2 }, { i: '15', j: 2 }, { i: '17', j: 2 }, { i: '18', j: 2 }, { i: '19', j: 2 }, { i: '21', j: 2 }, { i: '22', j: 2 }, { i: '23', j: 2 }, { i: '24', j: 2 }, { i: '25', j: 2 }, { i: '26', j: 2 }, { i: '2', j: 3 }, { i: '3', j: 3 }, { i: '4', j: 3 }, { i: '5', j: 3 }, { i: '6', j: 3 }, { i: '7', j: 3 }, { i: '8', j: 3 }, { i: '9', j: 3 }, { i: '10', j: 3 }, { i: '11', j: 3 }, { i: '12', j: 3 }, { i: '14', j: 3 }, { i: '15', j: 3 }, { i: '17', j: 3 }, { i: '18', j: 3 }, { i: '19', j: 3 }, { i: '21', j: 3 }, { i: '22', j: 3 }, { i: '23', j: 3 }, { i: '24', j: 3 }, { i: '25', j: 3 }, { i: '26', j: 3 } ], css_id: 'tinytable_css_4pkerem5l33uleih9jwq',}, 
+          { positions: [ { i: '1', j: 2 }, { i: '13', j: 2 }, { i: '16', j: 2 }, { i: '20', j: 2 }, { i: '1', j: 3 }, { i: '13', j: 3 }, { i: '16', j: 3 }, { i: '20', j: 3 } ], css_id: 'tinytable_css_o2w4670xjddnbmtwhbig',}, 
+          { positions: [ { i: '0', j: 2 }, { i: '0', j: 3 } ], css_id: 'tinytable_css_06nolb6hj0u45jm9k04r',}, 
+          { positions: [ { i: '27', j: 1 } ], css_id: 'tinytable_css_rs4enzn7wxa6igm69yhl',}, 
+          { positions: [ { i: '5', j: 1 }, { i: '6', j: 1 }, { i: '7', j: 1 }, { i: '9', j: 1 }, { i: '10', j: 1 }, { i: '15', j: 1 }, { i: '23', j: 1 }, { i: '24', j: 1 }, { i: '26', j: 1 } ], css_id: 'tinytable_css_v29i2e5nk1y8mphshlxz',}, 
+          { positions: [ { i: '2', j: 1 }, { i: '3', j: 1 }, { i: '4', j: 1 }, { i: '8', j: 1 }, { i: '11', j: 1 }, { i: '12', j: 1 }, { i: '14', j: 1 }, { i: '17', j: 1 }, { i: '18', j: 1 }, { i: '19', j: 1 }, { i: '21', j: 1 }, { i: '22', j: 1 }, { i: '25', j: 1 } ], css_id: 'tinytable_css_ctsofa1zlh899xopzep3',}, 
+          { positions: [ { i: '1', j: 1 }, { i: '13', j: 1 }, { i: '16', j: 1 }, { i: '20', j: 1 } ], css_id: 'tinytable_css_ttbxzv3nehj1379ajvty',}, 
+          { positions: [ { i: '0', j: 1 } ], css_id: 'tinytable_css_chy7rlx588d0mkfv9in3',}, 
+          ];
+
+          // Loop over the arrays to style the cells
+          cellsToStyle.forEach(function (group) {
+              group.positions.forEach(function (cell) {
+                  tableFns_ppushexdxpgvg9qzvsuc.styleCell(cell.i, cell.j, group.css_id);
+              });
+          });
+      });
+    </script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.css">
+    <style>
+    /* tinytable css entries after */
+    #tinytable_ppushexdxpgvg9qzvsuc td.tinytable_css_0oasqm9tvgv49k2dfc0f, #tinytable_ppushexdxpgvg9qzvsuc th.tinytable_css_0oasqm9tvgv49k2dfc0f {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: right }
+    #tinytable_ppushexdxpgvg9qzvsuc td.tinytable_css_4pkerem5l33uleih9jwq, #tinytable_ppushexdxpgvg9qzvsuc th.tinytable_css_4pkerem5l33uleih9jwq { text-align: right }
+    #tinytable_ppushexdxpgvg9qzvsuc td.tinytable_css_o2w4670xjddnbmtwhbig, #tinytable_ppushexdxpgvg9qzvsuc th.tinytable_css_o2w4670xjddnbmtwhbig { font-weight: bold; text-align: right }
+    #tinytable_ppushexdxpgvg9qzvsuc td.tinytable_css_06nolb6hj0u45jm9k04r, #tinytable_ppushexdxpgvg9qzvsuc th.tinytable_css_06nolb6hj0u45jm9k04r {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: right }
+    #tinytable_ppushexdxpgvg9qzvsuc td.tinytable_css_rs4enzn7wxa6igm69yhl, #tinytable_ppushexdxpgvg9qzvsuc th.tinytable_css_rs4enzn7wxa6igm69yhl {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left }
+    #tinytable_ppushexdxpgvg9qzvsuc td.tinytable_css_v29i2e5nk1y8mphshlxz, #tinytable_ppushexdxpgvg9qzvsuc th.tinytable_css_v29i2e5nk1y8mphshlxz { text-align: left; padding-left: 1em }
+    #tinytable_ppushexdxpgvg9qzvsuc td.tinytable_css_ctsofa1zlh899xopzep3, #tinytable_ppushexdxpgvg9qzvsuc th.tinytable_css_ctsofa1zlh899xopzep3 { text-align: left }
+    #tinytable_ppushexdxpgvg9qzvsuc td.tinytable_css_ttbxzv3nehj1379ajvty, #tinytable_ppushexdxpgvg9qzvsuc th.tinytable_css_ttbxzv3nehj1379ajvty { font-weight: bold; text-align: left }
+    #tinytable_ppushexdxpgvg9qzvsuc td.tinytable_css_chy7rlx588d0mkfv9in3, #tinytable_ppushexdxpgvg9qzvsuc th.tinytable_css_chy7rlx588d0mkfv9in3 {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left }
+    </style>
+    <div class="container">
+      <table class="tinytable" id="tinytable_ppushexdxpgvg9qzvsuc" style="width: auto; margin-left: auto; margin-right: auto;" data-quarto-disable-processing='true'>
+        <caption>Sample Characteristics</caption>
+        <thead>
+              <tr>
+                <th scope="col" data-row="0" data-col="1">Characteristic</th>
+                <th scope="col" data-row="0" data-col="2">Total</th>
+                <th scope="col" data-row="0" data-col="3">Analytical</th>
+              </tr>
+        </thead>
+        <tfoot><tr><td colspan='3'>Values are M (SD) unless noted. ¹ Mdn (IQR). LN = late-night.</td></tr></tfoot>
+        <tbody>
+                <tr>
+                  <td data-row="1" data-col="1">A. Sociodemographics</td>
+                  <td data-row="1" data-col="2"></td>
+                  <td data-row="1" data-col="3"></td>
+                </tr>
+                <tr>
+                  <td data-row="2" data-col="1">N</td>
+                  <td data-row="2" data-col="2">1948</td>
+                  <td data-row="2" data-col="3">1578</td>
+                </tr>
+                <tr>
+                  <td data-row="3" data-col="1">Age</td>
+                  <td data-row="3" data-col="2">26.8 (5.0)</td>
+                  <td data-row="3" data-col="3">27.1 (5.1)</td>
+                </tr>
+                <tr>
+                  <td data-row="4" data-col="1">Gender</td>
+                  <td data-row="4" data-col="2"></td>
+                  <td data-row="4" data-col="3"></td>
+                </tr>
+                <tr>
+                  <td data-row="5" data-col="1">Woman</td>
+                  <td data-row="5" data-col="2">518 (26.6%)</td>
+                  <td data-row="5" data-col="3">444 (28.1%)</td>
+                </tr>
+                <tr>
+                  <td data-row="6" data-col="1">Man</td>
+                  <td data-row="6" data-col="2">1211 (62.2%)</td>
+                  <td data-row="6" data-col="3">1035 (65.6%)</td>
+                </tr>
+                <tr>
+                  <td data-row="7" data-col="1">Other</td>
+                  <td data-row="7" data-col="2">111 (5.7%)</td>
+                  <td data-row="7" data-col="3">99 (6.3%)</td>
+                </tr>
+                <tr>
+                  <td data-row="8" data-col="1">Region</td>
+                  <td data-row="8" data-col="2"></td>
+                  <td data-row="8" data-col="3"></td>
+                </tr>
+                <tr>
+                  <td data-row="9" data-col="1">UK</td>
+                  <td data-row="9" data-col="2">719 (36.9%)</td>
+                  <td data-row="9" data-col="3">672 (42.6%)</td>
+                </tr>
+                <tr>
+                  <td data-row="10" data-col="1">US</td>
+                  <td data-row="10" data-col="2">1121 (57.5%)</td>
+                  <td data-row="10" data-col="3">906 (57.4%)</td>
+                </tr>
+                <tr>
+                  <td data-row="11" data-col="1">BMI (kg/m²)</td>
+                  <td data-row="11" data-col="2">22.0 (7.0)</td>
+                  <td data-row="11" data-col="3">22.1 (7.0)</td>
+                </tr>
+                <tr>
+                  <td data-row="12" data-col="1">SES index</td>
+                  <td data-row="12" data-col="2">2.27 (0.54)</td>
+                  <td data-row="12" data-col="3">2.26 (0.54)</td>
+                </tr>
+                <tr>
+                  <td data-row="13" data-col="1">B. Chronotype</td>
+                  <td data-row="13" data-col="2"></td>
+                  <td data-row="13" data-col="3"></td>
+                </tr>
+                <tr>
+                  <td data-row="14" data-col="1">No alarm on free days</td>
+                  <td data-row="14" data-col="2">1240 (74.4%)</td>
+                  <td data-row="14" data-col="3">1141 (74.5%)</td>
+                </tr>
+                <tr>
+                  <td data-row="15" data-col="1">MCTQ-MSFsc (HH:MM)¹</td>
+                  <td data-row="15" data-col="2">06:00 (03:23)</td>
+                  <td data-row="15" data-col="3">05:52 (03:05)</td>
+                </tr>
+                <tr>
+                  <td data-row="16" data-col="1">C. Gaming</td>
+                  <td data-row="16" data-col="2"></td>
+                  <td data-row="16" data-col="3"></td>
+                </tr>
+                <tr>
+                  <td data-row="17" data-col="1">Gaming (min/day)¹</td>
+                  <td data-row="17" data-col="2">59.6 (138.3)</td>
+                  <td data-row="17" data-col="3">83.7 (137.2)</td>
+                </tr>
+                <tr>
+                  <td data-row="18" data-col="1">LN gaming (min/day)¹</td>
+                  <td data-row="18" data-col="2">4.4 (24.1)</td>
+                  <td data-row="18" data-col="3">9.3 (30.7)</td>
+                </tr>
+                <tr>
+                  <td data-row="19" data-col="1">% nights LN gaming</td>
+                  <td data-row="19" data-col="2">13.3 (16.3)</td>
+                  <td data-row="19" data-col="3">16.4 (16.7)</td>
+                </tr>
+                <tr>
+                  <td data-row="20" data-col="1">D. Outcomes</td>
+                  <td data-row="20" data-col="2"></td>
+                  <td data-row="20" data-col="3"></td>
+                </tr>
+                <tr>
+                  <td data-row="21" data-col="1">Sleep (h)</td>
+                  <td data-row="21" data-col="2">7.2 (1.2)</td>
+                  <td data-row="21" data-col="3">7.2 (1.1)</td>
+                </tr>
+                <tr>
+                  <td data-row="22" data-col="1">PSQI global</td>
+                  <td data-row="22" data-col="2">6.7 (2.9)</td>
+                  <td data-row="22" data-col="3">6.7 (2.8)</td>
+                </tr>
+                <tr>
+                  <td data-row="23" data-col="1">Sleep quality</td>
+                  <td data-row="23" data-col="2">1.3 (0.6)</td>
+                  <td data-row="23" data-col="3">1.3 (0.6)</td>
+                </tr>
+                <tr>
+                  <td data-row="24" data-col="1">Poor sleep (PSQI>5)</td>
+                  <td data-row="24" data-col="2">793 (63.8%)</td>
+                  <td data-row="24" data-col="3">754 (63.8%)</td>
+                </tr>
+                <tr>
+                  <td data-row="25" data-col="1">ESS</td>
+                  <td data-row="25" data-col="2">5.6 (3.5)</td>
+                  <td data-row="25" data-col="3">5.6 (3.5)</td>
+                </tr>
+                <tr>
+                  <td data-row="26" data-col="1">Excessive sleepiness (ESS>10)</td>
+                  <td data-row="26" data-col="2">126 (10.2%)</td>
+                  <td data-row="26" data-col="3">120 (10.2%)</td>
+                </tr>
+                <tr>
+                  <td data-row="27" data-col="1">SWEMWBS</td>
+                  <td data-row="27" data-col="2">23.2 (5.0)</td>
+                  <td data-row="27" data-col="3">23.2 (5.0)</td>
+                </tr>
+        </tbody>
+      </table>
+    </div>
+<!-- hack to avoid NA insertion in last line -->
+```
+
 :::
 :::
 
@@ -258,7 +396,7 @@ Self-reported sleep duration in the analytical sample was 7.2 hours (SD = 1.1), 
 
 ::: {.cell}
 ::: {.cell-output-display}
-![Gaming patterns and outcome distributions in the complete-case analytical sample. (A) Hourly playtime: average minutes played per participant-day (total minutes summed across all sessions divided by the number of contributing participant-days), shown by hour of day, with grouped bars distinguishing weekdays (Sunday-Thursday nights, solid fill) from weekend nights (Friday-Saturday, striped fill); the pre-registered late-night window (23:00-06:00 local time) is delimited by red dashed lines and shaded in red. (B) Self-reported sleep quality (PSQI Item 6) shown as the percentage of person-wave responses in each ordinal category; missing responses are excluded. (C-E) Continuous outcomes displayed as raincloud plots: half-violin shapes show the kernel density estimate (bandwidth multiplier = 2, normalised within panel), boxplots show the median (centre line), interquartile range (box) and whiskers extending to the most extreme value within 1.5 x IQR of the hinges; outliers beyond the whiskers are not plotted. Self-reported sleep duration in panel C is derived from PSQI Item 4. Panel-specific sample sizes are reported in the panel subtitles. Abbreviations: PSQI = Pittsburgh Sleep Quality Index; ESS = Epworth Sleepiness Scale (range 0-24, higher = greater daytime sleepiness); SWEMWBS = Short Warwick-Edinburgh Mental Well-Being Scale (range 7-35, higher = greater wellbeing); IQR = interquartile range.](manuscript_files/figure-docx/fig-raincloud-1.png){#fig-raincloud}
+![Gaming patterns and outcome distributions in the complete-case analytical sample. (A) Hourly playtime: average minutes played per participant-day (total minutes summed across all sessions divided by the number of contributing participant-days), shown by hour of day, with grouped bars distinguishing weekdays (Sunday-Thursday nights, solid fill) from weekend nights (Friday-Saturday, striped fill); the pre-registered late-night window (23:00-06:00 local time) is delimited by red dashed lines and shaded in red. (B) Self-reported sleep quality (PSQI Item 6) shown as the percentage of person-wave responses in each ordinal category; missing responses are excluded. (C-E) Continuous outcomes displayed as raincloud plots: half-violin shapes show the kernel density estimate (bandwidth multiplier = 2, normalised within panel), boxplots show the median (centre line), interquartile range (box) and whiskers extending to the most extreme value within 1.5 x IQR of the hinges; outliers beyond the whiskers are not plotted. Self-reported sleep duration in panel C is derived from PSQI Item 4. Panel-specific sample sizes are reported in the panel subtitles. Abbreviations: PSQI = Pittsburgh Sleep Quality Index; ESS = Epworth Sleepiness Scale (range 0-24, higher = greater daytime sleepiness); SWEMWBS = Short Warwick-Edinburgh Mental Well-Being Scale (range 7-35, higher = greater wellbeing); IQR = interquartile range.](manuscript_files/figure-html/fig-raincloud-1.png){#fig-raincloud width=1152}
 :::
 :::
 
@@ -308,36 +446,136 @@ Two further sensitivity checks support the linear parameterization used in the p
 
 ::: {#tbl-h1-combined .cell tbl-cap='Summary of H1 Hypotheses: Effects of Late-Night Gaming on Sleep and Wellbeing'}
 
-+--------------------------------------------+------------------------+-------------------------+-------------------------+----------------------+
-|                                            | H1a: Sleep Quality     | H1b: Sleep Duration     | H1c: Daytime Sleepiness | H1d: Wellbeing       |
-+============================================+========================+=========================+=========================+======================+
-| Daily LN gaming (per 10 min/day, monthly)  | 0.05 [0.02, 0.08]***   | -0.01 [-0.02, 0.01]     | 0.01 [-0.03, 0.06]      |                      |
-+--------------------------------------------+------------------------+-------------------------+-------------------------+----------------------+
-| Daily LN gaming (per 10 min/day, biweekly) |                        |                         |                         | -0.00 [-0.04, 0.03]  |
-+--------------------------------------------+------------------------+-------------------------+-------------------------+----------------------+
-| Age (scaled)                               | 0.16 [-0.17, 0.50]     | -0.45 [-0.62, -0.27]*** | -0.68 [-1.27, -0.09]*   | 0.07 [-0.59, 0.72]   |
-+--------------------------------------------+------------------------+-------------------------+-------------------------+----------------------+
-| BMI (scaled)                               | 0.18 [0.05, 0.31]**    | -0.07 [-0.14, -0.00]*   | 0.18 [-0.05, 0.41]      | -0.21 [-0.48, 0.07]  |
-+--------------------------------------------+------------------------+-------------------------+-------------------------+----------------------+
-| SES (scaled)                               | -0.24 [-0.39, -0.09]** | -0.09 [-0.16, -0.01]*   | 0.09 [-0.17, 0.34]      | 0.98 [0.70, 1.26]*** |
-+--------------------------------------------+------------------------+-------------------------+-------------------------+----------------------+
-| Region: US                                 | -0.14 [-0.37, 0.09]    | 0.04 [-0.08, 0.17]      | 0.25 [-0.18, 0.69]      | 0.19 [-0.29, 0.68]   |
-+--------------------------------------------+------------------------+-------------------------+-------------------------+----------------------+
-| Day: Weekend                               | 0.03 [-0.16, 0.23]     | -0.00 [-0.09, 0.09]     | 0.04 [-0.25, 0.33]      | -0.01 [-0.27, 0.25]  |
-+--------------------------------------------+------------------------+-------------------------+-------------------------+----------------------+
-| N Obs                                      | 3561                   | 3553                    | 3551                    | 7425                 |
-+--------------------------------------------+------------------------+-------------------------+-------------------------+----------------------+
-| N Participants                             | 1294                   | 1293                    | 1290                    | 1469                 |
-+--------------------------------------------+------------------------+-------------------------+-------------------------+----------------------+
-| ICC                                        | 0.75                   | 0.69                    | 0.69                    | 0.71                 |
-+============================================+========================+=========================+=========================+======================+
-| + p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001                                                                                             |
-+============================================+========================+=========================+=========================+======================+
-| LN = late-night. Confidence intervals shown in brackets.                                                                                       |
-+============================================+========================+=========================+=========================+======================+
-| ICC = Intraclass Correlation Coefficient (adjusted).                                                                                           |
-+============================================+========================+=========================+=========================+======================+
-Table: H1: Effects of Late-Night Gaming on Sleep and Wellbeing (Imputed data)
+```{=html}
+<!-- preamble start -->
+
+    <script src="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.js"></script>
+
+    <script>
+      // Create table-specific functions using external factory
+      const tableFns_ah74vkh29si2yar9bhi5 = TinyTable.createTableFunctions("tinytable_ah74vkh29si2yar9bhi5");
+      // tinytable span after
+      window.addEventListener('load', function () {
+          var cellsToStyle = [
+            // tinytable style arrays after
+          { positions: [ { i: '10', j: 2 }, { i: '10', j: 3 }, { i: '10', j: 4 }, { i: '10', j: 5 } ], css_id: 'tinytable_css_rd76radwfbmsmwsieabj',}, 
+          { positions: [ { i: '1', j: 2 }, { i: '2', j: 2 }, { i: '3', j: 2 }, { i: '4', j: 2 }, { i: '5', j: 2 }, { i: '6', j: 2 }, { i: '7', j: 2 }, { i: '8', j: 2 }, { i: '9', j: 2 }, { i: '1', j: 3 }, { i: '2', j: 3 }, { i: '3', j: 3 }, { i: '4', j: 3 }, { i: '5', j: 3 }, { i: '6', j: 3 }, { i: '7', j: 3 }, { i: '8', j: 3 }, { i: '9', j: 3 }, { i: '1', j: 4 }, { i: '2', j: 4 }, { i: '3', j: 4 }, { i: '4', j: 4 }, { i: '5', j: 4 }, { i: '6', j: 4 }, { i: '7', j: 4 }, { i: '8', j: 4 }, { i: '9', j: 4 }, { i: '1', j: 5 }, { i: '2', j: 5 }, { i: '3', j: 5 }, { i: '4', j: 5 }, { i: '5', j: 5 }, { i: '6', j: 5 }, { i: '7', j: 5 }, { i: '8', j: 5 }, { i: '9', j: 5 } ], css_id: 'tinytable_css_0etd8q25zepzk2c4abuv',}, 
+          { positions: [ { i: '0', j: 2 }, { i: '0', j: 3 }, { i: '0', j: 4 }, { i: '0', j: 5 } ], css_id: 'tinytable_css_vt5qxt7dpw34tlx7xz8m',}, 
+          { positions: [ { i: '10', j: 1 } ], css_id: 'tinytable_css_hjq215z49bk16q1766lv',}, 
+          { positions: [ { i: '1', j: 1 }, { i: '2', j: 1 }, { i: '3', j: 1 }, { i: '4', j: 1 }, { i: '5', j: 1 }, { i: '6', j: 1 }, { i: '7', j: 1 }, { i: '8', j: 1 }, { i: '9', j: 1 } ], css_id: 'tinytable_css_5gog47g5x0e2sqokccvr',}, 
+          { positions: [ { i: '0', j: 1 } ], css_id: 'tinytable_css_djqpslwpelpn762oifwm',}, 
+          ];
+
+          // Loop over the arrays to style the cells
+          cellsToStyle.forEach(function (group) {
+              group.positions.forEach(function (cell) {
+                  tableFns_ah74vkh29si2yar9bhi5.styleCell(cell.i, cell.j, group.css_id);
+              });
+          });
+      });
+    </script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.css">
+    <style>
+    /* tinytable css entries after */
+    #tinytable_ah74vkh29si2yar9bhi5 td.tinytable_css_rd76radwfbmsmwsieabj, #tinytable_ah74vkh29si2yar9bhi5 th.tinytable_css_rd76radwfbmsmwsieabj {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
+    #tinytable_ah74vkh29si2yar9bhi5 td.tinytable_css_0etd8q25zepzk2c4abuv, #tinytable_ah74vkh29si2yar9bhi5 th.tinytable_css_0etd8q25zepzk2c4abuv { text-align: center }
+    #tinytable_ah74vkh29si2yar9bhi5 td.tinytable_css_vt5qxt7dpw34tlx7xz8m, #tinytable_ah74vkh29si2yar9bhi5 th.tinytable_css_vt5qxt7dpw34tlx7xz8m {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
+    #tinytable_ah74vkh29si2yar9bhi5 td.tinytable_css_hjq215z49bk16q1766lv, #tinytable_ah74vkh29si2yar9bhi5 th.tinytable_css_hjq215z49bk16q1766lv {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left }
+    #tinytable_ah74vkh29si2yar9bhi5 td.tinytable_css_5gog47g5x0e2sqokccvr, #tinytable_ah74vkh29si2yar9bhi5 th.tinytable_css_5gog47g5x0e2sqokccvr { text-align: left }
+    #tinytable_ah74vkh29si2yar9bhi5 td.tinytable_css_djqpslwpelpn762oifwm, #tinytable_ah74vkh29si2yar9bhi5 th.tinytable_css_djqpslwpelpn762oifwm {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left }
+    </style>
+    <div class="container">
+      <table class="tinytable" id="tinytable_ah74vkh29si2yar9bhi5" style="width: auto; margin-left: auto; margin-right: auto;" data-quarto-disable-processing='true'>
+        <caption>H1: Effects of Late-Night Gaming on Sleep and Wellbeing (Imputed data)</caption>
+        <thead>
+              <tr>
+                <th scope="col" data-row="0" data-col="1"> </th>
+                <th scope="col" data-row="0" data-col="2">H1a: Sleep Quality</th>
+                <th scope="col" data-row="0" data-col="3">H1b: Sleep Duration</th>
+                <th scope="col" data-row="0" data-col="4">H1c: Daytime Sleepiness</th>
+                <th scope="col" data-row="0" data-col="5">H1d: Wellbeing</th>
+              </tr>
+        </thead>
+        <tfoot><tr><td colspan='5'>+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001</td></tr>
+<tr><td colspan='5'>LN = late-night. Confidence intervals shown in brackets.</td></tr>
+<tr><td colspan='5'>ICC = Intraclass Correlation Coefficient (adjusted).</td></tr></tfoot>
+        <tbody>
+                <tr>
+                  <td data-row="1" data-col="1">Daily LN gaming (per 10 min/day, monthly)</td>
+                  <td data-row="1" data-col="2">0.05 [0.02, 0.08]***</td>
+                  <td data-row="1" data-col="3">-0.01 [-0.02, 0.01]</td>
+                  <td data-row="1" data-col="4">0.01 [-0.03, 0.06]</td>
+                  <td data-row="1" data-col="5"></td>
+                </tr>
+                <tr>
+                  <td data-row="2" data-col="1">Daily LN gaming (per 10 min/day, biweekly)</td>
+                  <td data-row="2" data-col="2"></td>
+                  <td data-row="2" data-col="3"></td>
+                  <td data-row="2" data-col="4"></td>
+                  <td data-row="2" data-col="5">-0.00 [-0.04, 0.03]</td>
+                </tr>
+                <tr>
+                  <td data-row="3" data-col="1">Age (scaled)</td>
+                  <td data-row="3" data-col="2">0.16 [-0.17, 0.50]</td>
+                  <td data-row="3" data-col="3">-0.45 [-0.62, -0.27]***</td>
+                  <td data-row="3" data-col="4">-0.68 [-1.27, -0.09]*</td>
+                  <td data-row="3" data-col="5">0.07 [-0.59, 0.72]</td>
+                </tr>
+                <tr>
+                  <td data-row="4" data-col="1">BMI (scaled)</td>
+                  <td data-row="4" data-col="2">0.18 [0.05, 0.31]**</td>
+                  <td data-row="4" data-col="3">-0.07 [-0.14, -0.00]*</td>
+                  <td data-row="4" data-col="4">0.18 [-0.05, 0.41]</td>
+                  <td data-row="4" data-col="5">-0.21 [-0.48, 0.07]</td>
+                </tr>
+                <tr>
+                  <td data-row="5" data-col="1">SES (scaled)</td>
+                  <td data-row="5" data-col="2">-0.24 [-0.39, -0.09]**</td>
+                  <td data-row="5" data-col="3">-0.09 [-0.16, -0.01]*</td>
+                  <td data-row="5" data-col="4">0.09 [-0.17, 0.34]</td>
+                  <td data-row="5" data-col="5">0.98 [0.70, 1.26]***</td>
+                </tr>
+                <tr>
+                  <td data-row="6" data-col="1">Region: US</td>
+                  <td data-row="6" data-col="2">-0.14 [-0.37, 0.09]</td>
+                  <td data-row="6" data-col="3">0.04 [-0.08, 0.17]</td>
+                  <td data-row="6" data-col="4">0.25 [-0.18, 0.69]</td>
+                  <td data-row="6" data-col="5">0.19 [-0.29, 0.68]</td>
+                </tr>
+                <tr>
+                  <td data-row="7" data-col="1">Day: Weekend</td>
+                  <td data-row="7" data-col="2">0.03 [-0.16, 0.23]</td>
+                  <td data-row="7" data-col="3">-0.00 [-0.09, 0.09]</td>
+                  <td data-row="7" data-col="4">0.04 [-0.25, 0.33]</td>
+                  <td data-row="7" data-col="5">-0.01 [-0.27, 0.25]</td>
+                </tr>
+                <tr>
+                  <td data-row="8" data-col="1">N Obs</td>
+                  <td data-row="8" data-col="2">3561</td>
+                  <td data-row="8" data-col="3">3553</td>
+                  <td data-row="8" data-col="4">3551</td>
+                  <td data-row="8" data-col="5">7425</td>
+                </tr>
+                <tr>
+                  <td data-row="9" data-col="1">N Participants</td>
+                  <td data-row="9" data-col="2">1294</td>
+                  <td data-row="9" data-col="3">1293</td>
+                  <td data-row="9" data-col="4">1290</td>
+                  <td data-row="9" data-col="5">1469</td>
+                </tr>
+                <tr>
+                  <td data-row="10" data-col="1">ICC</td>
+                  <td data-row="10" data-col="2">0.75</td>
+                  <td data-row="10" data-col="3">0.69</td>
+                  <td data-row="10" data-col="4">0.69</td>
+                  <td data-row="10" data-col="5">0.71</td>
+                </tr>
+        </tbody>
+      </table>
+    </div>
+<!-- hack to avoid NA insertion in last line -->
+```
 :::
 
 
@@ -352,7 +590,7 @@ Table: H1: Effects of Late-Night Gaming on Sleep and Wellbeing (Imputed data)
 
 ::: {.cell}
 ::: {.cell-output-display}
-![Marginal predicted probability of poor sleep quality (Fairly bad or Very bad) as a function of late-night gaming. Predictions are derived from the H1a probit cumulative link mixed model fitted separately on each of 20 multiply imputed datasets; predicted probabilities and their within-imputation variances are then pooled via Rubin's rules. The solid line shows the pooled point estimate and the shaded ribbon the 95% confidence interval, both computed on the probability scale using the delta method applied to each imputation's threshold, gaming coefficient, and variance--covariance matrix, then combined with Rubin's within- and between-imputation variance components. Probabilities are population-average (marginalised over the participant random intercept) with other covariates held at their reference or mean values. The top panel shows the marginal density of late-night gaming in the sample; vertical reference lines mark the median, mean, 75th, and 90th percentiles.](manuscript_files/figure-docx/fig-latenight-sleepquality-exceedance-1.png){#fig-latenight-sleepquality-exceedance}
+![Marginal predicted probability of poor sleep quality (Fairly bad or Very bad) as a function of late-night gaming. Predictions are derived from the H1a probit cumulative link mixed model fitted separately on each of 20 multiply imputed datasets; predicted probabilities and their within-imputation variances are then pooled via Rubin's rules. The solid line shows the pooled point estimate and the shaded ribbon the 95% confidence interval, both computed on the probability scale using the delta method applied to each imputation's threshold, gaming coefficient, and variance--covariance matrix, then combined with Rubin's within- and between-imputation variance components. Probabilities are population-average (marginalised over the participant random intercept) with other covariates held at their reference or mean values. The top panel shows the marginal density of late-night gaming in the sample; vertical reference lines mark the median, mean, 75th, and 90th percentiles.](manuscript_files/figure-html/fig-latenight-sleepquality-exceedance-1.png){#fig-latenight-sleepquality-exceedance width=864}
 :::
 :::
 
@@ -382,42 +620,157 @@ The H2 models added a late-night gaming × chronotype (MSF~sc~) interaction to e
 
 ::: {#tbl-h2-combined .cell tbl-cap='Summary of H2 Hypotheses: Chronotype Moderation of Late-Night Gaming Effects'}
 
-+--------------------------------------------+------------------------+-------------------------+-------------------------+----------------------+
-|                                            | H2a: Sleep Quality     | H2b: Sleep Duration     | H2c: Daytime Sleepiness | H2d: Wellbeing       |
-+============================================+========================+=========================+=========================+======================+
-| Daily LN gaming (per 10 min/day, monthly)  | 0.06 [0.02, 0.11]**    | -0.01 [-0.03, 0.01]     | 0.02 [-0.04, 0.09]      |                      |
-+--------------------------------------------+------------------------+-------------------------+-------------------------+----------------------+
-| Daily LN gaming (per 10 min/day, biweekly) |                        |                         |                         | 0.04 [-0.01, 0.08]   |
-+--------------------------------------------+------------------------+-------------------------+-------------------------+----------------------+
-| Chronotype (h, centered)                   | 0.03 [-0.02, 0.08]     | -0.02 [-0.05, 0.01]     | 0.04 [-0.04, 0.12]      | -0.07 [-0.16, 0.03]  |
-+--------------------------------------------+------------------------+-------------------------+-------------------------+----------------------+
-| LN gaming × Chronotype (h, monthly)        | -0.00 [-0.01, 0.01]    | 0.00 [-0.00, 0.01]      | -0.01 [-0.02, 0.01]     |                      |
-+--------------------------------------------+------------------------+-------------------------+-------------------------+----------------------+
-| LN gaming × Chronotype (h, biweekly)       |                        |                         |                         | -0.01 [-0.02, 0.00]  |
-+--------------------------------------------+------------------------+-------------------------+-------------------------+----------------------+
-| Age (scaled)                               | -0.06 [-0.53, 0.40]    | -0.45 [-0.69, -0.21]*** | -0.93 [-1.71, -0.16]*   | 0.14 [-0.74, 1.01]   |
-+--------------------------------------------+------------------------+-------------------------+-------------------------+----------------------+
-| BMI (scaled)                               | 0.06 [-0.10, 0.23]     | -0.04 [-0.13, 0.05]     | 0.12 [-0.15, 0.39]      | -0.06 [-0.41, 0.28]  |
-+--------------------------------------------+------------------------+-------------------------+-------------------------+----------------------+
-| SES (scaled)                               | -0.28 [-0.50, -0.07]** | -0.09 [-0.19, 0.01]+    | 0.13 [-0.20, 0.46]      | 1.08 [0.71, 1.44]*** |
-+--------------------------------------------+------------------------+-------------------------+-------------------------+----------------------+
-| Region: US                                 | -0.17 [-0.47, 0.14]    | -0.03 [-0.19, 0.13]     | 0.38 [-0.17, 0.93]      | 0.30 [-0.34, 0.93]   |
-+--------------------------------------------+------------------------+-------------------------+-------------------------+----------------------+
-| Day: Weekend                               | 0.07 [-0.19, 0.32]     | 0.00 [-0.11, 0.12]      | 0.04 [-0.31, 0.39]      | -0.06 [-0.38, 0.27]  |
-+--------------------------------------------+------------------------+-------------------------+-------------------------+----------------------+
-| N Obs                                      | 2580                   | 2580                    | 2580                    | 5160                 |
-+--------------------------------------------+------------------------+-------------------------+-------------------------+----------------------+
-| N Participants                             | 860                    | 860                     | 860                     | 860                  |
-+--------------------------------------------+------------------------+-------------------------+-------------------------+----------------------+
-| ICC                                        | 0.76                   | 0.70                    | 0.70                    | 0.70                 |
-+============================================+========================+=========================+=========================+======================+
-| + p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001                                                                                             |
-+============================================+========================+=========================+=========================+======================+
-| LN = late-night. Confidence intervals shown in brackets.                                                                                       |
-+============================================+========================+=========================+=========================+======================+
-| ICC = Intraclass Correlation Coefficient (adjusted).                                                                                           |
-+============================================+========================+=========================+=========================+======================+
-Table: H2: Chronotype Moderation of Late-Night Gaming Effects (Imputed data)
+```{=html}
+<!-- preamble start -->
+
+    <script src="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.js"></script>
+
+    <script>
+      // Create table-specific functions using external factory
+      const tableFns_7824spi95f8nr2cewywe = TinyTable.createTableFunctions("tinytable_7824spi95f8nr2cewywe");
+      // tinytable span after
+      window.addEventListener('load', function () {
+          var cellsToStyle = [
+            // tinytable style arrays after
+          { positions: [ { i: '13', j: 2 }, { i: '13', j: 3 }, { i: '13', j: 4 }, { i: '13', j: 5 } ], css_id: 'tinytable_css_hstsp7494aoswhyg7hik',}, 
+          { positions: [ { i: '1', j: 2 }, { i: '2', j: 2 }, { i: '3', j: 2 }, { i: '4', j: 2 }, { i: '5', j: 2 }, { i: '6', j: 2 }, { i: '7', j: 2 }, { i: '8', j: 2 }, { i: '9', j: 2 }, { i: '10', j: 2 }, { i: '11', j: 2 }, { i: '12', j: 2 }, { i: '1', j: 3 }, { i: '2', j: 3 }, { i: '3', j: 3 }, { i: '4', j: 3 }, { i: '5', j: 3 }, { i: '6', j: 3 }, { i: '7', j: 3 }, { i: '8', j: 3 }, { i: '9', j: 3 }, { i: '10', j: 3 }, { i: '11', j: 3 }, { i: '12', j: 3 }, { i: '1', j: 4 }, { i: '2', j: 4 }, { i: '3', j: 4 }, { i: '4', j: 4 }, { i: '5', j: 4 }, { i: '6', j: 4 }, { i: '7', j: 4 }, { i: '8', j: 4 }, { i: '9', j: 4 }, { i: '10', j: 4 }, { i: '11', j: 4 }, { i: '12', j: 4 }, { i: '1', j: 5 }, { i: '2', j: 5 }, { i: '3', j: 5 }, { i: '4', j: 5 }, { i: '5', j: 5 }, { i: '6', j: 5 }, { i: '7', j: 5 }, { i: '8', j: 5 }, { i: '9', j: 5 }, { i: '10', j: 5 }, { i: '11', j: 5 }, { i: '12', j: 5 } ], css_id: 'tinytable_css_wxod0pbpr77husc2a5h1',}, 
+          { positions: [ { i: '0', j: 2 }, { i: '0', j: 3 }, { i: '0', j: 4 }, { i: '0', j: 5 } ], css_id: 'tinytable_css_2djf8158t4hqwuaf5tb8',}, 
+          { positions: [ { i: '13', j: 1 } ], css_id: 'tinytable_css_d47emmghuf62a6n3oecs',}, 
+          { positions: [ { i: '1', j: 1 }, { i: '2', j: 1 }, { i: '3', j: 1 }, { i: '4', j: 1 }, { i: '5', j: 1 }, { i: '6', j: 1 }, { i: '7', j: 1 }, { i: '8', j: 1 }, { i: '9', j: 1 }, { i: '10', j: 1 }, { i: '11', j: 1 }, { i: '12', j: 1 } ], css_id: 'tinytable_css_o17vgydnkf0rmcl1p45x',}, 
+          { positions: [ { i: '0', j: 1 } ], css_id: 'tinytable_css_tgz3mwgv0htm8gtesryh',}, 
+          ];
+
+          // Loop over the arrays to style the cells
+          cellsToStyle.forEach(function (group) {
+              group.positions.forEach(function (cell) {
+                  tableFns_7824spi95f8nr2cewywe.styleCell(cell.i, cell.j, group.css_id);
+              });
+          });
+      });
+    </script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.css">
+    <style>
+    /* tinytable css entries after */
+    #tinytable_7824spi95f8nr2cewywe td.tinytable_css_hstsp7494aoswhyg7hik, #tinytable_7824spi95f8nr2cewywe th.tinytable_css_hstsp7494aoswhyg7hik {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
+    #tinytable_7824spi95f8nr2cewywe td.tinytable_css_wxod0pbpr77husc2a5h1, #tinytable_7824spi95f8nr2cewywe th.tinytable_css_wxod0pbpr77husc2a5h1 { text-align: center }
+    #tinytable_7824spi95f8nr2cewywe td.tinytable_css_2djf8158t4hqwuaf5tb8, #tinytable_7824spi95f8nr2cewywe th.tinytable_css_2djf8158t4hqwuaf5tb8 {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
+    #tinytable_7824spi95f8nr2cewywe td.tinytable_css_d47emmghuf62a6n3oecs, #tinytable_7824spi95f8nr2cewywe th.tinytable_css_d47emmghuf62a6n3oecs {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left }
+    #tinytable_7824spi95f8nr2cewywe td.tinytable_css_o17vgydnkf0rmcl1p45x, #tinytable_7824spi95f8nr2cewywe th.tinytable_css_o17vgydnkf0rmcl1p45x { text-align: left }
+    #tinytable_7824spi95f8nr2cewywe td.tinytable_css_tgz3mwgv0htm8gtesryh, #tinytable_7824spi95f8nr2cewywe th.tinytable_css_tgz3mwgv0htm8gtesryh {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left }
+    </style>
+    <div class="container">
+      <table class="tinytable" id="tinytable_7824spi95f8nr2cewywe" style="width: auto; margin-left: auto; margin-right: auto;" data-quarto-disable-processing='true'>
+        <caption>H2: Chronotype Moderation of Late-Night Gaming Effects (Imputed data)</caption>
+        <thead>
+              <tr>
+                <th scope="col" data-row="0" data-col="1"> </th>
+                <th scope="col" data-row="0" data-col="2">H2a: Sleep Quality</th>
+                <th scope="col" data-row="0" data-col="3">H2b: Sleep Duration</th>
+                <th scope="col" data-row="0" data-col="4">H2c: Daytime Sleepiness</th>
+                <th scope="col" data-row="0" data-col="5">H2d: Wellbeing</th>
+              </tr>
+        </thead>
+        <tfoot><tr><td colspan='5'>+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001</td></tr>
+<tr><td colspan='5'>LN = late-night. Confidence intervals shown in brackets.</td></tr>
+<tr><td colspan='5'>ICC = Intraclass Correlation Coefficient (adjusted).</td></tr></tfoot>
+        <tbody>
+                <tr>
+                  <td data-row="1" data-col="1">Daily LN gaming (per 10 min/day, monthly)</td>
+                  <td data-row="1" data-col="2">0.06 [0.02, 0.11]**</td>
+                  <td data-row="1" data-col="3">-0.01 [-0.03, 0.01]</td>
+                  <td data-row="1" data-col="4">0.02 [-0.04, 0.09]</td>
+                  <td data-row="1" data-col="5"></td>
+                </tr>
+                <tr>
+                  <td data-row="2" data-col="1">Daily LN gaming (per 10 min/day, biweekly)</td>
+                  <td data-row="2" data-col="2"></td>
+                  <td data-row="2" data-col="3"></td>
+                  <td data-row="2" data-col="4"></td>
+                  <td data-row="2" data-col="5">0.04 [-0.01, 0.08]</td>
+                </tr>
+                <tr>
+                  <td data-row="3" data-col="1">Chronotype (h, centered)</td>
+                  <td data-row="3" data-col="2">0.03 [-0.02, 0.08]</td>
+                  <td data-row="3" data-col="3">-0.02 [-0.05, 0.01]</td>
+                  <td data-row="3" data-col="4">0.04 [-0.04, 0.12]</td>
+                  <td data-row="3" data-col="5">-0.07 [-0.16, 0.03]</td>
+                </tr>
+                <tr>
+                  <td data-row="4" data-col="1">LN gaming × Chronotype (h, monthly)</td>
+                  <td data-row="4" data-col="2">-0.00 [-0.01, 0.01]</td>
+                  <td data-row="4" data-col="3">0.00 [-0.00, 0.01]</td>
+                  <td data-row="4" data-col="4">-0.01 [-0.02, 0.01]</td>
+                  <td data-row="4" data-col="5"></td>
+                </tr>
+                <tr>
+                  <td data-row="5" data-col="1">LN gaming × Chronotype (h, biweekly)</td>
+                  <td data-row="5" data-col="2"></td>
+                  <td data-row="5" data-col="3"></td>
+                  <td data-row="5" data-col="4"></td>
+                  <td data-row="5" data-col="5">-0.01 [-0.02, 0.00]</td>
+                </tr>
+                <tr>
+                  <td data-row="6" data-col="1">Age (scaled)</td>
+                  <td data-row="6" data-col="2">-0.06 [-0.53, 0.40]</td>
+                  <td data-row="6" data-col="3">-0.45 [-0.69, -0.21]***</td>
+                  <td data-row="6" data-col="4">-0.93 [-1.71, -0.16]*</td>
+                  <td data-row="6" data-col="5">0.14 [-0.74, 1.01]</td>
+                </tr>
+                <tr>
+                  <td data-row="7" data-col="1">BMI (scaled)</td>
+                  <td data-row="7" data-col="2">0.06 [-0.10, 0.23]</td>
+                  <td data-row="7" data-col="3">-0.04 [-0.13, 0.05]</td>
+                  <td data-row="7" data-col="4">0.12 [-0.15, 0.39]</td>
+                  <td data-row="7" data-col="5">-0.06 [-0.41, 0.28]</td>
+                </tr>
+                <tr>
+                  <td data-row="8" data-col="1">SES (scaled)</td>
+                  <td data-row="8" data-col="2">-0.28 [-0.50, -0.07]**</td>
+                  <td data-row="8" data-col="3">-0.09 [-0.19, 0.01]+</td>
+                  <td data-row="8" data-col="4">0.13 [-0.20, 0.46]</td>
+                  <td data-row="8" data-col="5">1.08 [0.71, 1.44]***</td>
+                </tr>
+                <tr>
+                  <td data-row="9" data-col="1">Region: US</td>
+                  <td data-row="9" data-col="2">-0.17 [-0.47, 0.14]</td>
+                  <td data-row="9" data-col="3">-0.03 [-0.19, 0.13]</td>
+                  <td data-row="9" data-col="4">0.38 [-0.17, 0.93]</td>
+                  <td data-row="9" data-col="5">0.30 [-0.34, 0.93]</td>
+                </tr>
+                <tr>
+                  <td data-row="10" data-col="1">Day: Weekend</td>
+                  <td data-row="10" data-col="2">0.07 [-0.19, 0.32]</td>
+                  <td data-row="10" data-col="3">0.00 [-0.11, 0.12]</td>
+                  <td data-row="10" data-col="4">0.04 [-0.31, 0.39]</td>
+                  <td data-row="10" data-col="5">-0.06 [-0.38, 0.27]</td>
+                </tr>
+                <tr>
+                  <td data-row="11" data-col="1">N Obs</td>
+                  <td data-row="11" data-col="2">2580</td>
+                  <td data-row="11" data-col="3">2580</td>
+                  <td data-row="11" data-col="4">2580</td>
+                  <td data-row="11" data-col="5">5160</td>
+                </tr>
+                <tr>
+                  <td data-row="12" data-col="1">N Participants</td>
+                  <td data-row="12" data-col="2">860</td>
+                  <td data-row="12" data-col="3">860</td>
+                  <td data-row="12" data-col="4">860</td>
+                  <td data-row="12" data-col="5">860</td>
+                </tr>
+                <tr>
+                  <td data-row="13" data-col="1">ICC</td>
+                  <td data-row="13" data-col="2">0.76</td>
+                  <td data-row="13" data-col="3">0.70</td>
+                  <td data-row="13" data-col="4">0.70</td>
+                  <td data-row="13" data-col="5">0.70</td>
+                </tr>
+        </tbody>
+      </table>
+    </div>
+<!-- hack to avoid NA insertion in last line -->
+```
 :::
 
 
@@ -463,19 +816,20 @@ Table: H2: Chronotype Moderation of Late-Night Gaming Effects (Imputed data)
 :::
 
 
-As an exploratory complement to the panel analyses, we re-used the H1a/H2a probit CLMM specification (random intercept for participant, late-night gaming scaled per 10 min/day, same covariate set) and refit it to daily diary reports of sleep quality against late-night gaming in the preceding 24 hours, rather than the 14- or 28-day averages used in the panel. Sleep quality was recorded on a 5-level ordinal scale (Very poor, Poor, Fair, Good, Very good). To separate within- from between-person variation in late-night gaming, the trimmed exposure (capped at the 99th percentile) was decomposed into a within-person component (daily deviation from the participant's own mean) and a between-person component (participant mean centred at the grand mean). The analytical diary sample comprised 1271 participants contributing 15,842 diary entries with valid sleep quality ratings. Region was dropped because all diary participants are US-based, and a random intercept for gender failed to converge with only three levels, so gender was excluded as well. Continuous covariates (age, BMI, SES) were rescaled within the diary subsample. Missing SES values for participants with unrecognised employment categories (n = 23) were imputed via standard PMM (m = 5) using age, BMI, gender, and region as predictors. These diary analyses were not formally pre-registered.
+The diary stage tests whether the panel-level H1a/H2a finding holds when sleep quality and late-night gaming are measured day-by-day, with the trimmed late-night exposure (capped at the 99th percentile) decomposed into a within-person component (daily deviation from the participant's own mean) and a between-person component (participant mean centred at the grand mean).
 
-To handle missing data in the diary outcomes and daily predictors, we applied the same hierarchical two-level `2l.pmm` approach and predictor-matrix coding as the panel imputation, with participants as clusters and diary days nested within (`miceadds`). Level-2 variables for the diary pass were age, BMI, SES, chronotype, gender, and person-mean late-night gaming; level-1 daily predictors with genuine missingness (gaming played, basic psychological needs, stress, day type, late-night gaming hours) were imputed via standard PMM within the same MICE run, and ±5-day lag and lead terms (rather than the ±1-wave terms used in the panel) provided temporal context for each outcome. We generated 60 imputed datasets with 20 iterations each — more than for the panel because of higher per-day missingness — inspected QC diagnostics and judged them acceptable, and combined diary regression estimates across imputations using Rubin's rules.
+For the direct-effects model (H1), the within-person effect of late-night gaming on sleep quality was b = -0.003, 95% CI [-0.007, 0.002], p = 0.214 (probit coefficient per 10 additional minutes); on days when participants gamed more than their own average, the association with sleep quality was not statistically significant. The between-person effect was b = 0.029, 95% CI [0.012, 0.047], p = 0.001 (probit coefficient per 10 min/day) and was statistically significant, indicating that participants who habitually engaged in more late-night gaming tended to report worse sleep quality on average. On the probability scale, each additional 10 minutes of habitual daily late-night gaming is associated with an approximate 0.6 percentage-point increase in the probability of reporting poor or very poor sleep, broadly consistent with the panel-level H1a estimate (0.9 pp per 10 min; @fig-diary-sleepquality, Panel A).
 
-For the direct-effects model (H1), the within-person effect of late-night gaming on sleep quality was b = -0.003, 95% CI [-0.007, 0.002], p = 0.214 (probit coefficient per 10 additional minutes). On days when participants gamed more than their own average, the association with sleep quality was not statistically significant. The between-person effect was b = 0.029, 95% CI [0.012, 0.047], p = 0.001 (probit coefficient per 10 min/day), indicating that participants who habitually engaged in more late-night gaming tended to report worse sleep quality on average; this between-person effect was statistically significant. On the probability scale, each additional 10 minutes of habitual daily late-night gaming is associated with an approximate 0.6 percentage-point increase in the probability of reporting poor or very poor sleep, broadly consistent with the panel-level H1a estimate (0.9 pp per 10 min; @fig-diary-sleepquality, Panel A).
-We compared the linear specification against natural cubic spline alternatives (df = 2–6). Among the splines, df = 2 was preferred, but the linear model had a lower BIC by 7.7 units (2|ΔBIC| = 15.4) — very strong evidence for the linear specification under the @jones2001nagin rule of thumb. We therefore retained the linear specification, both as a parsimonious summary of the average within- and between-person associations and for direct comparability with the panel H1a/H2a estimates. Diary subsample characteristics are presented in @tbl-diary-demographics in the Appendix.
+For the chronotype moderation model (H2), the interaction between within-person late-night gaming and chronotype was b = -0.002, 95% CI [-0.004, -0.000], p = 0.024 and the interaction between between-person late-night gaming and chronotype was b = -0.001, 95% CI [-0.009, 0.007], p = 0.730. The within-person interaction was statistically significant, indicating that the day-to-day link between late-night gaming and sleep quality was somewhat weaker for evening types; the between-person interaction was not statistically significant, suggesting that the trait-level association between habitual late-night gaming and sleep quality did not meaningfully vary across chronotypes. The main effect of chronotype was b = 0.035, 95% CI [0.005, 0.065], p = 0.022, with a later chronotype associated with worse sleep quality (statistically significant; @fig-diary-sleepquality, Panel B).
 
-For the chronotype moderation model (H2), the interaction between within-person late-night gaming and chronotype was b = -0.002, 95% CI [-0.004, -0.000], p = 0.024, and the interaction between between-person late-night gaming and chronotype was b = -0.001, 95% CI [-0.009, 0.007], p = 0.730. The within-person interaction was statistically significant, indicating that the day-to-day link between late-night gaming and sleep quality was somewhat weaker for evening types. The between-person interaction was not statistically significant, suggesting that the trait-level association between habitual late-night gaming and sleep quality did not meaningfully vary across chronotypes. The main effect of chronotype was b = 0.035, 95% CI [0.005, 0.065], p = 0.022; a later chronotype was associated with worse sleep quality (this effect was statistically significant). These diary-based findings are exploratory and should be interpreted with caution (@fig-diary-sleepquality, Panel B).
+These diary analyses were not formally pre-registered and are exploratory; they re-use the H1a/H2a probit CLMM specification (random intercept for participant, late-night gaming scaled per 10 min/day, same covariate set) but operate over the preceding 24 hours rather than the 14- or 28-day windows used in the panel, with sleep quality recorded on a 5-level ordinal scale (Very poor, Poor, Fair, Good, Very good). The analytical diary sample comprised 1271 participants contributing 15,842 diary entries with valid sleep quality ratings (@tbl-diary-demographics in the Appendix). Region was dropped because all diary participants are US-based, and a random intercept for gender failed to converge with only three levels, so gender was excluded as well; continuous covariates (age, BMI, SES) were rescaled within the diary subsample, and SES values missing for participants with unrecognised employment categories (n = 23) were imputed via standard PMM (m = 5) using age, BMI, gender, and region as predictors. Missing diary outcomes and daily predictors were handled with the same hierarchical two-level `2l.pmm` approach and predictor-matrix coding used in the panel imputation, with participants as clusters and diary days nested within (`miceadds`); level-2 variables were age, BMI, SES, chronotype, gender, and person-mean late-night gaming, level-1 daily predictors with genuine missingness (gaming played, basic psychological needs, stress, day type, late-night gaming hours) were imputed via standard PMM within the same MICE run, and ±5-day (rather than ±1-wave) lag and lead terms provided temporal context. We generated 60 imputed datasets with 20 iterations each — more than for the panel because of higher per-day missingness — inspected QC diagnostics and judged them acceptable, and combined diary regression estimates across imputations using Rubin's rules.
+
+We compared the linear specification against natural cubic spline alternatives (df = 2–6). Among the splines, df = 2 was preferred, but the linear model had a lower BIC by 7.7 units (2|ΔBIC| = 15.4) — very strong evidence for the linear specification under the @jones2001nagin rule of thumb. We therefore retained the linear specification, both as a parsimonious summary of the average within- and between-person associations and for direct comparability with the panel H1a/H2a estimates.
 
 
 ::: {.cell}
 ::: {.cell-output-display}
-![Predicted probability of poor sleep quality from the diary CLMM. (A) Between-person effect (H1): marginal probability of reporting Poor or Very poor sleep quality as a function of participants' average daily late-night gaming, with the within-person component held at zero. The ribbon shows 95% CIs from the between-person coefficient SE. (B) Within-person x chronotype interaction (H2): marginal probability of poor sleep quality as a function of daily within-person gaming deviation at three chronotype levels (morning = -1 SD, mean, evening = +1 SD), with the between-person component held at zero. Ribbons show 95% CIs via the delta method pooled across 60 imputations using Rubin's rules. Vertical reference lines mark the median (dotted), mean (dashed), 75th percentile (dotted), and 90th percentile (dashed) of the respective predictor distributions. Density plots (top) show predictor distributions.](manuscript_files/figure-docx/fig-diary-sleepquality-1.png){#fig-diary-sleepquality}
+![Predicted probability of poor sleep quality from the diary CLMM. (A) Between-person effect (H1): marginal probability of reporting Poor or Very poor sleep quality as a function of participants' average daily late-night gaming, with the within-person component held at zero. The ribbon shows 95% CIs from the between-person coefficient SE. (B) Within-person x chronotype interaction (H2): marginal probability of poor sleep quality as a function of daily within-person gaming deviation at three chronotype levels (morning = -1 SD, mean, evening = +1 SD), with the between-person component held at zero. Ribbons show 95% CIs via the delta method pooled across 60 imputations using Rubin's rules. Vertical reference lines mark the median (dotted), mean (dashed), 75th percentile (dotted), and 90th percentile (dashed) of the respective predictor distributions. Density plots (top) show predictor distributions.](manuscript_files/figure-html/fig-diary-sleepquality-1.png){#fig-diary-sleepquality width=1248}
 :::
 :::
 
@@ -484,77 +838,127 @@ For the chronotype moderation model (H2), the interaction between within-person 
 ::: {#tbl-diary-h1h2 .cell tbl-cap='Diary CLMM Regression Results: H1 (Direct Effects) and H2 (Chronotype Moderation) for Sleep Quality'}
 ::: {.cell-output-display}
 
-+---------------------------------------+-------------------------+---------------------------+
-|                                       | H1: Sleep Quality       | H2: Chronotype Moderation |
-+=======================================+=========================+===========================+
-| LN gaming within-person (per 10 min)  | -0.00
-+---------------------------------------+-------------------------+---------------------------+
-[-0.01, 0.00]     | 0.00
-+---------------------------------------+-------------------------+---------------------------+
-[-0.00, 0.01]        |
-+---------------------------------------+-------------------------+---------------------------+
-| LN gaming between-person (per 10 min) | 0.03**
-+---------------------------------------+-------------------------+---------------------------+
-[0.01, 0.05]     | 0.02
-+---------------------------------------+-------------------------+---------------------------+
-[-0.01, 0.05]        |
-+---------------------------------------+-------------------------+---------------------------+
-| Chronotype (h, centered)              |                         | 0.04*
-+---------------------------------------+-------------------------+---------------------------+
-[0.00, 0.07]        |
-+---------------------------------------+-------------------------+---------------------------+
-| LN within × Chronotype                |                         | -0.00*
-+---------------------------------------+-------------------------+---------------------------+
-[-0.00, -0.00]     |
-+---------------------------------------+-------------------------+---------------------------+
-| LN between × Chronotype               |                         | -0.00
-+---------------------------------------+-------------------------+---------------------------+
-[-0.01, 0.01]       |
-+---------------------------------------+-------------------------+---------------------------+
-| Age (scaled)                          | 0.01
-+---------------------------------------+-------------------------+---------------------------+
-[-0.06, 0.07]      | -0.06
-+---------------------------------------+-------------------------+---------------------------+
-[-0.16, 0.04]       |
-+---------------------------------------+-------------------------+---------------------------+
-| BMI (scaled)                          | 0.07*
-+---------------------------------------+-------------------------+---------------------------+
-[0.01, 0.14]      | 0.08
-+---------------------------------------+-------------------------+---------------------------+
-[-0.02, 0.18]        |
-+---------------------------------------+-------------------------+---------------------------+
-| SES (scaled)                          | -0.13***
-+---------------------------------------+-------------------------+---------------------------+
-[-0.20, -0.07] | -0.17**
-+---------------------------------------+-------------------------+---------------------------+
-[-0.28, -0.07]    |
-+---------------------------------------+-------------------------+---------------------------+
-| Day: Weekend                          | -0.29***
-+---------------------------------------+-------------------------+---------------------------+
-[-0.33, -0.24] | -0.28***
-+---------------------------------------+-------------------------+---------------------------+
-[-0.34, -0.22]   |
-+---------------------------------------+-------------------------+---------------------------+
-| N Obs                                 | 14690                   | 8399                      |
-+---------------------------------------+-------------------------+---------------------------+
-| N Participants                        | 1132                    | 509                       |
-+---------------------------------------+-------------------------+---------------------------+
-| ICC                                   | 0.48                    | 0.53                      |
-+=======================================+=========================+===========================+
-| + p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001                                          |
-+=======================================+=========================+===========================+
-| LN = late-night. Confidence intervals shown in brackets below each estimate.                |
-+=======================================+=========================+===========================+
-| Estimates pooled across 60 multiply imputed datasets using Rubin's rules.                   |
-+=======================================+=========================+===========================+
-| Cumulative link mixed models (random intercept for participant) on 5-level ordinal sleep    |
-| quality (positive coefficients = higher probability of worse sleep). Both H1 and H2 use     |
-| probit link. Late-night gaming expressed per 10 minutes; chronotype in centered hours;      |
-| age, BMI, SES scaled within the diary subsample. Region excluded: all diary participants    |
-| are US-only.                                                                                |
-+=======================================+=========================+===========================+
-| Within = daily deviation from person mean; Between = person mean - grand mean.              |
-+=======================================+=========================+===========================+
+```{=html}
+<!-- preamble start -->
+
+    <script src="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.js"></script>
+
+    <script>
+      // Create table-specific functions using external factory
+      const tableFns_e0j5tu3s8be3aokzx18v = TinyTable.createTableFunctions("tinytable_e0j5tu3s8be3aokzx18v");
+      // tinytable span after
+      window.addEventListener('load', function () {
+          var cellsToStyle = [
+            // tinytable style arrays after
+          { positions: [ { i: '12', j: 2 }, { i: '12', j: 3 } ], css_id: 'tinytable_css_2ydk7ibp6t9x4hgp1f10',}, 
+          { positions: [ { i: '1', j: 2 }, { i: '2', j: 2 }, { i: '3', j: 2 }, { i: '4', j: 2 }, { i: '5', j: 2 }, { i: '6', j: 2 }, { i: '7', j: 2 }, { i: '8', j: 2 }, { i: '9', j: 2 }, { i: '10', j: 2 }, { i: '11', j: 2 }, { i: '1', j: 3 }, { i: '2', j: 3 }, { i: '3', j: 3 }, { i: '4', j: 3 }, { i: '5', j: 3 }, { i: '6', j: 3 }, { i: '7', j: 3 }, { i: '8', j: 3 }, { i: '9', j: 3 }, { i: '10', j: 3 }, { i: '11', j: 3 } ], css_id: 'tinytable_css_5o1p6agmhzvcolb5qhgi',}, 
+          { positions: [ { i: '0', j: 2 }, { i: '0', j: 3 } ], css_id: 'tinytable_css_li6vtx5nvsmddbe1eenl',}, 
+          { positions: [ { i: '12', j: 1 } ], css_id: 'tinytable_css_p37c89beco2sl5mh5uw0',}, 
+          { positions: [ { i: '1', j: 1 }, { i: '2', j: 1 }, { i: '3', j: 1 }, { i: '4', j: 1 }, { i: '5', j: 1 }, { i: '6', j: 1 }, { i: '7', j: 1 }, { i: '8', j: 1 }, { i: '9', j: 1 }, { i: '10', j: 1 }, { i: '11', j: 1 } ], css_id: 'tinytable_css_i7tomtox9mlgu1dnu3za',}, 
+          { positions: [ { i: '0', j: 1 } ], css_id: 'tinytable_css_7n1msd84pstu81fx4yw1',}, 
+          ];
+
+          // Loop over the arrays to style the cells
+          cellsToStyle.forEach(function (group) {
+              group.positions.forEach(function (cell) {
+                  tableFns_e0j5tu3s8be3aokzx18v.styleCell(cell.i, cell.j, group.css_id);
+              });
+          });
+      });
+    </script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.css">
+    <style>
+    /* tinytable css entries after */
+    #tinytable_e0j5tu3s8be3aokzx18v td.tinytable_css_2ydk7ibp6t9x4hgp1f10, #tinytable_e0j5tu3s8be3aokzx18v th.tinytable_css_2ydk7ibp6t9x4hgp1f10 {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
+    #tinytable_e0j5tu3s8be3aokzx18v td.tinytable_css_5o1p6agmhzvcolb5qhgi, #tinytable_e0j5tu3s8be3aokzx18v th.tinytable_css_5o1p6agmhzvcolb5qhgi { text-align: center }
+    #tinytable_e0j5tu3s8be3aokzx18v td.tinytable_css_li6vtx5nvsmddbe1eenl, #tinytable_e0j5tu3s8be3aokzx18v th.tinytable_css_li6vtx5nvsmddbe1eenl {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
+    #tinytable_e0j5tu3s8be3aokzx18v td.tinytable_css_p37c89beco2sl5mh5uw0, #tinytable_e0j5tu3s8be3aokzx18v th.tinytable_css_p37c89beco2sl5mh5uw0 {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left }
+    #tinytable_e0j5tu3s8be3aokzx18v td.tinytable_css_i7tomtox9mlgu1dnu3za, #tinytable_e0j5tu3s8be3aokzx18v th.tinytable_css_i7tomtox9mlgu1dnu3za { text-align: left }
+    #tinytable_e0j5tu3s8be3aokzx18v td.tinytable_css_7n1msd84pstu81fx4yw1, #tinytable_e0j5tu3s8be3aokzx18v th.tinytable_css_7n1msd84pstu81fx4yw1 {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left }
+    </style>
+    <div class="container">
+      <table class="tinytable" id="tinytable_e0j5tu3s8be3aokzx18v" style="width: auto; margin-left: auto; margin-right: auto;" data-quarto-disable-processing='true'>
+        
+        <thead>
+              <tr>
+                <th scope="col" data-row="0" data-col="1"> </th>
+                <th scope="col" data-row="0" data-col="2">H1: Sleep Quality</th>
+                <th scope="col" data-row="0" data-col="3">H2: Chronotype Moderation</th>
+              </tr>
+        </thead>
+        <tfoot><tr><td colspan='3'>+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001</td></tr>
+<tr><td colspan='3'>LN = late-night. Confidence intervals shown in brackets below each estimate.</td></tr>
+<tr><td colspan='3'>Estimates pooled across 60 multiply imputed datasets using Rubin's rules.</td></tr>
+<tr><td colspan='3'>Cumulative link mixed models (random intercept for participant) on 5-level ordinal sleep quality (positive coefficients = higher probability of worse sleep). Both H1 and H2 use probit link. Late-night gaming expressed per 10 minutes; chronotype in centered hours; age, BMI, SES scaled within the diary subsample. Region excluded: all diary participants are US-only.</td></tr>
+<tr><td colspan='3'>Within = daily deviation from person mean; Between = person mean - grand mean.</td></tr></tfoot>
+        <tbody>
+                <tr>
+                  <td data-row="1" data-col="1">LN gaming within-person (per 10 min)</td>
+                  <td data-row="1" data-col="2">-0.00<br>[-0.01, 0.00]</td>
+                  <td data-row="1" data-col="3">0.00<br>[-0.00, 0.01]</td>
+                </tr>
+                <tr>
+                  <td data-row="2" data-col="1">LN gaming between-person (per 10 min)</td>
+                  <td data-row="2" data-col="2">0.03**<br>[0.01, 0.05]</td>
+                  <td data-row="2" data-col="3">0.02<br>[-0.01, 0.05]</td>
+                </tr>
+                <tr>
+                  <td data-row="3" data-col="1">Chronotype (h, centered)</td>
+                  <td data-row="3" data-col="2"></td>
+                  <td data-row="3" data-col="3">0.04*<br>[0.00, 0.07]</td>
+                </tr>
+                <tr>
+                  <td data-row="4" data-col="1">LN within × Chronotype</td>
+                  <td data-row="4" data-col="2"></td>
+                  <td data-row="4" data-col="3">-0.00*<br>[-0.00, -0.00]</td>
+                </tr>
+                <tr>
+                  <td data-row="5" data-col="1">LN between × Chronotype</td>
+                  <td data-row="5" data-col="2"></td>
+                  <td data-row="5" data-col="3">-0.00<br>[-0.01, 0.01]</td>
+                </tr>
+                <tr>
+                  <td data-row="6" data-col="1">Age (scaled)</td>
+                  <td data-row="6" data-col="2">0.01<br>[-0.06, 0.07]</td>
+                  <td data-row="6" data-col="3">-0.06<br>[-0.16, 0.04]</td>
+                </tr>
+                <tr>
+                  <td data-row="7" data-col="1">BMI (scaled)</td>
+                  <td data-row="7" data-col="2">0.07*<br>[0.01, 0.14]</td>
+                  <td data-row="7" data-col="3">0.08<br>[-0.02, 0.18]</td>
+                </tr>
+                <tr>
+                  <td data-row="8" data-col="1">SES (scaled)</td>
+                  <td data-row="8" data-col="2">-0.13***<br>[-0.20, -0.07]</td>
+                  <td data-row="8" data-col="3">-0.17**<br>[-0.28, -0.07]</td>
+                </tr>
+                <tr>
+                  <td data-row="9" data-col="1">Day: Weekend</td>
+                  <td data-row="9" data-col="2">-0.29***<br>[-0.33, -0.24]</td>
+                  <td data-row="9" data-col="3">-0.28***<br>[-0.34, -0.22]</td>
+                </tr>
+                <tr>
+                  <td data-row="10" data-col="1">N Obs</td>
+                  <td data-row="10" data-col="2">14690</td>
+                  <td data-row="10" data-col="3">8399</td>
+                </tr>
+                <tr>
+                  <td data-row="11" data-col="1">N Participants</td>
+                  <td data-row="11" data-col="2">1132</td>
+                  <td data-row="11" data-col="3">509</td>
+                </tr>
+                <tr>
+                  <td data-row="12" data-col="1">ICC</td>
+                  <td data-row="12" data-col="2">0.48</td>
+                  <td data-row="12" data-col="3">0.53</td>
+                </tr>
+        </tbody>
+      </table>
+    </div>
+<!-- hack to avoid NA insertion in last line -->
+```
+
 :::
 :::
 
@@ -652,41 +1056,158 @@ The parent Open Play dataset [@ballou2025openplay], including the Nintendo, Xbox
 ::: {#tbl-appendix-h1-completecase .cell tbl-cap='Panel H1 Effects of Late-Night Gaming — Complete-Case (Non-Imputed Data)'}
 ::: {.cell-output-display}
 
-+--------------------------------------------+-------------------------+-------------------------+-------------------------+----------------------+
-|                                            | H1a: Sleep Quality      | H1b: Sleep Duration     | H1c: Daytime Sleepiness | H1d: Wellbeing       |
-+============================================+=========================+=========================+=========================+======================+
-| Daily LN gaming (per 10 min/day, monthly)  | 0.06 [0.03, 0.08]***    | -0.00 [-0.02, 0.01]     | 0.02 [-0.02, 0.06]      |                      |
-+--------------------------------------------+-------------------------+-------------------------+-------------------------+----------------------+
-| Daily LN gaming (per 10 min/day, biweekly) |                         |                         |                         | -0.02 [-0.05, 0.01]  |
-+--------------------------------------------+-------------------------+-------------------------+-------------------------+----------------------+
-| Age (scaled)                               | 0.24 [-0.12, 0.60]      | -0.45 [-0.62, -0.28]*** | -0.80 [-1.36, -0.24]**  | 0.07 [-0.58, 0.71]   |
-+--------------------------------------------+-------------------------+-------------------------+-------------------------+----------------------+
-| BMI (scaled)                               | 0.23 [0.08, 0.39]**     | -0.09 [-0.16, -0.01]*   | 0.24 [-0.00, 0.48]+     | -0.20 [-0.48, 0.07]  |
-+--------------------------------------------+-------------------------+-------------------------+-------------------------+----------------------+
-| SES (scaled)                               | -0.26 [-0.42, -0.11]*** | -0.10 [-0.17, -0.03]**  | 0.13 [-0.11, 0.38]      | 0.94 [0.67, 1.21]*** |
-+--------------------------------------------+-------------------------+-------------------------+-------------------------+----------------------+
-| Region: US                                 | -0.23 [-0.50, 0.05]     | 0.07 [-0.06, 0.20]      | 0.29 [-0.13, 0.72]      | 0.17 [-0.31, 0.66]   |
-+--------------------------------------------+-------------------------+-------------------------+-------------------------+----------------------+
-| Day: Weekend                               | 0.04 [-0.16, 0.24]      | 0.02 [-0.08, 0.11]      | 0.00 [-0.30, 0.31]      | -0.01 [-0.27, 0.24]  |
-+--------------------------------------------+-------------------------+-------------------------+-------------------------+----------------------+
-| SD (Intercept | Participant)               | 2.01                    | 0.96                    | 3.12                    | 4.23                 |
-+--------------------------------------------+-------------------------+-------------------------+-------------------------+----------------------+
-| SD (Residual)                              |                         | 0.66                    | 2.16                    | 2.81                 |
-+--------------------------------------------+-------------------------+-------------------------+-------------------------+----------------------+
-| SD (Intercept | Gender)                    |                         |                         | 0.46                    | 1.20                 |
-+--------------------------------------------+-------------------------+-------------------------+-------------------------+----------------------+
-| N Obs                                      | 2482                    | 2482                    | 2482                    | 5704                 |
-+--------------------------------------------+-------------------------+-------------------------+-------------------------+----------------------+
-| N Participants                             | 1102                    | 1102                    | 1102                    | 1469                 |
-+--------------------------------------------+-------------------------+-------------------------+-------------------------+----------------------+
-| ICC                                        | 0.80                    | 0.68                    | 0.68                    | 0.71                 |
-+============================================+=========================+=========================+=========================+======================+
-| + p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001                                                                                              |
-+============================================+=========================+=========================+=========================+======================+
-| LN = late-night. Confidence intervals shown in brackets.                                                                                        |
-+============================================+=========================+=========================+=========================+======================+
-| ICC = Intraclass Correlation Coefficient (adjusted).                                                                                            |
-+============================================+=========================+=========================+=========================+======================+
+```{=html}
+<!-- preamble start -->
+
+    <script src="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.js"></script>
+
+    <script>
+      // Create table-specific functions using external factory
+      const tableFns_u6uhv4gz6i8ouotmgsyt = TinyTable.createTableFunctions("tinytable_u6uhv4gz6i8ouotmgsyt");
+      // tinytable span after
+      window.addEventListener('load', function () {
+          var cellsToStyle = [
+            // tinytable style arrays after
+          { positions: [ { i: '13', j: 2 }, { i: '13', j: 3 }, { i: '13', j: 4 }, { i: '13', j: 5 } ], css_id: 'tinytable_css_eds2zcmjeiawm3y5e6h4',}, 
+          { positions: [ { i: '1', j: 2 }, { i: '2', j: 2 }, { i: '3', j: 2 }, { i: '4', j: 2 }, { i: '5', j: 2 }, { i: '6', j: 2 }, { i: '7', j: 2 }, { i: '8', j: 2 }, { i: '9', j: 2 }, { i: '10', j: 2 }, { i: '11', j: 2 }, { i: '12', j: 2 }, { i: '1', j: 3 }, { i: '2', j: 3 }, { i: '3', j: 3 }, { i: '4', j: 3 }, { i: '5', j: 3 }, { i: '6', j: 3 }, { i: '7', j: 3 }, { i: '8', j: 3 }, { i: '9', j: 3 }, { i: '10', j: 3 }, { i: '11', j: 3 }, { i: '12', j: 3 }, { i: '1', j: 4 }, { i: '2', j: 4 }, { i: '3', j: 4 }, { i: '4', j: 4 }, { i: '5', j: 4 }, { i: '6', j: 4 }, { i: '7', j: 4 }, { i: '8', j: 4 }, { i: '9', j: 4 }, { i: '10', j: 4 }, { i: '11', j: 4 }, { i: '12', j: 4 }, { i: '1', j: 5 }, { i: '2', j: 5 }, { i: '3', j: 5 }, { i: '4', j: 5 }, { i: '5', j: 5 }, { i: '6', j: 5 }, { i: '7', j: 5 }, { i: '8', j: 5 }, { i: '9', j: 5 }, { i: '10', j: 5 }, { i: '11', j: 5 }, { i: '12', j: 5 } ], css_id: 'tinytable_css_t5i9spbxylzx8qdabv4h',}, 
+          { positions: [ { i: '0', j: 2 }, { i: '0', j: 3 }, { i: '0', j: 4 }, { i: '0', j: 5 } ], css_id: 'tinytable_css_w12dc01th9p5xu99m1eg',}, 
+          { positions: [ { i: '13', j: 1 } ], css_id: 'tinytable_css_1lc7pgr60olyhe9fwn7t',}, 
+          { positions: [ { i: '1', j: 1 }, { i: '2', j: 1 }, { i: '3', j: 1 }, { i: '4', j: 1 }, { i: '5', j: 1 }, { i: '6', j: 1 }, { i: '7', j: 1 }, { i: '8', j: 1 }, { i: '9', j: 1 }, { i: '10', j: 1 }, { i: '11', j: 1 }, { i: '12', j: 1 } ], css_id: 'tinytable_css_nun0z9ox5ihokutkzluv',}, 
+          { positions: [ { i: '0', j: 1 } ], css_id: 'tinytable_css_rr7nko4e8bmq4wgrj6w0',}, 
+          ];
+
+          // Loop over the arrays to style the cells
+          cellsToStyle.forEach(function (group) {
+              group.positions.forEach(function (cell) {
+                  tableFns_u6uhv4gz6i8ouotmgsyt.styleCell(cell.i, cell.j, group.css_id);
+              });
+          });
+      });
+    </script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.css">
+    <style>
+    /* tinytable css entries after */
+    #tinytable_u6uhv4gz6i8ouotmgsyt td.tinytable_css_eds2zcmjeiawm3y5e6h4, #tinytable_u6uhv4gz6i8ouotmgsyt th.tinytable_css_eds2zcmjeiawm3y5e6h4 {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
+    #tinytable_u6uhv4gz6i8ouotmgsyt td.tinytable_css_t5i9spbxylzx8qdabv4h, #tinytable_u6uhv4gz6i8ouotmgsyt th.tinytable_css_t5i9spbxylzx8qdabv4h { text-align: center }
+    #tinytable_u6uhv4gz6i8ouotmgsyt td.tinytable_css_w12dc01th9p5xu99m1eg, #tinytable_u6uhv4gz6i8ouotmgsyt th.tinytable_css_w12dc01th9p5xu99m1eg {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
+    #tinytable_u6uhv4gz6i8ouotmgsyt td.tinytable_css_1lc7pgr60olyhe9fwn7t, #tinytable_u6uhv4gz6i8ouotmgsyt th.tinytable_css_1lc7pgr60olyhe9fwn7t {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left }
+    #tinytable_u6uhv4gz6i8ouotmgsyt td.tinytable_css_nun0z9ox5ihokutkzluv, #tinytable_u6uhv4gz6i8ouotmgsyt th.tinytable_css_nun0z9ox5ihokutkzluv { text-align: left }
+    #tinytable_u6uhv4gz6i8ouotmgsyt td.tinytable_css_rr7nko4e8bmq4wgrj6w0, #tinytable_u6uhv4gz6i8ouotmgsyt th.tinytable_css_rr7nko4e8bmq4wgrj6w0 {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left }
+    </style>
+    <div class="container">
+      <table class="tinytable" id="tinytable_u6uhv4gz6i8ouotmgsyt" style="width: auto; margin-left: auto; margin-right: auto;" data-quarto-disable-processing='true'>
+        
+        <thead>
+              <tr>
+                <th scope="col" data-row="0" data-col="1"> </th>
+                <th scope="col" data-row="0" data-col="2">H1a: Sleep Quality</th>
+                <th scope="col" data-row="0" data-col="3">H1b: Sleep Duration</th>
+                <th scope="col" data-row="0" data-col="4">H1c: Daytime Sleepiness</th>
+                <th scope="col" data-row="0" data-col="5">H1d: Wellbeing</th>
+              </tr>
+        </thead>
+        <tfoot><tr><td colspan='5'>+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001</td></tr>
+<tr><td colspan='5'>LN = late-night. Confidence intervals shown in brackets.</td></tr>
+<tr><td colspan='5'>ICC = Intraclass Correlation Coefficient (adjusted).</td></tr></tfoot>
+        <tbody>
+                <tr>
+                  <td data-row="1" data-col="1">Daily LN gaming (per 10 min/day, monthly)</td>
+                  <td data-row="1" data-col="2">0.06 [0.03, 0.08]***</td>
+                  <td data-row="1" data-col="3">-0.00 [-0.02, 0.01]</td>
+                  <td data-row="1" data-col="4">0.02 [-0.02, 0.06]</td>
+                  <td data-row="1" data-col="5"></td>
+                </tr>
+                <tr>
+                  <td data-row="2" data-col="1">Daily LN gaming (per 10 min/day, biweekly)</td>
+                  <td data-row="2" data-col="2"></td>
+                  <td data-row="2" data-col="3"></td>
+                  <td data-row="2" data-col="4"></td>
+                  <td data-row="2" data-col="5">-0.02 [-0.05, 0.01]</td>
+                </tr>
+                <tr>
+                  <td data-row="3" data-col="1">Age (scaled)</td>
+                  <td data-row="3" data-col="2">0.24 [-0.12, 0.60]</td>
+                  <td data-row="3" data-col="3">-0.45 [-0.62, -0.28]***</td>
+                  <td data-row="3" data-col="4">-0.80 [-1.36, -0.24]**</td>
+                  <td data-row="3" data-col="5">0.07 [-0.58, 0.71]</td>
+                </tr>
+                <tr>
+                  <td data-row="4" data-col="1">BMI (scaled)</td>
+                  <td data-row="4" data-col="2">0.23 [0.08, 0.39]**</td>
+                  <td data-row="4" data-col="3">-0.09 [-0.16, -0.01]*</td>
+                  <td data-row="4" data-col="4">0.24 [-0.00, 0.48]+</td>
+                  <td data-row="4" data-col="5">-0.20 [-0.48, 0.07]</td>
+                </tr>
+                <tr>
+                  <td data-row="5" data-col="1">SES (scaled)</td>
+                  <td data-row="5" data-col="2">-0.26 [-0.42, -0.11]***</td>
+                  <td data-row="5" data-col="3">-0.10 [-0.17, -0.03]**</td>
+                  <td data-row="5" data-col="4">0.13 [-0.11, 0.38]</td>
+                  <td data-row="5" data-col="5">0.94 [0.67, 1.21]***</td>
+                </tr>
+                <tr>
+                  <td data-row="6" data-col="1">Region: US</td>
+                  <td data-row="6" data-col="2">-0.23 [-0.50, 0.05]</td>
+                  <td data-row="6" data-col="3">0.07 [-0.06, 0.20]</td>
+                  <td data-row="6" data-col="4">0.29 [-0.13, 0.72]</td>
+                  <td data-row="6" data-col="5">0.17 [-0.31, 0.66]</td>
+                </tr>
+                <tr>
+                  <td data-row="7" data-col="1">Day: Weekend</td>
+                  <td data-row="7" data-col="2">0.04 [-0.16, 0.24]</td>
+                  <td data-row="7" data-col="3">0.02 [-0.08, 0.11]</td>
+                  <td data-row="7" data-col="4">0.00 [-0.30, 0.31]</td>
+                  <td data-row="7" data-col="5">-0.01 [-0.27, 0.24]</td>
+                </tr>
+                <tr>
+                  <td data-row="8" data-col="1">SD (Intercept | Participant)</td>
+                  <td data-row="8" data-col="2">2.01</td>
+                  <td data-row="8" data-col="3">0.96</td>
+                  <td data-row="8" data-col="4">3.12</td>
+                  <td data-row="8" data-col="5">4.23</td>
+                </tr>
+                <tr>
+                  <td data-row="9" data-col="1">SD (Residual)</td>
+                  <td data-row="9" data-col="2"></td>
+                  <td data-row="9" data-col="3">0.66</td>
+                  <td data-row="9" data-col="4">2.16</td>
+                  <td data-row="9" data-col="5">2.81</td>
+                </tr>
+                <tr>
+                  <td data-row="10" data-col="1">SD (Intercept | Gender)</td>
+                  <td data-row="10" data-col="2"></td>
+                  <td data-row="10" data-col="3"></td>
+                  <td data-row="10" data-col="4">0.46</td>
+                  <td data-row="10" data-col="5">1.20</td>
+                </tr>
+                <tr>
+                  <td data-row="11" data-col="1">N Obs</td>
+                  <td data-row="11" data-col="2">2482</td>
+                  <td data-row="11" data-col="3">2482</td>
+                  <td data-row="11" data-col="4">2482</td>
+                  <td data-row="11" data-col="5">5704</td>
+                </tr>
+                <tr>
+                  <td data-row="12" data-col="1">N Participants</td>
+                  <td data-row="12" data-col="2">1102</td>
+                  <td data-row="12" data-col="3">1102</td>
+                  <td data-row="12" data-col="4">1102</td>
+                  <td data-row="12" data-col="5">1469</td>
+                </tr>
+                <tr>
+                  <td data-row="13" data-col="1">ICC</td>
+                  <td data-row="13" data-col="2">0.80</td>
+                  <td data-row="13" data-col="3">0.68</td>
+                  <td data-row="13" data-col="4">0.68</td>
+                  <td data-row="13" data-col="5">0.71</td>
+                </tr>
+        </tbody>
+      </table>
+    </div>
+<!-- hack to avoid NA insertion in last line -->
+```
+
 :::
 :::
 
@@ -702,47 +1223,179 @@ The parent Open Play dataset [@ballou2025openplay], including the Nintendo, Xbox
 ::: {#tbl-appendix-h2-completecase .cell tbl-cap='Panel H2 Chronotype Moderation — Complete-Case (Non-Imputed Data)'}
 ::: {.cell-output-display}
 
-+--------------------------------------------+---------------------+-------------------------+-------------------------+-----------------------+
-|                                            | H2a: Sleep Quality  | H2b: Sleep Duration     | H2c: Daytime Sleepiness | H2d: Wellbeing        |
-+============================================+=====================+=========================+=========================+=======================+
-| Daily LN gaming (per 10 min/day, monthly)  | 0.07 [0.02, 0.12]** | -0.02 [-0.04, 0.01]     | 0.04 [-0.02, 0.10]      |                       |
-+--------------------------------------------+---------------------+-------------------------+-------------------------+-----------------------+
-| Daily LN gaming (per 10 min/day, biweekly) |                     |                         |                         | 0.03 [-0.01, 0.07]    |
-+--------------------------------------------+---------------------+-------------------------+-------------------------+-----------------------+
-| Chronotype (h, centered)                   | 0.02 [-0.04, 0.08]  | -0.02 [-0.05, 0.01]     | 0.02 [-0.07, 0.11]      | -0.05 [-0.15, 0.04]   |
-+--------------------------------------------+---------------------+-------------------------+-------------------------+-----------------------+
-| LN gaming × Chronotype (h, monthly)        | -0.01 [-0.02, 0.00] | 0.00 [-0.00, 0.01]+     | -0.01 [-0.03, 0.00]     |                       |
-+--------------------------------------------+---------------------+-------------------------+-------------------------+-----------------------+
-| LN gaming × Chronotype (h, biweekly)       |                     |                         |                         | -0.01 [-0.02, -0.00]* |
-+--------------------------------------------+---------------------+-------------------------+-------------------------+-----------------------+
-| Age (scaled)                               | 0.01 [-0.44, 0.46]  | -0.43 [-0.67, -0.19]*** | -1.18 [-1.90, -0.46]**  | 0.16 [-0.69, 1.01]    |
-+--------------------------------------------+---------------------+-------------------------+-------------------------+-----------------------+
-| BMI (scaled)                               | 0.04 [-0.15, 0.24]  | -0.06 [-0.15, 0.04]     | 0.19 [-0.09, 0.48]      | -0.04 [-0.37, 0.30]   |
-+--------------------------------------------+---------------------+-------------------------+-------------------------+-----------------------+
-| SES (scaled)                               | -0.11 [-0.32, 0.09] | -0.11 [-0.21, -0.01]*   | 0.22 [-0.08, 0.52]      | 1.05 [0.71, 1.40]***  |
-+--------------------------------------------+---------------------+-------------------------+-------------------------+-----------------------+
-| Region: US                                 | -0.16 [-0.52, 0.19] | -0.02 [-0.20, 0.16]     | 0.51 [-0.02, 1.05]+     | 0.26 [-0.36, 0.88]    |
-+--------------------------------------------+---------------------+-------------------------+-------------------------+-----------------------+
-| Day: Weekend                               | -0.01 [-0.27, 0.25] | 0.05 [-0.08, 0.17]      | -0.02 [-0.39, 0.35]     | -0.08 [-0.40, 0.24]   |
-+--------------------------------------------+---------------------+-------------------------+-------------------------+-----------------------+
-| SD (Intercept | Participant)               | 4.51                | 1.02                    | 3.03                    | 4.12                  |
-+--------------------------------------------+---------------------+-------------------------+-------------------------+-----------------------+
-| SD (Intercept | Gender)                    |                     | 0.04                    | 0.33                    | 0.85                  |
-+--------------------------------------------+---------------------+-------------------------+-------------------------+-----------------------+
-| SD (Residual)                              |                     | 0.68                    | 2.03                    | 2.79                  |
-+--------------------------------------------+---------------------+-------------------------+-------------------------+-----------------------+
-| N Obs                                      | 1520                | 1520                    | 1520                    | 3462                  |
-+--------------------------------------------+---------------------+-------------------------+-------------------------+-----------------------+
-| N Participants                             | 673                 | 673                     | 673                     | 860                   |
-+--------------------------------------------+---------------------+-------------------------+-------------------------+-----------------------+
-| ICC                                        | 0.95                | 0.69                    | 0.69                    | 0.69                  |
-+============================================+=====================+=========================+=========================+=======================+
-| + p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001                                                                                           |
-+============================================+=====================+=========================+=========================+=======================+
-| LN = late-night. Confidence intervals shown in brackets.                                                                                     |
-+============================================+=====================+=========================+=========================+=======================+
-| ICC = Intraclass Correlation Coefficient (adjusted).                                                                                         |
-+============================================+=====================+=========================+=========================+=======================+
+```{=html}
+<!-- preamble start -->
+
+    <script src="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.js"></script>
+
+    <script>
+      // Create table-specific functions using external factory
+      const tableFns_kt3hxujr8cr3f6ko8f4v = TinyTable.createTableFunctions("tinytable_kt3hxujr8cr3f6ko8f4v");
+      // tinytable span after
+      window.addEventListener('load', function () {
+          var cellsToStyle = [
+            // tinytable style arrays after
+          { positions: [ { i: '16', j: 2 }, { i: '16', j: 3 }, { i: '16', j: 4 }, { i: '16', j: 5 } ], css_id: 'tinytable_css_djt247e469qsg4e80jox',}, 
+          { positions: [ { i: '1', j: 2 }, { i: '2', j: 2 }, { i: '3', j: 2 }, { i: '4', j: 2 }, { i: '5', j: 2 }, { i: '6', j: 2 }, { i: '7', j: 2 }, { i: '8', j: 2 }, { i: '9', j: 2 }, { i: '10', j: 2 }, { i: '11', j: 2 }, { i: '12', j: 2 }, { i: '13', j: 2 }, { i: '14', j: 2 }, { i: '15', j: 2 }, { i: '1', j: 3 }, { i: '2', j: 3 }, { i: '3', j: 3 }, { i: '4', j: 3 }, { i: '5', j: 3 }, { i: '6', j: 3 }, { i: '7', j: 3 }, { i: '8', j: 3 }, { i: '9', j: 3 }, { i: '10', j: 3 }, { i: '11', j: 3 }, { i: '12', j: 3 }, { i: '13', j: 3 }, { i: '14', j: 3 }, { i: '15', j: 3 }, { i: '1', j: 4 }, { i: '2', j: 4 }, { i: '3', j: 4 }, { i: '4', j: 4 }, { i: '5', j: 4 }, { i: '6', j: 4 }, { i: '7', j: 4 }, { i: '8', j: 4 }, { i: '9', j: 4 }, { i: '10', j: 4 }, { i: '11', j: 4 }, { i: '12', j: 4 }, { i: '13', j: 4 }, { i: '14', j: 4 }, { i: '15', j: 4 }, { i: '1', j: 5 }, { i: '2', j: 5 }, { i: '3', j: 5 }, { i: '4', j: 5 }, { i: '5', j: 5 }, { i: '6', j: 5 }, { i: '7', j: 5 }, { i: '8', j: 5 }, { i: '9', j: 5 }, { i: '10', j: 5 }, { i: '11', j: 5 }, { i: '12', j: 5 }, { i: '13', j: 5 }, { i: '14', j: 5 }, { i: '15', j: 5 } ], css_id: 'tinytable_css_h1m4rj0cw4u9njqzahoh',}, 
+          { positions: [ { i: '0', j: 2 }, { i: '0', j: 3 }, { i: '0', j: 4 }, { i: '0', j: 5 } ], css_id: 'tinytable_css_azosvqvti4bxhvvshjlj',}, 
+          { positions: [ { i: '16', j: 1 } ], css_id: 'tinytable_css_11swwkvr53ny0khd3yyf',}, 
+          { positions: [ { i: '1', j: 1 }, { i: '2', j: 1 }, { i: '3', j: 1 }, { i: '4', j: 1 }, { i: '5', j: 1 }, { i: '6', j: 1 }, { i: '7', j: 1 }, { i: '8', j: 1 }, { i: '9', j: 1 }, { i: '10', j: 1 }, { i: '11', j: 1 }, { i: '12', j: 1 }, { i: '13', j: 1 }, { i: '14', j: 1 }, { i: '15', j: 1 } ], css_id: 'tinytable_css_ph95ocu6mxer2gy6twri',}, 
+          { positions: [ { i: '0', j: 1 } ], css_id: 'tinytable_css_11w54410awbylo4fqpha',}, 
+          ];
+
+          // Loop over the arrays to style the cells
+          cellsToStyle.forEach(function (group) {
+              group.positions.forEach(function (cell) {
+                  tableFns_kt3hxujr8cr3f6ko8f4v.styleCell(cell.i, cell.j, group.css_id);
+              });
+          });
+      });
+    </script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.css">
+    <style>
+    /* tinytable css entries after */
+    #tinytable_kt3hxujr8cr3f6ko8f4v td.tinytable_css_djt247e469qsg4e80jox, #tinytable_kt3hxujr8cr3f6ko8f4v th.tinytable_css_djt247e469qsg4e80jox {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
+    #tinytable_kt3hxujr8cr3f6ko8f4v td.tinytable_css_h1m4rj0cw4u9njqzahoh, #tinytable_kt3hxujr8cr3f6ko8f4v th.tinytable_css_h1m4rj0cw4u9njqzahoh { text-align: center }
+    #tinytable_kt3hxujr8cr3f6ko8f4v td.tinytable_css_azosvqvti4bxhvvshjlj, #tinytable_kt3hxujr8cr3f6ko8f4v th.tinytable_css_azosvqvti4bxhvvshjlj {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
+    #tinytable_kt3hxujr8cr3f6ko8f4v td.tinytable_css_11swwkvr53ny0khd3yyf, #tinytable_kt3hxujr8cr3f6ko8f4v th.tinytable_css_11swwkvr53ny0khd3yyf {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left }
+    #tinytable_kt3hxujr8cr3f6ko8f4v td.tinytable_css_ph95ocu6mxer2gy6twri, #tinytable_kt3hxujr8cr3f6ko8f4v th.tinytable_css_ph95ocu6mxer2gy6twri { text-align: left }
+    #tinytable_kt3hxujr8cr3f6ko8f4v td.tinytable_css_11w54410awbylo4fqpha, #tinytable_kt3hxujr8cr3f6ko8f4v th.tinytable_css_11w54410awbylo4fqpha {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left }
+    </style>
+    <div class="container">
+      <table class="tinytable" id="tinytable_kt3hxujr8cr3f6ko8f4v" style="width: auto; margin-left: auto; margin-right: auto;" data-quarto-disable-processing='true'>
+        
+        <thead>
+              <tr>
+                <th scope="col" data-row="0" data-col="1"> </th>
+                <th scope="col" data-row="0" data-col="2">H2a: Sleep Quality</th>
+                <th scope="col" data-row="0" data-col="3">H2b: Sleep Duration</th>
+                <th scope="col" data-row="0" data-col="4">H2c: Daytime Sleepiness</th>
+                <th scope="col" data-row="0" data-col="5">H2d: Wellbeing</th>
+              </tr>
+        </thead>
+        <tfoot><tr><td colspan='5'>+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001</td></tr>
+<tr><td colspan='5'>LN = late-night. Confidence intervals shown in brackets.</td></tr>
+<tr><td colspan='5'>ICC = Intraclass Correlation Coefficient (adjusted).</td></tr></tfoot>
+        <tbody>
+                <tr>
+                  <td data-row="1" data-col="1">Daily LN gaming (per 10 min/day, monthly)</td>
+                  <td data-row="1" data-col="2">0.07 [0.02, 0.12]**</td>
+                  <td data-row="1" data-col="3">-0.02 [-0.04, 0.01]</td>
+                  <td data-row="1" data-col="4">0.04 [-0.02, 0.10]</td>
+                  <td data-row="1" data-col="5"></td>
+                </tr>
+                <tr>
+                  <td data-row="2" data-col="1">Daily LN gaming (per 10 min/day, biweekly)</td>
+                  <td data-row="2" data-col="2"></td>
+                  <td data-row="2" data-col="3"></td>
+                  <td data-row="2" data-col="4"></td>
+                  <td data-row="2" data-col="5">0.03 [-0.01, 0.07]</td>
+                </tr>
+                <tr>
+                  <td data-row="3" data-col="1">Chronotype (h, centered)</td>
+                  <td data-row="3" data-col="2">0.02 [-0.04, 0.08]</td>
+                  <td data-row="3" data-col="3">-0.02 [-0.05, 0.01]</td>
+                  <td data-row="3" data-col="4">0.02 [-0.07, 0.11]</td>
+                  <td data-row="3" data-col="5">-0.05 [-0.15, 0.04]</td>
+                </tr>
+                <tr>
+                  <td data-row="4" data-col="1">LN gaming × Chronotype (h, monthly)</td>
+                  <td data-row="4" data-col="2">-0.01 [-0.02, 0.00]</td>
+                  <td data-row="4" data-col="3">0.00 [-0.00, 0.01]+</td>
+                  <td data-row="4" data-col="4">-0.01 [-0.03, 0.00]</td>
+                  <td data-row="4" data-col="5"></td>
+                </tr>
+                <tr>
+                  <td data-row="5" data-col="1">LN gaming × Chronotype (h, biweekly)</td>
+                  <td data-row="5" data-col="2"></td>
+                  <td data-row="5" data-col="3"></td>
+                  <td data-row="5" data-col="4"></td>
+                  <td data-row="5" data-col="5">-0.01 [-0.02, -0.00]*</td>
+                </tr>
+                <tr>
+                  <td data-row="6" data-col="1">Age (scaled)</td>
+                  <td data-row="6" data-col="2">0.01 [-0.44, 0.46]</td>
+                  <td data-row="6" data-col="3">-0.43 [-0.67, -0.19]***</td>
+                  <td data-row="6" data-col="4">-1.18 [-1.90, -0.46]**</td>
+                  <td data-row="6" data-col="5">0.16 [-0.69, 1.01]</td>
+                </tr>
+                <tr>
+                  <td data-row="7" data-col="1">BMI (scaled)</td>
+                  <td data-row="7" data-col="2">0.04 [-0.15, 0.24]</td>
+                  <td data-row="7" data-col="3">-0.06 [-0.15, 0.04]</td>
+                  <td data-row="7" data-col="4">0.19 [-0.09, 0.48]</td>
+                  <td data-row="7" data-col="5">-0.04 [-0.37, 0.30]</td>
+                </tr>
+                <tr>
+                  <td data-row="8" data-col="1">SES (scaled)</td>
+                  <td data-row="8" data-col="2">-0.11 [-0.32, 0.09]</td>
+                  <td data-row="8" data-col="3">-0.11 [-0.21, -0.01]*</td>
+                  <td data-row="8" data-col="4">0.22 [-0.08, 0.52]</td>
+                  <td data-row="8" data-col="5">1.05 [0.71, 1.40]***</td>
+                </tr>
+                <tr>
+                  <td data-row="9" data-col="1">Region: US</td>
+                  <td data-row="9" data-col="2">-0.16 [-0.52, 0.19]</td>
+                  <td data-row="9" data-col="3">-0.02 [-0.20, 0.16]</td>
+                  <td data-row="9" data-col="4">0.51 [-0.02, 1.05]+</td>
+                  <td data-row="9" data-col="5">0.26 [-0.36, 0.88]</td>
+                </tr>
+                <tr>
+                  <td data-row="10" data-col="1">Day: Weekend</td>
+                  <td data-row="10" data-col="2">-0.01 [-0.27, 0.25]</td>
+                  <td data-row="10" data-col="3">0.05 [-0.08, 0.17]</td>
+                  <td data-row="10" data-col="4">-0.02 [-0.39, 0.35]</td>
+                  <td data-row="10" data-col="5">-0.08 [-0.40, 0.24]</td>
+                </tr>
+                <tr>
+                  <td data-row="11" data-col="1">SD (Intercept | Participant)</td>
+                  <td data-row="11" data-col="2">4.51</td>
+                  <td data-row="11" data-col="3">1.02</td>
+                  <td data-row="11" data-col="4">3.03</td>
+                  <td data-row="11" data-col="5">4.12</td>
+                </tr>
+                <tr>
+                  <td data-row="12" data-col="1">SD (Intercept | Gender)</td>
+                  <td data-row="12" data-col="2"></td>
+                  <td data-row="12" data-col="3">0.04</td>
+                  <td data-row="12" data-col="4">0.33</td>
+                  <td data-row="12" data-col="5">0.85</td>
+                </tr>
+                <tr>
+                  <td data-row="13" data-col="1">SD (Residual)</td>
+                  <td data-row="13" data-col="2"></td>
+                  <td data-row="13" data-col="3">0.68</td>
+                  <td data-row="13" data-col="4">2.03</td>
+                  <td data-row="13" data-col="5">2.79</td>
+                </tr>
+                <tr>
+                  <td data-row="14" data-col="1">N Obs</td>
+                  <td data-row="14" data-col="2">1520</td>
+                  <td data-row="14" data-col="3">1520</td>
+                  <td data-row="14" data-col="4">1520</td>
+                  <td data-row="14" data-col="5">3462</td>
+                </tr>
+                <tr>
+                  <td data-row="15" data-col="1">N Participants</td>
+                  <td data-row="15" data-col="2">673</td>
+                  <td data-row="15" data-col="3">673</td>
+                  <td data-row="15" data-col="4">673</td>
+                  <td data-row="15" data-col="5">860</td>
+                </tr>
+                <tr>
+                  <td data-row="16" data-col="1">ICC</td>
+                  <td data-row="16" data-col="2">0.95</td>
+                  <td data-row="16" data-col="3">0.69</td>
+                  <td data-row="16" data-col="4">0.69</td>
+                  <td data-row="16" data-col="5">0.69</td>
+                </tr>
+        </tbody>
+      </table>
+    </div>
+<!-- hack to avoid NA insertion in last line -->
+```
+
 :::
 :::
 
@@ -759,23 +1412,106 @@ We summarised the extent of missingness for the key self-report outcomes across 
 ::: {#tbl-appendix-wave-missingness .cell tbl-cap='Wave-level missingness for key self-report measures (pre-imputation data)'}
 ::: {.cell-output-display}
 
-+------+--------------+-----------------------------+------------------------+--------------------------+---------------------+
-| Wave | Observations | Sleep quality (PSQI item 6) | Sleep duration (hours) | Daytime sleepiness (ESS) | Wellbeing (SWEMWBS) |
-+======+==============+=============================+========================+==========================+=====================+
-| 1    | 1578         |                             |                        |                          | 1 (0.1%)            |
-+------+--------------+-----------------------------+------------------------+--------------------------+---------------------+
-| 2    | 1578         | 458 (29.0%)                 | 471 (29.8%)            | 472 (29.9%)              | 455 (28.8%)         |
-+------+--------------+-----------------------------+------------------------+--------------------------+---------------------+
-| 3    | 1578         |                             |                        |                          | 530 (33.6%)         |
-+------+--------------+-----------------------------+------------------------+--------------------------+---------------------+
-| 4    | 1578         | 663 (42.0%)                 | 674 (42.7%)            | 669 (42.4%)              | 661 (41.9%)         |
-+------+--------------+-----------------------------+------------------------+--------------------------+---------------------+
-| 5    | 1578         |                             |                        |                          | 740 (46.9%)         |
-+------+--------------+-----------------------------+------------------------+--------------------------+---------------------+
-| 6    | 1578         | 876 (55.5%)                 | 881 (55.8%)            | 888 (56.3%)              | 872 (55.3%)         |
-+------+--------------+-----------------------------+------------------------+--------------------------+---------------------+
+```{=html}
+<!-- preamble start -->
 
-Table: Wave-level missingness for key self-report measures (pre-imputation data). Entries show the number and percentage of participants missing each measure within a wave.
+    <script src="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.js"></script>
+
+    <script>
+      // Create table-specific functions using external factory
+      const tableFns_tpswmxsqc58x60yv1kdo = TinyTable.createTableFunctions("tinytable_tpswmxsqc58x60yv1kdo");
+      // tinytable span after
+      window.addEventListener('load', function () {
+          var cellsToStyle = [
+            // tinytable style arrays after
+          { positions: [ { i: '6', j: 1 }, { i: '6', j: 2 }, { i: '6', j: 3 }, { i: '6', j: 4 }, { i: '6', j: 5 }, { i: '6', j: 6 } ], css_id: 'tinytable_css_fzmds9sgbt79jm3bbvhh',}, 
+          { positions: [ { i: '0', j: 1 }, { i: '0', j: 2 }, { i: '0', j: 3 }, { i: '0', j: 4 }, { i: '0', j: 5 }, { i: '0', j: 6 } ], css_id: 'tinytable_css_0h9muzo6r90hk93r0b93',}, 
+          ];
+
+          // Loop over the arrays to style the cells
+          cellsToStyle.forEach(function (group) {
+              group.positions.forEach(function (cell) {
+                  tableFns_tpswmxsqc58x60yv1kdo.styleCell(cell.i, cell.j, group.css_id);
+              });
+          });
+      });
+    </script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.css">
+    <style>
+    /* tinytable css entries after */
+    #tinytable_tpswmxsqc58x60yv1kdo td.tinytable_css_fzmds9sgbt79jm3bbvhh, #tinytable_tpswmxsqc58x60yv1kdo th.tinytable_css_fzmds9sgbt79jm3bbvhh {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%;  }
+    #tinytable_tpswmxsqc58x60yv1kdo td.tinytable_css_0h9muzo6r90hk93r0b93, #tinytable_tpswmxsqc58x60yv1kdo th.tinytable_css_0h9muzo6r90hk93r0b93 {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%;  }
+    </style>
+    <div class="container">
+      <table class="tinytable" id="tinytable_tpswmxsqc58x60yv1kdo" style="width: auto; margin-left: auto; margin-right: auto;" data-quarto-disable-processing='true'>
+        <caption>Wave-level missingness for key self-report measures (pre-imputation data). Entries show the number and percentage of participants missing each measure within a wave.</caption>
+        <thead>
+              <tr>
+                <th scope="col" data-row="0" data-col="1">Wave</th>
+                <th scope="col" data-row="0" data-col="2">Observations</th>
+                <th scope="col" data-row="0" data-col="3">Sleep quality (PSQI item 6)</th>
+                <th scope="col" data-row="0" data-col="4">Sleep duration (hours)</th>
+                <th scope="col" data-row="0" data-col="5">Daytime sleepiness (ESS)</th>
+                <th scope="col" data-row="0" data-col="6">Wellbeing (SWEMWBS)</th>
+              </tr>
+        </thead>
+        
+        <tbody>
+                <tr>
+                  <td data-row="1" data-col="1">1</td>
+                  <td data-row="1" data-col="2">1578</td>
+                  <td data-row="1" data-col="3"></td>
+                  <td data-row="1" data-col="4"></td>
+                  <td data-row="1" data-col="5"></td>
+                  <td data-row="1" data-col="6">1 (0.1%)</td>
+                </tr>
+                <tr>
+                  <td data-row="2" data-col="1">2</td>
+                  <td data-row="2" data-col="2">1578</td>
+                  <td data-row="2" data-col="3">458 (29.0%)</td>
+                  <td data-row="2" data-col="4">471 (29.8%)</td>
+                  <td data-row="2" data-col="5">472 (29.9%)</td>
+                  <td data-row="2" data-col="6">455 (28.8%)</td>
+                </tr>
+                <tr>
+                  <td data-row="3" data-col="1">3</td>
+                  <td data-row="3" data-col="2">1578</td>
+                  <td data-row="3" data-col="3"></td>
+                  <td data-row="3" data-col="4"></td>
+                  <td data-row="3" data-col="5"></td>
+                  <td data-row="3" data-col="6">530 (33.6%)</td>
+                </tr>
+                <tr>
+                  <td data-row="4" data-col="1">4</td>
+                  <td data-row="4" data-col="2">1578</td>
+                  <td data-row="4" data-col="3">663 (42.0%)</td>
+                  <td data-row="4" data-col="4">674 (42.7%)</td>
+                  <td data-row="4" data-col="5">669 (42.4%)</td>
+                  <td data-row="4" data-col="6">661 (41.9%)</td>
+                </tr>
+                <tr>
+                  <td data-row="5" data-col="1">5</td>
+                  <td data-row="5" data-col="2">1578</td>
+                  <td data-row="5" data-col="3"></td>
+                  <td data-row="5" data-col="4"></td>
+                  <td data-row="5" data-col="5"></td>
+                  <td data-row="5" data-col="6">740 (46.9%)</td>
+                </tr>
+                <tr>
+                  <td data-row="6" data-col="1">6</td>
+                  <td data-row="6" data-col="2">1578</td>
+                  <td data-row="6" data-col="3">876 (55.5%)</td>
+                  <td data-row="6" data-col="4">881 (55.8%)</td>
+                  <td data-row="6" data-col="5">888 (56.3%)</td>
+                  <td data-row="6" data-col="6">872 (55.3%)</td>
+                </tr>
+        </tbody>
+      </table>
+    </div>
+<!-- hack to avoid NA insertion in last line -->
+```
+
 :::
 :::
 
@@ -792,47 +1528,177 @@ This section presents a sensitivity analysis using the PSQI global score as an a
 
 ::: {#tbl-appendix-psqi-global .cell tbl-cap='Sensitivity Analysis: PSQI Global Score Models (Imputed vs. Original)'}
 ::: {.cell-output-display}
-+-------------------------------------------+-----------------------+---------------------------------+--------------------------+---------------------------------------+
-|                                           | PSQI Global                                                                                                                |
-+-------------------------------------------+-----------------------+---------------------------------+--------------------------+---------------------------------------+
-|                                           | Playtime (Imputed)    | Chronotype × Playtime (Imputed) | Playtime (Complete-Case) | Chronotype × Playtime (Complete-Case) |
-+===========================================+=======================+=================================+==========================+=======================================+
-| Daily LN gaming (per 10 min/day, monthly) | 0.09 [0.05, 0.12]***  | 0.09 [0.04, 0.15]***            | 0.04 [0.00, 0.07]*       | 0.04 [-0.00, 0.09]+                   |
-+-------------------------------------------+-----------------------+---------------------------------+--------------------------+---------------------------------------+
-| Age (scaled)                              | 1.44 [1.04, 1.83]***  | 1.16 [0.63, 1.69]***            | 0.51 [0.07, 0.95]*       | 0.15 [-0.44, 0.74]                    |
-+-------------------------------------------+-----------------------+---------------------------------+--------------------------+---------------------------------------+
-| BMI (scaled)                              | 0.14 [-0.03, 0.31]    | 0.01 [-0.20, 0.22]              | 0.31 [0.13, 0.50]**      | 0.14 [-0.09, 0.37]                    |
-+-------------------------------------------+-----------------------+---------------------------------+--------------------------+---------------------------------------+
-| SES (scaled)                              | -0.18 [-0.34, -0.01]* | -0.24 [-0.46, -0.02]*           | -0.41 [-0.60, -0.22]***  | -0.39 [-0.64, -0.15]**                |
-+-------------------------------------------+-----------------------+---------------------------------+--------------------------+---------------------------------------+
-| Chronotype (h, centered)                  |                       | 0.01 [-0.05, 0.07]              |                          | 0.10 [0.03, 0.18]**                   |
-+-------------------------------------------+-----------------------+---------------------------------+--------------------------+---------------------------------------+
-| LN gaming × Chronotype (h, monthly)       |                       | 0.00 [-0.01, 0.01]              |                          | -0.01 [-0.02, 0.00]                   |
-+-------------------------------------------+-----------------------+---------------------------------+--------------------------+---------------------------------------+
-| Region: US                                | -0.20 [-0.49, 0.10]   | -0.17 [-0.55, 0.22]             | -0.38 [-0.71, -0.04]*    | -0.42 [-0.86, 0.02]+                  |
-+-------------------------------------------+-----------------------+---------------------------------+--------------------------+---------------------------------------+
-| Day: Weekend                              | 0.23 [-0.03, 0.48]+   | 0.24 [-0.09, 0.56]              | -0.23 [-0.46, 0.00]+     | -0.19 [-0.48, 0.10]                   |
-+-------------------------------------------+-----------------------+---------------------------------+--------------------------+---------------------------------------+
-| SD (Residual)                             |                       |                                 | 1.60                     | 1.55                                  |
-+-------------------------------------------+-----------------------+---------------------------------+--------------------------+---------------------------------------+
-| SD (Intercept | Participant)              |                       |                                 | 2.47                     | 2.52                                  |
-+-------------------------------------------+-----------------------+---------------------------------+--------------------------+---------------------------------------+
-| SD (Intercept | Gender)                   |                       |                                 | 0.71                     | 0.55                                  |
-+-------------------------------------------+-----------------------+---------------------------------+--------------------------+---------------------------------------+
-| N Obs                                     | 4410                  | 2580                            | 2482                     | 1520                                  |
-+-------------------------------------------+-----------------------+---------------------------------+--------------------------+---------------------------------------+
-| N Participants                            | 1470                  | 860                             | 1102                     | 673                                   |
-+-------------------------------------------+-----------------------+---------------------------------+--------------------------+---------------------------------------+
-| ICC                                       | 0.51                  | 0.51                            | 0.72                     | 0.73                                  |
-+===========================================+=======================+=================================+==========================+=======================================+
-| + p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001                                                                                                                     |
-+===========================================+=======================+=================================+==========================+=======================================+
-| PSQI global score range: 0-21 (higher = worse sleep quality)                                                                                                           |
-+===========================================+=======================+=================================+==========================+=======================================+
-| Confidence intervals shown in brackets.                                                                                                                                |
-+===========================================+=======================+=================================+==========================+=======================================+
-| ICC = Intraclass Correlation Coefficient (adjusted).                                                                                                                   |
-+===========================================+=======================+=================================+==========================+=======================================+
+
+```{=html}
+<!-- preamble start -->
+
+    <script src="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.js"></script>
+
+    <script>
+      // Create table-specific functions using external factory
+      const tableFns_t5hu6cuwa46oxty1m62x = TinyTable.createTableFunctions("tinytable_t5hu6cuwa46oxty1m62x");
+      // tinytable span after
+      window.addEventListener('load', function () {
+          var cellsToStyle = [
+            // tinytable style arrays after
+          { positions: [ { i: '-1', j: 3 }, { i: '-1', j: 4 }, { i: '-1', j: 5 } ], css_id: 'tinytable_css_9pncudpsu4dsc2ice7sr',}, 
+          { positions: [ { i: '14', j: 2 }, { i: '14', j: 3 }, { i: '14', j: 4 }, { i: '14', j: 5 } ], css_id: 'tinytable_css_ogotf4j4o1pzjejxi628',}, 
+          { positions: [ { i: '1', j: 2 }, { i: '2', j: 2 }, { i: '3', j: 2 }, { i: '4', j: 2 }, { i: '5', j: 2 }, { i: '6', j: 2 }, { i: '7', j: 2 }, { i: '8', j: 2 }, { i: '9', j: 2 }, { i: '10', j: 2 }, { i: '11', j: 2 }, { i: '12', j: 2 }, { i: '13', j: 2 }, { i: '1', j: 3 }, { i: '2', j: 3 }, { i: '3', j: 3 }, { i: '4', j: 3 }, { i: '5', j: 3 }, { i: '6', j: 3 }, { i: '7', j: 3 }, { i: '8', j: 3 }, { i: '9', j: 3 }, { i: '10', j: 3 }, { i: '11', j: 3 }, { i: '12', j: 3 }, { i: '13', j: 3 }, { i: '1', j: 4 }, { i: '2', j: 4 }, { i: '3', j: 4 }, { i: '4', j: 4 }, { i: '5', j: 4 }, { i: '6', j: 4 }, { i: '7', j: 4 }, { i: '8', j: 4 }, { i: '9', j: 4 }, { i: '10', j: 4 }, { i: '11', j: 4 }, { i: '12', j: 4 }, { i: '13', j: 4 }, { i: '1', j: 5 }, { i: '2', j: 5 }, { i: '3', j: 5 }, { i: '4', j: 5 }, { i: '5', j: 5 }, { i: '6', j: 5 }, { i: '7', j: 5 }, { i: '8', j: 5 }, { i: '9', j: 5 }, { i: '10', j: 5 }, { i: '11', j: 5 }, { i: '12', j: 5 }, { i: '13', j: 5 } ], css_id: 'tinytable_css_xmyy4w9maoi1r4l64xeu',}, 
+          { positions: [ { i: '0', j: 2 }, { i: '0', j: 3 }, { i: '0', j: 4 }, { i: '0', j: 5 } ], css_id: 'tinytable_css_o4bmhrhb78j9wds0m4vc',}, 
+          { positions: [ { i: '-1', j: 2 } ], css_id: 'tinytable_css_b9fmi4hwbve59hu6oum3',}, 
+          { positions: [ { i: '14', j: 1 } ], css_id: 'tinytable_css_j7fe0x1bdr1gwofol34g',}, 
+          { positions: [ { i: '1', j: 1 }, { i: '2', j: 1 }, { i: '3', j: 1 }, { i: '4', j: 1 }, { i: '5', j: 1 }, { i: '6', j: 1 }, { i: '7', j: 1 }, { i: '8', j: 1 }, { i: '9', j: 1 }, { i: '10', j: 1 }, { i: '11', j: 1 }, { i: '12', j: 1 }, { i: '13', j: 1 } ], css_id: 'tinytable_css_y4sdhq18dh6scdk8h0h1',}, 
+          { positions: [ { i: '0', j: 1 } ], css_id: 'tinytable_css_4o8ns2aueop9k01aoj9w',}, 
+          { positions: [ { i: '-1', j: 1 } ], css_id: 'tinytable_css_iluqvocz0p8d6y2fqy6o',}, 
+          ];
+
+          // Loop over the arrays to style the cells
+          cellsToStyle.forEach(function (group) {
+              group.positions.forEach(function (cell) {
+                  tableFns_t5hu6cuwa46oxty1m62x.styleCell(cell.i, cell.j, group.css_id);
+              });
+          });
+      });
+    </script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.css">
+    <style>
+    /* tinytable css entries after */
+    #tinytable_t5hu6cuwa46oxty1m62x td.tinytable_css_9pncudpsu4dsc2ice7sr, #tinytable_t5hu6cuwa46oxty1m62x th.tinytable_css_9pncudpsu4dsc2ice7sr {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
+    #tinytable_t5hu6cuwa46oxty1m62x td.tinytable_css_ogotf4j4o1pzjejxi628, #tinytable_t5hu6cuwa46oxty1m62x th.tinytable_css_ogotf4j4o1pzjejxi628 {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
+    #tinytable_t5hu6cuwa46oxty1m62x td.tinytable_css_xmyy4w9maoi1r4l64xeu, #tinytable_t5hu6cuwa46oxty1m62x th.tinytable_css_xmyy4w9maoi1r4l64xeu { text-align: center }
+    #tinytable_t5hu6cuwa46oxty1m62x td.tinytable_css_o4bmhrhb78j9wds0m4vc, #tinytable_t5hu6cuwa46oxty1m62x th.tinytable_css_o4bmhrhb78j9wds0m4vc {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
+    #tinytable_t5hu6cuwa46oxty1m62x td.tinytable_css_b9fmi4hwbve59hu6oum3, #tinytable_t5hu6cuwa46oxty1m62x th.tinytable_css_b9fmi4hwbve59hu6oum3 {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 3%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
+    #tinytable_t5hu6cuwa46oxty1m62x td.tinytable_css_j7fe0x1bdr1gwofol34g, #tinytable_t5hu6cuwa46oxty1m62x th.tinytable_css_j7fe0x1bdr1gwofol34g {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left }
+    #tinytable_t5hu6cuwa46oxty1m62x td.tinytable_css_y4sdhq18dh6scdk8h0h1, #tinytable_t5hu6cuwa46oxty1m62x th.tinytable_css_y4sdhq18dh6scdk8h0h1 { text-align: left }
+    #tinytable_t5hu6cuwa46oxty1m62x td.tinytable_css_4o8ns2aueop9k01aoj9w, #tinytable_t5hu6cuwa46oxty1m62x th.tinytable_css_4o8ns2aueop9k01aoj9w {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left }
+    #tinytable_t5hu6cuwa46oxty1m62x td.tinytable_css_iluqvocz0p8d6y2fqy6o, #tinytable_t5hu6cuwa46oxty1m62x th.tinytable_css_iluqvocz0p8d6y2fqy6o {  position: relative; --border-bottom: 0; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
+    </style>
+    <div class="container">
+      <table class="tinytable" id="tinytable_t5hu6cuwa46oxty1m62x" style="width: auto; margin-left: auto; margin-right: auto;" data-quarto-disable-processing='true'>
+        
+        <thead>
+<tr>
+<th scope="col" align="center" colspan=1 data-row="-1" data-col="1"> </th>
+<th scope="col" align="center" colspan=4 data-row="-1" data-col="2">PSQI Global</th>
+</tr>
+              <tr>
+                <th scope="col" data-row="0" data-col="1"> </th>
+                <th scope="col" data-row="0" data-col="2">Playtime (Imputed)</th>
+                <th scope="col" data-row="0" data-col="3">Chronotype × Playtime (Imputed)</th>
+                <th scope="col" data-row="0" data-col="4">Playtime (Complete-Case)</th>
+                <th scope="col" data-row="0" data-col="5">Chronotype × Playtime (Complete-Case)</th>
+              </tr>
+        </thead>
+        <tfoot><tr><td colspan='5'>+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001</td></tr>
+<tr><td colspan='5'>PSQI global score range: 0-21 (higher = worse sleep quality)</td></tr>
+<tr><td colspan='5'>Confidence intervals shown in brackets.</td></tr>
+<tr><td colspan='5'>ICC = Intraclass Correlation Coefficient (adjusted).</td></tr></tfoot>
+        <tbody>
+                <tr>
+                  <td data-row="1" data-col="1">Daily LN gaming (per 10 min/day, monthly)</td>
+                  <td data-row="1" data-col="2">0.09 [0.05, 0.12]***</td>
+                  <td data-row="1" data-col="3">0.09 [0.04, 0.15]***</td>
+                  <td data-row="1" data-col="4">0.04 [0.00, 0.07]*</td>
+                  <td data-row="1" data-col="5">0.04 [-0.00, 0.09]+</td>
+                </tr>
+                <tr>
+                  <td data-row="2" data-col="1">Age (scaled)</td>
+                  <td data-row="2" data-col="2">1.44 [1.04, 1.83]***</td>
+                  <td data-row="2" data-col="3">1.16 [0.63, 1.69]***</td>
+                  <td data-row="2" data-col="4">0.51 [0.07, 0.95]*</td>
+                  <td data-row="2" data-col="5">0.15 [-0.44, 0.74]</td>
+                </tr>
+                <tr>
+                  <td data-row="3" data-col="1">BMI (scaled)</td>
+                  <td data-row="3" data-col="2">0.14 [-0.03, 0.31]</td>
+                  <td data-row="3" data-col="3">0.01 [-0.20, 0.22]</td>
+                  <td data-row="3" data-col="4">0.31 [0.13, 0.50]**</td>
+                  <td data-row="3" data-col="5">0.14 [-0.09, 0.37]</td>
+                </tr>
+                <tr>
+                  <td data-row="4" data-col="1">SES (scaled)</td>
+                  <td data-row="4" data-col="2">-0.18 [-0.34, -0.01]*</td>
+                  <td data-row="4" data-col="3">-0.24 [-0.46, -0.02]*</td>
+                  <td data-row="4" data-col="4">-0.41 [-0.60, -0.22]***</td>
+                  <td data-row="4" data-col="5">-0.39 [-0.64, -0.15]**</td>
+                </tr>
+                <tr>
+                  <td data-row="5" data-col="1">Chronotype (h, centered)</td>
+                  <td data-row="5" data-col="2"></td>
+                  <td data-row="5" data-col="3">0.01 [-0.05, 0.07]</td>
+                  <td data-row="5" data-col="4"></td>
+                  <td data-row="5" data-col="5">0.10 [0.03, 0.18]**</td>
+                </tr>
+                <tr>
+                  <td data-row="6" data-col="1">LN gaming × Chronotype (h, monthly)</td>
+                  <td data-row="6" data-col="2"></td>
+                  <td data-row="6" data-col="3">0.00 [-0.01, 0.01]</td>
+                  <td data-row="6" data-col="4"></td>
+                  <td data-row="6" data-col="5">-0.01 [-0.02, 0.00]</td>
+                </tr>
+                <tr>
+                  <td data-row="7" data-col="1">Region: US</td>
+                  <td data-row="7" data-col="2">-0.20 [-0.49, 0.10]</td>
+                  <td data-row="7" data-col="3">-0.17 [-0.55, 0.22]</td>
+                  <td data-row="7" data-col="4">-0.38 [-0.71, -0.04]*</td>
+                  <td data-row="7" data-col="5">-0.42 [-0.86, 0.02]+</td>
+                </tr>
+                <tr>
+                  <td data-row="8" data-col="1">Day: Weekend</td>
+                  <td data-row="8" data-col="2">0.23 [-0.03, 0.48]+</td>
+                  <td data-row="8" data-col="3">0.24 [-0.09, 0.56]</td>
+                  <td data-row="8" data-col="4">-0.23 [-0.46, 0.00]+</td>
+                  <td data-row="8" data-col="5">-0.19 [-0.48, 0.10]</td>
+                </tr>
+                <tr>
+                  <td data-row="9" data-col="1">SD (Residual)</td>
+                  <td data-row="9" data-col="2"></td>
+                  <td data-row="9" data-col="3"></td>
+                  <td data-row="9" data-col="4">1.60</td>
+                  <td data-row="9" data-col="5">1.55</td>
+                </tr>
+                <tr>
+                  <td data-row="10" data-col="1">SD (Intercept | Participant)</td>
+                  <td data-row="10" data-col="2"></td>
+                  <td data-row="10" data-col="3"></td>
+                  <td data-row="10" data-col="4">2.47</td>
+                  <td data-row="10" data-col="5">2.52</td>
+                </tr>
+                <tr>
+                  <td data-row="11" data-col="1">SD (Intercept | Gender)</td>
+                  <td data-row="11" data-col="2"></td>
+                  <td data-row="11" data-col="3"></td>
+                  <td data-row="11" data-col="4">0.71</td>
+                  <td data-row="11" data-col="5">0.55</td>
+                </tr>
+                <tr>
+                  <td data-row="12" data-col="1">N Obs</td>
+                  <td data-row="12" data-col="2">4410</td>
+                  <td data-row="12" data-col="3">2580</td>
+                  <td data-row="12" data-col="4">2482</td>
+                  <td data-row="12" data-col="5">1520</td>
+                </tr>
+                <tr>
+                  <td data-row="13" data-col="1">N Participants</td>
+                  <td data-row="13" data-col="2">1470</td>
+                  <td data-row="13" data-col="3">860</td>
+                  <td data-row="13" data-col="4">1102</td>
+                  <td data-row="13" data-col="5">673</td>
+                </tr>
+                <tr>
+                  <td data-row="14" data-col="1">ICC</td>
+                  <td data-row="14" data-col="2">0.51</td>
+                  <td data-row="14" data-col="3">0.51</td>
+                  <td data-row="14" data-col="4">0.72</td>
+                  <td data-row="14" data-col="5">0.73</td>
+                </tr>
+        </tbody>
+      </table>
+    </div>
+<!-- hack to avoid NA insertion in last line -->
+```
+
 :::
 :::
 
@@ -847,59 +1713,184 @@ This section presents a sensitivity analysis using the PSQI global score as an a
 ::: {#tbl-diary-demographics .cell tbl-cap='Daily Diary Subsample Characteristics'}
 ::: {.cell-output-display}
 
-+--------------------------------------+---------------+---------------+
-| Characteristic                       | Total         | Analytical    |
-+======================================+===============+===============+
-| **A. Sociodemographics**             |               |               |
-+--------------------------------------+---------------+---------------+
-| N participants                       | 1275          | 1271          |
-+--------------------------------------+---------------+---------------+
-| N diary entries                      | 16131         | 15842         |
-+--------------------------------------+---------------+---------------+
-|  Diary entries per person (Mdn, IQR) | 8 (20)        | 8 (21)        |
-+--------------------------------------+---------------+---------------+
-| Age                                  | 26.6 (4.9)    | 26.6 (4.9)    |
-+--------------------------------------+---------------+---------------+
-| Gender                               |               |               |
-+--------------------------------------+---------------+---------------+
-|  Man                                 | 746 (58.5%)   | 744 (58.5%)   |
-+--------------------------------------+---------------+---------------+
-|  Non-binary or other gender identity | 78 (6.1%)     | 78 (6.1%)     |
-+--------------------------------------+---------------+---------------+
-|  Woman                               | 384 (30.1%)   | 382 (30.1%)   |
-+--------------------------------------+---------------+---------------+
-| BMI (scaled)                         | 0.00 (1.00)   | 0.00 (1.00)   |
-+--------------------------------------+---------------+---------------+
-| SES (scaled)                         | 0.00 (1.00)   | 0.00 (1.00)   |
-+--------------------------------------+---------------+---------------+
-| **B. Chronotype**                    |               |               |
-+--------------------------------------+---------------+---------------+
-| No alarm on free days                | 657 (77.8%)   | 657 (77.8%)   |
-+--------------------------------------+---------------+---------------+
-|  MSF~sc~ (HH:MM)                     | 06:10 (03:22) | 06:10 (03:22) |
-+--------------------------------------+---------------+---------------+
-| **C. Gaming**                        |               |               |
-+--------------------------------------+---------------+---------------+
-| LN gaming (min/day, Mdn, IQR)        | 0.0 (15.1)    | 0.0 (15.0)    |
-+--------------------------------------+---------------+---------------+
-| % entries with any LN gaming         | 19.1 (29.3)   | 19.2 (29.4)   |
-+--------------------------------------+---------------+---------------+
-| **D. Sleep Quality Distribution**    |               |               |
-+--------------------------------------+---------------+---------------+
-|  Very poor                           | 836 (5.3%)    | 836 (5.3%)    |
-+--------------------------------------+---------------+---------------+
-|  Poor                                | 2436 (15.4%)  | 2436 (15.4%)  |
-+--------------------------------------+---------------+---------------+
-|  Fair                                | 5575 (35.2%)  | 5575 (35.2%)  |
-+--------------------------------------+---------------+---------------+
-|  Good                                | 5494 (34.7%)  | 5494 (34.7%)  |
-+--------------------------------------+---------------+---------------+
-|  Very good                           | 1501 (9.5%)   | 1501 (9.5%)   |
-+======================================+===============+===============+
-| Values are M (SD) unless noted. LN = late-night. Sleep quality       |
-| distribution counts are at the diary-entry level.                    |
-+======================================+===============+===============+
-Table: Daily Diary Subsample Characteristics
+```{=html}
+<!-- preamble start -->
+
+    <script src="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.js"></script>
+
+    <script>
+      // Create table-specific functions using external factory
+      const tableFns_dexzdwom2s7n5qgv9nci = TinyTable.createTableFunctions("tinytable_dexzdwom2s7n5qgv9nci");
+      // tinytable span after
+      window.addEventListener('load', function () {
+          var cellsToStyle = [
+            // tinytable style arrays after
+          { positions: [ { i: '23', j: 2 }, { i: '23', j: 3 } ], css_id: 'tinytable_css_ueso7x16p3apoxwy5l6o',}, 
+          { positions: [ { i: '2', j: 2 }, { i: '3', j: 2 }, { i: '4', j: 2 }, { i: '5', j: 2 }, { i: '6', j: 2 }, { i: '7', j: 2 }, { i: '8', j: 2 }, { i: '9', j: 2 }, { i: '10', j: 2 }, { i: '11', j: 2 }, { i: '13', j: 2 }, { i: '14', j: 2 }, { i: '16', j: 2 }, { i: '17', j: 2 }, { i: '19', j: 2 }, { i: '20', j: 2 }, { i: '21', j: 2 }, { i: '22', j: 2 }, { i: '2', j: 3 }, { i: '3', j: 3 }, { i: '4', j: 3 }, { i: '5', j: 3 }, { i: '6', j: 3 }, { i: '7', j: 3 }, { i: '8', j: 3 }, { i: '9', j: 3 }, { i: '10', j: 3 }, { i: '11', j: 3 }, { i: '13', j: 3 }, { i: '14', j: 3 }, { i: '16', j: 3 }, { i: '17', j: 3 }, { i: '19', j: 3 }, { i: '20', j: 3 }, { i: '21', j: 3 }, { i: '22', j: 3 } ], css_id: 'tinytable_css_bog6339l9bf8vzz0dz5z',}, 
+          { positions: [ { i: '1', j: 2 }, { i: '12', j: 2 }, { i: '15', j: 2 }, { i: '18', j: 2 }, { i: '1', j: 3 }, { i: '12', j: 3 }, { i: '15', j: 3 }, { i: '18', j: 3 } ], css_id: 'tinytable_css_islnkej6ssqh0sdygcgv',}, 
+          { positions: [ { i: '0', j: 2 }, { i: '0', j: 3 } ], css_id: 'tinytable_css_9g9rknxny6khhafb3kvt',}, 
+          { positions: [ { i: '23', j: 1 } ], css_id: 'tinytable_css_tpi0npq0uppetysxdk6z',}, 
+          { positions: [ { i: '4', j: 1 }, { i: '7', j: 1 }, { i: '8', j: 1 }, { i: '9', j: 1 }, { i: '14', j: 1 }, { i: '19', j: 1 }, { i: '20', j: 1 }, { i: '21', j: 1 }, { i: '22', j: 1 } ], css_id: 'tinytable_css_cuzxo7h3xrlv5xunvm03',}, 
+          { positions: [ { i: '2', j: 1 }, { i: '3', j: 1 }, { i: '5', j: 1 }, { i: '6', j: 1 }, { i: '10', j: 1 }, { i: '11', j: 1 }, { i: '13', j: 1 }, { i: '16', j: 1 }, { i: '17', j: 1 } ], css_id: 'tinytable_css_cpyeqcgcbnc0806mfuxu',}, 
+          { positions: [ { i: '1', j: 1 }, { i: '12', j: 1 }, { i: '15', j: 1 }, { i: '18', j: 1 } ], css_id: 'tinytable_css_8ald1tmo6hxd532p2s16',}, 
+          { positions: [ { i: '0', j: 1 } ], css_id: 'tinytable_css_p4e78qps9cqfoz1hzs3g',}, 
+          ];
+
+          // Loop over the arrays to style the cells
+          cellsToStyle.forEach(function (group) {
+              group.positions.forEach(function (cell) {
+                  tableFns_dexzdwom2s7n5qgv9nci.styleCell(cell.i, cell.j, group.css_id);
+              });
+          });
+      });
+    </script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.css">
+    <style>
+    /* tinytable css entries after */
+    #tinytable_dexzdwom2s7n5qgv9nci td.tinytable_css_ueso7x16p3apoxwy5l6o, #tinytable_dexzdwom2s7n5qgv9nci th.tinytable_css_ueso7x16p3apoxwy5l6o {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: right }
+    #tinytable_dexzdwom2s7n5qgv9nci td.tinytable_css_bog6339l9bf8vzz0dz5z, #tinytable_dexzdwom2s7n5qgv9nci th.tinytable_css_bog6339l9bf8vzz0dz5z { text-align: right }
+    #tinytable_dexzdwom2s7n5qgv9nci td.tinytable_css_islnkej6ssqh0sdygcgv, #tinytable_dexzdwom2s7n5qgv9nci th.tinytable_css_islnkej6ssqh0sdygcgv { font-weight: bold; text-align: right }
+    #tinytable_dexzdwom2s7n5qgv9nci td.tinytable_css_9g9rknxny6khhafb3kvt, #tinytable_dexzdwom2s7n5qgv9nci th.tinytable_css_9g9rknxny6khhafb3kvt {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: right }
+    #tinytable_dexzdwom2s7n5qgv9nci td.tinytable_css_tpi0npq0uppetysxdk6z, #tinytable_dexzdwom2s7n5qgv9nci th.tinytable_css_tpi0npq0uppetysxdk6z {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left; padding-left: 1em }
+    #tinytable_dexzdwom2s7n5qgv9nci td.tinytable_css_cuzxo7h3xrlv5xunvm03, #tinytable_dexzdwom2s7n5qgv9nci th.tinytable_css_cuzxo7h3xrlv5xunvm03 { text-align: left; padding-left: 1em }
+    #tinytable_dexzdwom2s7n5qgv9nci td.tinytable_css_cpyeqcgcbnc0806mfuxu, #tinytable_dexzdwom2s7n5qgv9nci th.tinytable_css_cpyeqcgcbnc0806mfuxu { text-align: left }
+    #tinytable_dexzdwom2s7n5qgv9nci td.tinytable_css_8ald1tmo6hxd532p2s16, #tinytable_dexzdwom2s7n5qgv9nci th.tinytable_css_8ald1tmo6hxd532p2s16 { font-weight: bold; text-align: left }
+    #tinytable_dexzdwom2s7n5qgv9nci td.tinytable_css_p4e78qps9cqfoz1hzs3g, #tinytable_dexzdwom2s7n5qgv9nci th.tinytable_css_p4e78qps9cqfoz1hzs3g {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left }
+    </style>
+    <div class="container">
+      <table class="tinytable" id="tinytable_dexzdwom2s7n5qgv9nci" style="width: auto; margin-left: auto; margin-right: auto;" data-quarto-disable-processing='true'>
+        <caption>Daily Diary Subsample Characteristics</caption>
+        <thead>
+              <tr>
+                <th scope="col" data-row="0" data-col="1">Characteristic</th>
+                <th scope="col" data-row="0" data-col="2">Total</th>
+                <th scope="col" data-row="0" data-col="3">Analytical</th>
+              </tr>
+        </thead>
+        <tfoot><tr><td colspan='3'>Values are M (SD) unless noted. LN = late-night. Sleep quality distribution counts are at the diary-entry level.</td></tr></tfoot>
+        <tbody>
+                <tr>
+                  <td data-row="1" data-col="1">A. Sociodemographics</td>
+                  <td data-row="1" data-col="2"></td>
+                  <td data-row="1" data-col="3"></td>
+                </tr>
+                <tr>
+                  <td data-row="2" data-col="1">N participants</td>
+                  <td data-row="2" data-col="2">1275</td>
+                  <td data-row="2" data-col="3">1271</td>
+                </tr>
+                <tr>
+                  <td data-row="3" data-col="1">N diary entries</td>
+                  <td data-row="3" data-col="2">16131</td>
+                  <td data-row="3" data-col="3">15842</td>
+                </tr>
+                <tr>
+                  <td data-row="4" data-col="1">Diary entries per person (Mdn, IQR)</td>
+                  <td data-row="4" data-col="2">8 (20)</td>
+                  <td data-row="4" data-col="3">8 (21)</td>
+                </tr>
+                <tr>
+                  <td data-row="5" data-col="1">Age</td>
+                  <td data-row="5" data-col="2">26.6 (4.9)</td>
+                  <td data-row="5" data-col="3">26.6 (4.9)</td>
+                </tr>
+                <tr>
+                  <td data-row="6" data-col="1">Gender</td>
+                  <td data-row="6" data-col="2"></td>
+                  <td data-row="6" data-col="3"></td>
+                </tr>
+                <tr>
+                  <td data-row="7" data-col="1">Man</td>
+                  <td data-row="7" data-col="2">746 (58.5%)</td>
+                  <td data-row="7" data-col="3">744 (58.5%)</td>
+                </tr>
+                <tr>
+                  <td data-row="8" data-col="1">Non-binary or other gender identity</td>
+                  <td data-row="8" data-col="2">78 (6.1%)</td>
+                  <td data-row="8" data-col="3">78 (6.1%)</td>
+                </tr>
+                <tr>
+                  <td data-row="9" data-col="1">Woman</td>
+                  <td data-row="9" data-col="2">384 (30.1%)</td>
+                  <td data-row="9" data-col="3">382 (30.1%)</td>
+                </tr>
+                <tr>
+                  <td data-row="10" data-col="1">BMI (scaled)</td>
+                  <td data-row="10" data-col="2">0.00 (1.00)</td>
+                  <td data-row="10" data-col="3">0.00 (1.00)</td>
+                </tr>
+                <tr>
+                  <td data-row="11" data-col="1">SES (scaled)</td>
+                  <td data-row="11" data-col="2">0.00 (1.00)</td>
+                  <td data-row="11" data-col="3">0.00 (1.00)</td>
+                </tr>
+                <tr>
+                  <td data-row="12" data-col="1">B. Chronotype</td>
+                  <td data-row="12" data-col="2"></td>
+                  <td data-row="12" data-col="3"></td>
+                </tr>
+                <tr>
+                  <td data-row="13" data-col="1">No alarm on free days</td>
+                  <td data-row="13" data-col="2">657 (77.8%)</td>
+                  <td data-row="13" data-col="3">657 (77.8%)</td>
+                </tr>
+                <tr>
+                  <td data-row="14" data-col="1">MSF~sc~ (HH:MM)</td>
+                  <td data-row="14" data-col="2">06:10 (03:22)</td>
+                  <td data-row="14" data-col="3">06:10 (03:22)</td>
+                </tr>
+                <tr>
+                  <td data-row="15" data-col="1">C. Gaming</td>
+                  <td data-row="15" data-col="2"></td>
+                  <td data-row="15" data-col="3"></td>
+                </tr>
+                <tr>
+                  <td data-row="16" data-col="1">LN gaming (min/day, Mdn, IQR)</td>
+                  <td data-row="16" data-col="2">0.0 (15.1)</td>
+                  <td data-row="16" data-col="3">0.0 (15.0)</td>
+                </tr>
+                <tr>
+                  <td data-row="17" data-col="1">% entries with any LN gaming</td>
+                  <td data-row="17" data-col="2">19.1 (29.3)</td>
+                  <td data-row="17" data-col="3">19.2 (29.4)</td>
+                </tr>
+                <tr>
+                  <td data-row="18" data-col="1">D. Sleep Quality Distribution</td>
+                  <td data-row="18" data-col="2"></td>
+                  <td data-row="18" data-col="3"></td>
+                </tr>
+                <tr>
+                  <td data-row="19" data-col="1">Very poor</td>
+                  <td data-row="19" data-col="2">836 (5.3%)</td>
+                  <td data-row="19" data-col="3">836 (5.3%)</td>
+                </tr>
+                <tr>
+                  <td data-row="20" data-col="1">Poor</td>
+                  <td data-row="20" data-col="2">2436 (15.4%)</td>
+                  <td data-row="20" data-col="3">2436 (15.4%)</td>
+                </tr>
+                <tr>
+                  <td data-row="21" data-col="1">Fair</td>
+                  <td data-row="21" data-col="2">5575 (35.2%)</td>
+                  <td data-row="21" data-col="3">5575 (35.2%)</td>
+                </tr>
+                <tr>
+                  <td data-row="22" data-col="1">Good</td>
+                  <td data-row="22" data-col="2">5494 (34.7%)</td>
+                  <td data-row="22" data-col="3">5494 (34.7%)</td>
+                </tr>
+                <tr>
+                  <td data-row="23" data-col="1">Very good</td>
+                  <td data-row="23" data-col="2">1501 (9.5%)</td>
+                  <td data-row="23" data-col="3">1501 (9.5%)</td>
+                </tr>
+        </tbody>
+      </table>
+    </div>
+<!-- hack to avoid NA insertion in last line -->
+```
+
 :::
 :::
 
@@ -914,46 +1905,127 @@ Table: Daily Diary Subsample Characteristics
 ::: {#tbl-appendix-diary-completecase .cell tbl-cap='Diary H1 and H2 Probit CLMM — Complete-Case (Non-Imputed Data)'}
 ::: {.cell-output-display}
 
-+---------------------------------------+-----------------------------+--------------------------------------+
-|                                       | H1a: Sleep Quality (direct) | H2a: Sleep Quality (chronotype mod.) |
-+=======================================+=============================+======================================+
-| LN gaming within-person (per 10 min)  | -0.00 [-0.01, 0.00]         | 0.00 [-0.01, 0.01]                   |
-+---------------------------------------+-----------------------------+--------------------------------------+
-| LN gaming between-person (per 10 min) | 0.03 [0.01, 0.04]**         | 0.02 [-0.01, 0.05]                   |
-+---------------------------------------+-----------------------------+--------------------------------------+
-| Chronotype (h, centered)              |                             | 0.03 [0.01, 0.06]*                   |
-+---------------------------------------+-----------------------------+--------------------------------------+
-| LN within × Chronotype                |                             | -0.00 [-0.00, -0.00]*                |
-+---------------------------------------+-----------------------------+--------------------------------------+
-| LN between × Chronotype               |                             | -0.00 [-0.01, 0.01]                  |
-+---------------------------------------+-----------------------------+--------------------------------------+
-| Age (scaled)                          | 0.03 [-0.04, 0.09]          | -0.05 [-0.15, 0.05]                  |
-+---------------------------------------+-----------------------------+--------------------------------------+
-| BMI (scaled)                          | 0.07 [0.00, 0.13]*          | 0.07 [-0.02, 0.17]                   |
-+---------------------------------------+-----------------------------+--------------------------------------+
-| SES (scaled)                          | -0.12 [-0.19, -0.06]***     | -0.14 [-0.25, -0.04]**               |
-+---------------------------------------+-----------------------------+--------------------------------------+
-| Day: Weekend                          | -0.00 [-0.04, 0.04]         | -0.01 [-0.06, 0.05]                  |
-+---------------------------------------+-----------------------------+--------------------------------------+
-| N Obs                                 | 14683                       | 8392                                 |
-+---------------------------------------+-----------------------------+--------------------------------------+
-| N Participants                        | 1132                        | 509                                  |
-+---------------------------------------+-----------------------------+--------------------------------------+
-| ICC                                   | 0.48                        | 0.52                                 |
-+=======================================+=============================+======================================+
-| + p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001                                                         |
-+=======================================+=============================+======================================+
-| LN = late-night. Confidence intervals shown in brackets.                                                   |
-+=======================================+=============================+======================================+
-| Complete-case estimates — no imputation applied to the diary outcome.                                      |
-+=======================================+=============================+======================================+
-| Cumulative link mixed models (random intercept for participant) on 5-level ordinal sleep quality           |
-| (positive coefficients = higher probability of worse sleep). Probit link. Late-night gaming per 10         |
-| minutes; chronotype in centered hours; age, BMI, SES scaled within the diary subsample. Region excluded:   |
-| all diary participants are US-only.                                                                        |
-+=======================================+=============================+======================================+
-| Within = daily deviation from person mean; Between = person mean - grand mean.                             |
-+=======================================+=============================+======================================+
+```{=html}
+<!-- preamble start -->
+
+    <script src="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.js"></script>
+
+    <script>
+      // Create table-specific functions using external factory
+      const tableFns_nu0xu4a6g7vawk2hhmve = TinyTable.createTableFunctions("tinytable_nu0xu4a6g7vawk2hhmve");
+      // tinytable span after
+      window.addEventListener('load', function () {
+          var cellsToStyle = [
+            // tinytable style arrays after
+          { positions: [ { i: '12', j: 2 }, { i: '12', j: 3 } ], css_id: 'tinytable_css_0g2ubd4azi8uddscm9o8',}, 
+          { positions: [ { i: '1', j: 2 }, { i: '2', j: 2 }, { i: '3', j: 2 }, { i: '4', j: 2 }, { i: '5', j: 2 }, { i: '6', j: 2 }, { i: '7', j: 2 }, { i: '8', j: 2 }, { i: '9', j: 2 }, { i: '10', j: 2 }, { i: '11', j: 2 }, { i: '1', j: 3 }, { i: '2', j: 3 }, { i: '3', j: 3 }, { i: '4', j: 3 }, { i: '5', j: 3 }, { i: '6', j: 3 }, { i: '7', j: 3 }, { i: '8', j: 3 }, { i: '9', j: 3 }, { i: '10', j: 3 }, { i: '11', j: 3 } ], css_id: 'tinytable_css_xa7yvrut4g3mb0dbewsx',}, 
+          { positions: [ { i: '0', j: 2 }, { i: '0', j: 3 } ], css_id: 'tinytable_css_r4e1pxmpphu17op28bg1',}, 
+          { positions: [ { i: '12', j: 1 } ], css_id: 'tinytable_css_r5mjqyz0pm3k2xtn230o',}, 
+          { positions: [ { i: '1', j: 1 }, { i: '2', j: 1 }, { i: '3', j: 1 }, { i: '4', j: 1 }, { i: '5', j: 1 }, { i: '6', j: 1 }, { i: '7', j: 1 }, { i: '8', j: 1 }, { i: '9', j: 1 }, { i: '10', j: 1 }, { i: '11', j: 1 } ], css_id: 'tinytable_css_y4ip96pk8nwl4pwk4h6j',}, 
+          { positions: [ { i: '0', j: 1 } ], css_id: 'tinytable_css_dj3fh7fzel4p5ud34wmj',}, 
+          ];
+
+          // Loop over the arrays to style the cells
+          cellsToStyle.forEach(function (group) {
+              group.positions.forEach(function (cell) {
+                  tableFns_nu0xu4a6g7vawk2hhmve.styleCell(cell.i, cell.j, group.css_id);
+              });
+          });
+      });
+    </script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.css">
+    <style>
+    /* tinytable css entries after */
+    #tinytable_nu0xu4a6g7vawk2hhmve td.tinytable_css_0g2ubd4azi8uddscm9o8, #tinytable_nu0xu4a6g7vawk2hhmve th.tinytable_css_0g2ubd4azi8uddscm9o8 {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
+    #tinytable_nu0xu4a6g7vawk2hhmve td.tinytable_css_xa7yvrut4g3mb0dbewsx, #tinytable_nu0xu4a6g7vawk2hhmve th.tinytable_css_xa7yvrut4g3mb0dbewsx { text-align: center }
+    #tinytable_nu0xu4a6g7vawk2hhmve td.tinytable_css_r4e1pxmpphu17op28bg1, #tinytable_nu0xu4a6g7vawk2hhmve th.tinytable_css_r4e1pxmpphu17op28bg1 {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: center }
+    #tinytable_nu0xu4a6g7vawk2hhmve td.tinytable_css_r5mjqyz0pm3k2xtn230o, #tinytable_nu0xu4a6g7vawk2hhmve th.tinytable_css_r5mjqyz0pm3k2xtn230o {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left }
+    #tinytable_nu0xu4a6g7vawk2hhmve td.tinytable_css_y4ip96pk8nwl4pwk4h6j, #tinytable_nu0xu4a6g7vawk2hhmve th.tinytable_css_y4ip96pk8nwl4pwk4h6j { text-align: left }
+    #tinytable_nu0xu4a6g7vawk2hhmve td.tinytable_css_dj3fh7fzel4p5ud34wmj, #tinytable_nu0xu4a6g7vawk2hhmve th.tinytable_css_dj3fh7fzel4p5ud34wmj {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left }
+    </style>
+    <div class="container">
+      <table class="tinytable" id="tinytable_nu0xu4a6g7vawk2hhmve" style="width: auto; margin-left: auto; margin-right: auto;" data-quarto-disable-processing='true'>
+        
+        <thead>
+              <tr>
+                <th scope="col" data-row="0" data-col="1"> </th>
+                <th scope="col" data-row="0" data-col="2">H1a: Sleep Quality (direct)</th>
+                <th scope="col" data-row="0" data-col="3">H2a: Sleep Quality (chronotype mod.)</th>
+              </tr>
+        </thead>
+        <tfoot><tr><td colspan='3'>+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001</td></tr>
+<tr><td colspan='3'>LN = late-night. Confidence intervals shown in brackets.</td></tr>
+<tr><td colspan='3'>Complete-case estimates — no imputation applied to the diary outcome.</td></tr>
+<tr><td colspan='3'>Cumulative link mixed models (random intercept for participant) on 5-level ordinal sleep quality (positive coefficients = higher probability of worse sleep). Probit link. Late-night gaming per 10 minutes; chronotype in centered hours; age, BMI, SES scaled within the diary subsample. Region excluded: all diary participants are US-only.</td></tr>
+<tr><td colspan='3'>Within = daily deviation from person mean; Between = person mean - grand mean.</td></tr></tfoot>
+        <tbody>
+                <tr>
+                  <td data-row="1" data-col="1">LN gaming within-person (per 10 min)</td>
+                  <td data-row="1" data-col="2">-0.00 [-0.01, 0.00]</td>
+                  <td data-row="1" data-col="3">0.00 [-0.01, 0.01]</td>
+                </tr>
+                <tr>
+                  <td data-row="2" data-col="1">LN gaming between-person (per 10 min)</td>
+                  <td data-row="2" data-col="2">0.03 [0.01, 0.04]**</td>
+                  <td data-row="2" data-col="3">0.02 [-0.01, 0.05]</td>
+                </tr>
+                <tr>
+                  <td data-row="3" data-col="1">Chronotype (h, centered)</td>
+                  <td data-row="3" data-col="2"></td>
+                  <td data-row="3" data-col="3">0.03 [0.01, 0.06]*</td>
+                </tr>
+                <tr>
+                  <td data-row="4" data-col="1">LN within × Chronotype</td>
+                  <td data-row="4" data-col="2"></td>
+                  <td data-row="4" data-col="3">-0.00 [-0.00, -0.00]*</td>
+                </tr>
+                <tr>
+                  <td data-row="5" data-col="1">LN between × Chronotype</td>
+                  <td data-row="5" data-col="2"></td>
+                  <td data-row="5" data-col="3">-0.00 [-0.01, 0.01]</td>
+                </tr>
+                <tr>
+                  <td data-row="6" data-col="1">Age (scaled)</td>
+                  <td data-row="6" data-col="2">0.03 [-0.04, 0.09]</td>
+                  <td data-row="6" data-col="3">-0.05 [-0.15, 0.05]</td>
+                </tr>
+                <tr>
+                  <td data-row="7" data-col="1">BMI (scaled)</td>
+                  <td data-row="7" data-col="2">0.07 [0.00, 0.13]*</td>
+                  <td data-row="7" data-col="3">0.07 [-0.02, 0.17]</td>
+                </tr>
+                <tr>
+                  <td data-row="8" data-col="1">SES (scaled)</td>
+                  <td data-row="8" data-col="2">-0.12 [-0.19, -0.06]***</td>
+                  <td data-row="8" data-col="3">-0.14 [-0.25, -0.04]**</td>
+                </tr>
+                <tr>
+                  <td data-row="9" data-col="1">Day: Weekend</td>
+                  <td data-row="9" data-col="2">-0.00 [-0.04, 0.04]</td>
+                  <td data-row="9" data-col="3">-0.01 [-0.06, 0.05]</td>
+                </tr>
+                <tr>
+                  <td data-row="10" data-col="1">N Obs</td>
+                  <td data-row="10" data-col="2">14683</td>
+                  <td data-row="10" data-col="3">8392</td>
+                </tr>
+                <tr>
+                  <td data-row="11" data-col="1">N Participants</td>
+                  <td data-row="11" data-col="2">1132</td>
+                  <td data-row="11" data-col="3">509</td>
+                </tr>
+                <tr>
+                  <td data-row="12" data-col="1">ICC</td>
+                  <td data-row="12" data-col="2">0.48</td>
+                  <td data-row="12" data-col="3">0.52</td>
+                </tr>
+        </tbody>
+      </table>
+    </div>
+<!-- hack to avoid NA insertion in last line -->
+```
+
 :::
 :::
 
@@ -983,17 +2055,116 @@ For each panel outcome (H1a–H1d), we replace the linear gaming predictor with 
 ::: {#tbl-appendix-panel-h1-spline-bic .cell tbl-cap='AIC and BIC comparison for panel H1 linear vs. natural spline models (complete-case data). Best df selected from 2–6 by BIC (primary criterion); AIC values are reported alongside for transparency. ΔAIC = Spline AIC − Linear AIC; ΔBIC = Spline BIC − Linear BIC; negative values indicate improvement over the linear specification. The Verdict column applies the @jones2001nagin rule of thumb to 2|ΔBIC|: ≈ = not worth mentioning (0–2); + = positive (2–6); ++ = strong (6–10); +++ = very strong (>10), with the favoured model marked L (linear) or S (spline).'}
 ::: {.cell-output-display}
 
-+-------------------------+---------+------------+------------+------------+------------+------+----------+-------------+-------------+
-| Outcome                 | Best df | Linear AIC | Spline AIC | Linear BIC | Spline BIC | ΔAIC | **ΔBIC** | **2|ΔBIC|** | **Verdict** |
-+=========================+=========+============+============+============+============+======+==========+=============+=============+
-| H1a: Sleep Quality      | 2       | 4153.4     | 4147.2     | 4211.5     | 4211.2     | -6.2 | **-0.3** | **0.6**     | **≈**       |
-+-------------------------+---------+------------+------------+------------+------------+------+----------+-------------+-------------+
-| H1b: Sleep Duration     | 2       | 6895.4     | 6891.4     | 6947.8     | 6949.6     | -4.0 | **1.8**  | **3.6**     | **+ L**     |
-+-------------------------+---------+------------+------------+------------+------------+------+----------+-------------+-------------+
-| H1c: Daytime Sleepiness | 2       | 12762.5    | 12755.3    | 12820.7    | 12819.3    | -7.2 | **-1.4** | **2.8**     | **+ S**     |
-+-------------------------+---------+------------+------------+------------+------------+------+----------+-------------+-------------+
-| H1d: Wellbeing          | 2       | 31144.8    | 31138.4    | 31211.2    | 31211.5    | -6.4 | **0.3**  | **0.6**     | **≈**       |
-+-------------------------+---------+------------+------------+------------+------------+------+----------+-------------+-------------+
+```{=html}
+<!-- preamble start -->
+
+    <script src="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.js"></script>
+
+    <script>
+      // Create table-specific functions using external factory
+      const tableFns_mynho3adhfgda9uf5msc = TinyTable.createTableFunctions("tinytable_mynho3adhfgda9uf5msc");
+      // tinytable span after
+      window.addEventListener('load', function () {
+          var cellsToStyle = [
+            // tinytable style arrays after
+          { positions: [ { i: '4', j: 8 }, { i: '4', j: 9 }, { i: '4', j: 10 } ], css_id: 'tinytable_css_iyr490f62ldseaid6j3q',}, 
+          { positions: [ { i: '1', j: 8 }, { i: '2', j: 8 }, { i: '3', j: 8 }, { i: '1', j: 9 }, { i: '2', j: 9 }, { i: '3', j: 9 }, { i: '1', j: 10 }, { i: '2', j: 10 }, { i: '3', j: 10 } ], css_id: 'tinytable_css_ckj9emhtucah3tmhv9c3',}, 
+          { positions: [ { i: '0', j: 8 }, { i: '0', j: 9 }, { i: '0', j: 10 } ], css_id: 'tinytable_css_f3r2yn07x9bnqxr8qrk4',}, 
+          { positions: [ { i: '4', j: 1 }, { i: '4', j: 2 }, { i: '4', j: 3 }, { i: '4', j: 4 }, { i: '4', j: 5 }, { i: '4', j: 6 }, { i: '4', j: 7 } ], css_id: 'tinytable_css_oy81sma5yu9i9dd63s87',}, 
+          { positions: [ { i: '0', j: 1 }, { i: '0', j: 2 }, { i: '0', j: 3 }, { i: '0', j: 4 }, { i: '0', j: 5 }, { i: '0', j: 6 }, { i: '0', j: 7 } ], css_id: 'tinytable_css_wzm6zwgb7a03qw5ge6vu',}, 
+          ];
+
+          // Loop over the arrays to style the cells
+          cellsToStyle.forEach(function (group) {
+              group.positions.forEach(function (cell) {
+                  tableFns_mynho3adhfgda9uf5msc.styleCell(cell.i, cell.j, group.css_id);
+              });
+          });
+      });
+    </script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.css">
+    <style>
+    /* tinytable css entries after */
+    #tinytable_mynho3adhfgda9uf5msc td.tinytable_css_iyr490f62ldseaid6j3q, #tinytable_mynho3adhfgda9uf5msc th.tinytable_css_iyr490f62ldseaid6j3q {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; font-weight: bold }
+    #tinytable_mynho3adhfgda9uf5msc td.tinytable_css_ckj9emhtucah3tmhv9c3, #tinytable_mynho3adhfgda9uf5msc th.tinytable_css_ckj9emhtucah3tmhv9c3 { font-weight: bold }
+    #tinytable_mynho3adhfgda9uf5msc td.tinytable_css_f3r2yn07x9bnqxr8qrk4, #tinytable_mynho3adhfgda9uf5msc th.tinytable_css_f3r2yn07x9bnqxr8qrk4 {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; font-weight: bold }
+    #tinytable_mynho3adhfgda9uf5msc td.tinytable_css_oy81sma5yu9i9dd63s87, #tinytable_mynho3adhfgda9uf5msc th.tinytable_css_oy81sma5yu9i9dd63s87 {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%;  }
+    #tinytable_mynho3adhfgda9uf5msc td.tinytable_css_wzm6zwgb7a03qw5ge6vu, #tinytable_mynho3adhfgda9uf5msc th.tinytable_css_wzm6zwgb7a03qw5ge6vu {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%;  }
+    </style>
+    <div class="container">
+      <table class="tinytable" id="tinytable_mynho3adhfgda9uf5msc" style="width: auto; margin-left: auto; margin-right: auto;" data-quarto-disable-processing='true'>
+        
+        <thead>
+              <tr>
+                <th scope="col" data-row="0" data-col="1">Outcome</th>
+                <th scope="col" data-row="0" data-col="2">Best df</th>
+                <th scope="col" data-row="0" data-col="3">Linear AIC</th>
+                <th scope="col" data-row="0" data-col="4">Spline AIC</th>
+                <th scope="col" data-row="0" data-col="5">Linear BIC</th>
+                <th scope="col" data-row="0" data-col="6">Spline BIC</th>
+                <th scope="col" data-row="0" data-col="7">ΔAIC</th>
+                <th scope="col" data-row="0" data-col="8">ΔBIC</th>
+                <th scope="col" data-row="0" data-col="9">2|ΔBIC|</th>
+                <th scope="col" data-row="0" data-col="10">Verdict</th>
+              </tr>
+        </thead>
+        
+        <tbody>
+                <tr>
+                  <td data-row="1" data-col="1">H1a: Sleep Quality</td>
+                  <td data-row="1" data-col="2">2</td>
+                  <td data-row="1" data-col="3">4153.4</td>
+                  <td data-row="1" data-col="4">4147.2</td>
+                  <td data-row="1" data-col="5">4211.5</td>
+                  <td data-row="1" data-col="6">4211.2</td>
+                  <td data-row="1" data-col="7">-6.2</td>
+                  <td data-row="1" data-col="8">-0.3</td>
+                  <td data-row="1" data-col="9">0.6</td>
+                  <td data-row="1" data-col="10">≈</td>
+                </tr>
+                <tr>
+                  <td data-row="2" data-col="1">H1b: Sleep Duration</td>
+                  <td data-row="2" data-col="2">2</td>
+                  <td data-row="2" data-col="3">6895.4</td>
+                  <td data-row="2" data-col="4">6891.4</td>
+                  <td data-row="2" data-col="5">6947.8</td>
+                  <td data-row="2" data-col="6">6949.6</td>
+                  <td data-row="2" data-col="7">-4.0</td>
+                  <td data-row="2" data-col="8">1.8</td>
+                  <td data-row="2" data-col="9">3.6</td>
+                  <td data-row="2" data-col="10">+ L</td>
+                </tr>
+                <tr>
+                  <td data-row="3" data-col="1">H1c: Daytime Sleepiness</td>
+                  <td data-row="3" data-col="2">2</td>
+                  <td data-row="3" data-col="3">12762.5</td>
+                  <td data-row="3" data-col="4">12755.3</td>
+                  <td data-row="3" data-col="5">12820.7</td>
+                  <td data-row="3" data-col="6">12819.3</td>
+                  <td data-row="3" data-col="7">-7.2</td>
+                  <td data-row="3" data-col="8">-1.4</td>
+                  <td data-row="3" data-col="9">2.8</td>
+                  <td data-row="3" data-col="10">+ S</td>
+                </tr>
+                <tr>
+                  <td data-row="4" data-col="1">H1d: Wellbeing</td>
+                  <td data-row="4" data-col="2">2</td>
+                  <td data-row="4" data-col="3">31144.8</td>
+                  <td data-row="4" data-col="4">31138.4</td>
+                  <td data-row="4" data-col="5">31211.2</td>
+                  <td data-row="4" data-col="6">31211.5</td>
+                  <td data-row="4" data-col="7">-6.4</td>
+                  <td data-row="4" data-col="8">0.3</td>
+                  <td data-row="4" data-col="9">0.6</td>
+                  <td data-row="4" data-col="10">≈</td>
+                </tr>
+        </tbody>
+      </table>
+    </div>
+<!-- hack to avoid NA insertion in last line -->
+```
+
 :::
 :::
 
@@ -1001,7 +2172,7 @@ For each panel outcome (H1a–H1d), we replace the linear gaming predictor with 
 
 ::: {.cell}
 ::: {.cell-output-display}
-![Marginal predicted outcomes as a function of late-night gaming (natural cubic spline, complete-case data). Solid blue line: spline fit with 95% delta-method CI ribbon. Dashed orange line: corresponding linear model fit, with its own 95% delta-method CI ribbon for comparison. X-axis shows average late-night gaming minutes per day on a common 0–90 min scale across panels; curves are drawn over the observed support within that range. All other covariates held at reference values (scaled continuous predictors at zero; isWeekend = 0; reference region). H1a: P(Fairly bad or Very bad sleep quality), marginalised over the participant random intercept via the marginal probit formula. H1b–H1d: predicted means on the original scale. Each panel title shows the selected spline df; AIC and BIC values are reported in @tbl-appendix-panel-h1-spline-bic.](manuscript_files/figure-docx/fig-appendix-panel-h1-spline-bic-1.png){#fig-appendix-panel-h1-spline-bic}
+![Marginal predicted outcomes as a function of late-night gaming (natural cubic spline, complete-case data). Solid blue line: spline fit with 95% delta-method CI ribbon. Dashed orange line: corresponding linear model fit, with its own 95% delta-method CI ribbon for comparison. X-axis shows average late-night gaming minutes per day on a common 0–90 min scale across panels; curves are drawn over the observed support within that range. All other covariates held at reference values (scaled continuous predictors at zero; isWeekend = 0; reference region). H1a: P(Fairly bad or Very bad sleep quality), marginalised over the participant random intercept via the marginal probit formula. H1b–H1d: predicted means on the original scale. Each panel title shows the selected spline df; AIC and BIC values are reported in @tbl-appendix-panel-h1-spline-bic.](manuscript_files/figure-html/fig-appendix-panel-h1-spline-bic-1.png){#fig-appendix-panel-h1-spline-bic width=864}
 :::
 :::
 
@@ -1027,35 +2198,123 @@ We conducted frequentist equivalence tests (TOST; @lakens2017equivalence; @laken
 ::: {.cell}
 ::: {.cell-output-display}
 
-+--------------------------------------+-----------------+-----------------+-----------+--------+
-| Hypothesis                           | ROPE            | 90% CI          | Decision  | p      |
-+======================================+=================+=================+===========+========+
-| H1a: Sleep Quality                   | [-0.028, 0.028] | [0.028, 0.075]  | Undecided | < .001 |
-+--------------------------------------+-----------------+-----------------+-----------+--------+
-| H1b: Sleep Duration                  | [-0.033, 0.033] | [-0.016, 0.006] | Accepted  | 0.456  |
-+--------------------------------------+-----------------+-----------------+-----------+--------+
-| H1c: Daytime Sleepiness              | [-0.107, 0.107] | [-0.026, 0.053] | Accepted  | 0.577  |
-+--------------------------------------+-----------------+-----------------+-----------+--------+
-| H1d: Wellbeing                       | [-0.134, 0.134] | [-0.033, 0.024] | Accepted  | 0.805  |
-+--------------------------------------+-----------------+-----------------+-----------+--------+
-| H2a: Sleep Quality × Chronotype      | [-0.006, 0.006] | [-0.011, 0.005] | Undecided | 0.487  |
-+--------------------------------------+-----------------+-----------------+-----------+--------+
-| H2b: Sleep Duration × Chronotype     | [-0.007, 0.007] | [-0.001, 0.007] | Accepted  | 0.199  |
-+--------------------------------------+-----------------+-----------------+-----------+--------+
-| H2c: Daytime Sleepiness × Chronotype | [-0.022, 0.022] | [-0.021, 0.003] | Accepted  | 0.225  |
-+--------------------------------------+-----------------+-----------------+-----------+--------+
-| H2d: Wellbeing × Chronotype          | [-0.028, 0.028] | [-0.018, 0.000] | Accepted  | 0.101  |
-+======================================+=================+=================+===========+========+
-| ROPE = Region of Practical Equivalence, rescaled to the native units of the raw coefficient:  |
-| ±0.1 × SD(y) / SD(x) for linear mixed models and ±0.1 / SD(x) for the ordinal probit models   |
-| (H1a, H2a), where the latent residual SD is fixed at 1. SD(x) is the sample SD of the focal   |
-| predictor (product predictor for interactions).                                               |
-+======================================+=================+=================+===========+========+
-| Decision via TOST rule (Lakens, 2017): Accepted = 90% CI entirely inside ROPE; Rejected =     |
-| 90% CI entirely outside ROPE; Undecided = otherwise.                                          |
-+======================================+=================+=================+===========+========+
-| p = Wald p-value for the pooled coefficient (not the TOST equivalence p).                     |
-+======================================+=================+=================+===========+========+
+```{=html}
+<!-- preamble start -->
+
+    <script src="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.js"></script>
+
+    <script>
+      // Create table-specific functions using external factory
+      const tableFns_9142l7aueeorl5meq9aw = TinyTable.createTableFunctions("tinytable_9142l7aueeorl5meq9aw");
+      // tinytable span after
+      window.addEventListener('load', function () {
+          var cellsToStyle = [
+            // tinytable style arrays after
+          { positions: [ { i: '8', j: 2 }, { i: '8', j: 3 }, { i: '8', j: 4 }, { i: '8', j: 5 } ], css_id: 'tinytable_css_gervx4hvi73qsv3l504i',}, 
+          { positions: [ { i: '1', j: 2 }, { i: '2', j: 2 }, { i: '3', j: 2 }, { i: '4', j: 2 }, { i: '5', j: 2 }, { i: '6', j: 2 }, { i: '7', j: 2 }, { i: '1', j: 3 }, { i: '2', j: 3 }, { i: '3', j: 3 }, { i: '4', j: 3 }, { i: '5', j: 3 }, { i: '6', j: 3 }, { i: '7', j: 3 }, { i: '1', j: 4 }, { i: '2', j: 4 }, { i: '3', j: 4 }, { i: '4', j: 4 }, { i: '5', j: 4 }, { i: '6', j: 4 }, { i: '7', j: 4 }, { i: '1', j: 5 }, { i: '2', j: 5 }, { i: '3', j: 5 }, { i: '4', j: 5 }, { i: '5', j: 5 }, { i: '6', j: 5 }, { i: '7', j: 5 } ], css_id: 'tinytable_css_cb7j7j89pxpn25s2xue9',}, 
+          { positions: [ { i: '0', j: 2 }, { i: '0', j: 3 }, { i: '0', j: 4 }, { i: '0', j: 5 } ], css_id: 'tinytable_css_a77hf96yuymf9qaqflml',}, 
+          { positions: [ { i: '8', j: 1 } ], css_id: 'tinytable_css_mzi7y3gi4catevb5suck',}, 
+          { positions: [ { i: '1', j: 1 }, { i: '2', j: 1 }, { i: '3', j: 1 }, { i: '4', j: 1 }, { i: '5', j: 1 }, { i: '6', j: 1 }, { i: '7', j: 1 } ], css_id: 'tinytable_css_hv7lkpnw2rodwxcfvfqf',}, 
+          { positions: [ { i: '0', j: 1 } ], css_id: 'tinytable_css_dwdcrrkl6cofo3kq6dys',}, 
+          ];
+
+          // Loop over the arrays to style the cells
+          cellsToStyle.forEach(function (group) {
+              group.positions.forEach(function (cell) {
+                  tableFns_9142l7aueeorl5meq9aw.styleCell(cell.i, cell.j, group.css_id);
+              });
+          });
+      });
+    </script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.css">
+    <style>
+    /* tinytable css entries after */
+    #tinytable_9142l7aueeorl5meq9aw td.tinytable_css_gervx4hvi73qsv3l504i, #tinytable_9142l7aueeorl5meq9aw th.tinytable_css_gervx4hvi73qsv3l504i {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: right; font-size: 0.85em }
+    #tinytable_9142l7aueeorl5meq9aw td.tinytable_css_cb7j7j89pxpn25s2xue9, #tinytable_9142l7aueeorl5meq9aw th.tinytable_css_cb7j7j89pxpn25s2xue9 { text-align: right; font-size: 0.85em }
+    #tinytable_9142l7aueeorl5meq9aw td.tinytable_css_a77hf96yuymf9qaqflml, #tinytable_9142l7aueeorl5meq9aw th.tinytable_css_a77hf96yuymf9qaqflml {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: right; font-size: 0.85em }
+    #tinytable_9142l7aueeorl5meq9aw td.tinytable_css_mzi7y3gi4catevb5suck, #tinytable_9142l7aueeorl5meq9aw th.tinytable_css_mzi7y3gi4catevb5suck {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left; font-size: 0.85em }
+    #tinytable_9142l7aueeorl5meq9aw td.tinytable_css_hv7lkpnw2rodwxcfvfqf, #tinytable_9142l7aueeorl5meq9aw th.tinytable_css_hv7lkpnw2rodwxcfvfqf { text-align: left; font-size: 0.85em }
+    #tinytable_9142l7aueeorl5meq9aw td.tinytable_css_dwdcrrkl6cofo3kq6dys, #tinytable_9142l7aueeorl5meq9aw th.tinytable_css_dwdcrrkl6cofo3kq6dys {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: black; --line-color-left: black; --line-color-right: black; --line-color-top: black; --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; text-align: left; font-size: 0.85em }
+    </style>
+    <div class="container">
+      <table class="tinytable" id="tinytable_9142l7aueeorl5meq9aw" style="table-layout: fixed; width: 100% !important; margin-left: auto; margin-right: auto;" data-quarto-disable-processing='true'>
+        
+        <thead>
+              <tr>
+                <th scope="col" data-row="0" data-col="1">Hypothesis</th>
+                <th scope="col" data-row="0" data-col="2">ROPE</th>
+                <th scope="col" data-row="0" data-col="3">90% CI</th>
+                <th scope="col" data-row="0" data-col="4">Decision</th>
+                <th scope="col" data-row="0" data-col="5">p</th>
+              </tr>
+        </thead>
+        <tfoot><tr><td colspan='5'>ROPE = Region of Practical Equivalence, rescaled to the native units of the raw coefficient: ±0.1 × SD(y) / SD(x) for linear mixed models and ±0.1 / SD(x) for the ordinal probit models (H1a, H2a), where the latent residual SD is fixed at 1. SD(x) is the sample SD of the focal predictor (product predictor for interactions).</td></tr>
+<tr><td colspan='5'>Decision via TOST rule (Lakens, 2017): Accepted = 90% CI entirely inside ROPE; Rejected = 90% CI entirely outside ROPE; Undecided = otherwise.</td></tr>
+<tr><td colspan='5'>p = Wald p-value for the pooled coefficient (not the TOST equivalence p).</td></tr></tfoot>
+        <tbody>
+                <tr>
+                  <td data-row="1" data-col="1">H1a: Sleep Quality</td>
+                  <td data-row="1" data-col="2">[-0.028, 0.028]</td>
+                  <td data-row="1" data-col="3">[0.028, 0.075]</td>
+                  <td data-row="1" data-col="4">Undecided</td>
+                  <td data-row="1" data-col="5">< .001</td>
+                </tr>
+                <tr>
+                  <td data-row="2" data-col="1">H1b: Sleep Duration</td>
+                  <td data-row="2" data-col="2">[-0.033, 0.033]</td>
+                  <td data-row="2" data-col="3">[-0.016, 0.006]</td>
+                  <td data-row="2" data-col="4">Accepted</td>
+                  <td data-row="2" data-col="5">0.456</td>
+                </tr>
+                <tr>
+                  <td data-row="3" data-col="1">H1c: Daytime Sleepiness</td>
+                  <td data-row="3" data-col="2">[-0.107, 0.107]</td>
+                  <td data-row="3" data-col="3">[-0.026, 0.053]</td>
+                  <td data-row="3" data-col="4">Accepted</td>
+                  <td data-row="3" data-col="5">0.577</td>
+                </tr>
+                <tr>
+                  <td data-row="4" data-col="1">H1d: Wellbeing</td>
+                  <td data-row="4" data-col="2">[-0.134, 0.134]</td>
+                  <td data-row="4" data-col="3">[-0.033, 0.024]</td>
+                  <td data-row="4" data-col="4">Accepted</td>
+                  <td data-row="4" data-col="5">0.805</td>
+                </tr>
+                <tr>
+                  <td data-row="5" data-col="1">H2a: Sleep Quality × Chronotype</td>
+                  <td data-row="5" data-col="2">[-0.006, 0.006]</td>
+                  <td data-row="5" data-col="3">[-0.011, 0.005]</td>
+                  <td data-row="5" data-col="4">Undecided</td>
+                  <td data-row="5" data-col="5">0.487</td>
+                </tr>
+                <tr>
+                  <td data-row="6" data-col="1">H2b: Sleep Duration × Chronotype</td>
+                  <td data-row="6" data-col="2">[-0.007, 0.007]</td>
+                  <td data-row="6" data-col="3">[-0.001, 0.007]</td>
+                  <td data-row="6" data-col="4">Accepted</td>
+                  <td data-row="6" data-col="5">0.199</td>
+                </tr>
+                <tr>
+                  <td data-row="7" data-col="1">H2c: Daytime Sleepiness × Chronotype</td>
+                  <td data-row="7" data-col="2">[-0.022, 0.022]</td>
+                  <td data-row="7" data-col="3">[-0.021, 0.003]</td>
+                  <td data-row="7" data-col="4">Accepted</td>
+                  <td data-row="7" data-col="5">0.225</td>
+                </tr>
+                <tr>
+                  <td data-row="8" data-col="1">H2d: Wellbeing × Chronotype</td>
+                  <td data-row="8" data-col="2">[-0.028, 0.028]</td>
+                  <td data-row="8" data-col="3">[-0.018, 0.000]</td>
+                  <td data-row="8" data-col="4">Accepted</td>
+                  <td data-row="8" data-col="5">0.101</td>
+                </tr>
+        </tbody>
+      </table>
+    </div>
+<!-- hack to avoid NA insertion in last line -->
+```
+
 :::
 :::
 
