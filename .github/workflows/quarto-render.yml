@@ -29,6 +29,7 @@ jobs:
             any::emmeans
             any::glmmTMB
             any::mice
+            any::miceadds
             any::ordinal
             any::modelsummary
             any::tinytable
