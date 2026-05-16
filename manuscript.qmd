@@ -3477,6 +3477,10 @@ Second, the observational design of this study limits the strength of causal cla
 
 The telemetry–survey linkage protocol piloted in Open Play is, in principle, portable: with appropriate ethical safeguards, assent procedures, and clinical validation, an analogous continuous-telemetry approach could be used to study adolescents and problematic gamers, populations in which the timing-specific effects of late-night play are most hotly contested and where aggregate self-report measures are especially vulnerable to recall bias. Extending the present methodology to those populations rather than extrapolating our estimates to them is, in our view, the most productive next step.
 
+# Data, Code, and Materials Availability
+
+The parent Open Play dataset [@ballou2025openplay], including the Nintendo, Xbox, and Steam telemetry and the intake, biweekly, and daily survey tables used here, is openly released at https://github.com/digital-wellbeing/open-play. All analytical code for this study is openly released under MIT (code) and CC BY 4.0 (text) at https://github.com/digital-wellbeing/platform-study-rr-sleep.
+
 # References
 
 :::{#refs}
