@@ -42,3 +42,5 @@ output/qc_imputation/diary/strip.pdf
 
 # Local Netlify folder
 .netlify
+output/figures/test_fig_raincloud_update.png
+R/test_fig_raincloud_update.R

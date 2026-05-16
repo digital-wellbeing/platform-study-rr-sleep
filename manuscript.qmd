@@ -870,7 +870,7 @@ Self-reported sleep duration in the analytical sample was `r sprintf("%.1f", mea
 
 ```{r}
 #| label: fig-raincloud
-#| fig-cap: "Gaming patterns and outcome distributions. (A) Hourly playtime distribution shows average daily minutes played by hour of day, with grouped bars for weekday (solid) vs weekend (striped) and late-night hours (23:00-06:00) highlighted in red. (B) Sleep Quality shows percentage of responses across ordinal categories. (C-E) Continuous variables displayed as raincloud plots with boxplots (median and IQR) and density distributions."
+#| fig-cap: "Gaming patterns and outcome distributions in the complete-case analytical sample. (A) Hourly playtime: average minutes played per participant-day (total minutes summed across all sessions divided by the number of contributing participant-days), shown by hour of day, with grouped bars distinguishing weekdays (Sunday-Thursday nights, solid fill) from weekend nights (Friday-Saturday, striped fill); the pre-registered late-night window (23:00-06:00 local time) is delimited by red dashed lines and shaded in red. (B) Self-reported sleep quality (PSQI Item 6) shown as the percentage of person-wave responses in each ordinal category; missing responses are excluded. (C-E) Continuous outcomes displayed as raincloud plots: half-violin shapes show the kernel density estimate (bandwidth multiplier = 2, normalised within panel), boxplots show the median (centre line), interquartile range (box) and whiskers extending to the most extreme value within 1.5 x IQR of the hinges; outliers beyond the whiskers are not plotted. Self-reported sleep duration in panel C is derived from PSQI Item 4. Panel-specific sample sizes are reported in the panel subtitles. Abbreviations: PSQI = Pittsburgh Sleep Quality Index; ESS = Epworth Sleepiness Scale (range 0-24, higher = greater daytime sleepiness); SWEMWBS = Short Warwick-Edinburgh Mental Well-Being Scale (range 7-35, higher = greater wellbeing); IQR = interquartile range."
 #| code-summary: "Combined hourly playtime, bar chart, and raincloud plots"
 #| fig-width: 12
 #| fig-height: 9
@@ -900,6 +900,10 @@ participant_day_counts <- gaming_sessions |>
   ) |>
   distinct(pid, date_local, isWeekend) |>
   count(isWeekend, name = "n_days")
+
+# Sample sizes for panel A subtitle
+n_panel_a_participants <- dplyr::n_distinct(gaming_sessions$pid)
+n_panel_a_pdays <- sum(participant_day_counts$n_days)
 
 # Aggregate by hour and calculate averages
 hourly_avg <- gaming_sessions |>
@@ -949,12 +953,22 @@ p_hourly_playtime <- ggplot(hourly_avg, aes(x = start_hour, y = avg_minutes_per_
   scale_fill_manual(
     values = c("Daytime (06:00-23:00)" = "steelblue", "Late-Night (23:00-06:00)" = "#E76F51"),
     name = "Time Period",
-    guide = guide_legend(override.aes = list(pattern = "none"))
+    guide = guide_legend(
+      override.aes = list(pattern = "none"),
+      direction = "horizontal",
+      nrow = 1,
+      title.position = "left"
+    )
   ) +
   # Pattern scales for weekday/weekend
   scale_pattern_manual(
     values = c("Weekday" = "none", "Weekend" = "stripe"),
-    name = "Day Type"
+    name = "Day Type",
+    guide = guide_legend(
+      direction = "horizontal",
+      nrow = 1,
+      title.position = "left"
+    )
   ) +
   # Axes
   scale_x_continuous(
@@ -966,8 +980,13 @@ p_hourly_playtime <- ggplot(hourly_avg, aes(x = start_hour, y = avg_minutes_per_
   # Labels and theme
   labs(
     title = "A. Gaming Playtime by Hour of Day",
+    subtitle = sprintf(
+      "N = %s participants, %s participant-days",
+      format(n_panel_a_participants, big.mark = ","),
+      format(n_panel_a_pdays, big.mark = ",")
+    ),
     x = "Hour of Day (Local Time)",
-    y = "Avg Minutes Played"
+    y = "Average minutes played per participant-day"
   ) +
   theme_minimal(base_size = 11) +
   theme(
@@ -977,19 +996,25 @@ p_hourly_playtime <- ggplot(hourly_avg, aes(x = start_hour, y = avg_minutes_per_
     plot.title = element_text(face = "bold", size = 12),
     plot.subtitle = element_text(size = 10, color = "gray40"),
     legend.position = "bottom",
-    legend.box = "horizontal"
+    legend.direction = "horizontal",
+    legend.box = "horizontal",
+    legend.box.just = "left",
+    legend.margin = margin(t = 4, b = 0)
   )
 
 # === PANEL B: Sleep Quality (ordinal - bar chart) ===
 sleep_quality_data <- selfreport |>
   filter(!is.na(psqi_comp1_quality)) |>
   mutate(
-    sleep_quality = factor(psqi_comp1_quality, 
+    sleep_quality = factor(psqi_comp1_quality,
                           levels = 0:3,
                           labels = c("Very good", "Fairly good", "Fairly bad", "Very bad"))
   ) |>
+  filter(!is.na(sleep_quality)) |>
   count(sleep_quality) |>
   mutate(pct = n / sum(n) * 100)
+
+n_panel_b <- sum(sleep_quality_data$n)
 
 p_sleep_quality <- ggplot(sleep_quality_data, aes(x = sleep_quality, y = pct, fill = sleep_quality)) +
   geom_col(alpha = 0.8, width = 0.7) +
@@ -998,7 +1023,7 @@ p_sleep_quality <- ggplot(sleep_quality_data, aes(x = sleep_quality, y = pct, fi
   scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
   labs(
     title = "B. Sleep Quality",
-    subtitle = "PSQI Item 6",
+    subtitle = sprintf("PSQI Item 6 (N = %s responses)", format(n_panel_b, big.mark = ",")),
     x = "",
     y = "Percentage (%)"
   ) +
@@ -1025,13 +1050,28 @@ continuous_data <- selfreport |>
     names_to = "variable",
     values_to = "value"
   ) |>
-  filter(!is.na(value)) |>
+  filter(!is.na(value))
+
+# Per-variable sample sizes for panel C-E labels
+panel_ce_n <- continuous_data |>
+  count(variable, name = "n") |>
   mutate(
-    variable = factor(variable,
-                     levels = c("sleep_duration", "daytime_sleepiness", "wellbeing"),
-                     labels = c("C. Sleep Duration\n(hours)",
-                               "D. Daytime Sleepiness\n(ESS: 0-24)",
-                               "E. Wellbeing\n(SWEMWBS: 7-35)"))
+    label = dplyr::case_when(
+      variable == "sleep_duration"     ~ sprintf("C. Sleep Duration\n(PSQI Item 4, hours; N = %s)", format(n, big.mark = ",")),
+      variable == "daytime_sleepiness" ~ sprintf("D. Daytime Sleepiness\n(ESS: 0-24; N = %s)", format(n, big.mark = ",")),
+      variable == "wellbeing"          ~ sprintf("E. Wellbeing\n(SWEMWBS: 7-35; N = %s)", format(n, big.mark = ","))
+    )
+  )
+
+continuous_data <- continuous_data |>
+  dplyr::left_join(panel_ce_n |> dplyr::select(variable, label), by = "variable") |>
+  mutate(
+    variable = factor(label,
+                     levels = c(
+                       panel_ce_n$label[panel_ce_n$variable == "sleep_duration"],
+                       panel_ce_n$label[panel_ce_n$variable == "daytime_sleepiness"],
+                       panel_ce_n$label[panel_ce_n$variable == "wellbeing"]
+                     ))
   )
 
 p_continuous <- ggplot(continuous_data, aes(x = 1, y = value, fill = variable)) +
@@ -1177,39 +1217,6 @@ Missingness in the adjustment covariates was minimal in the original (pre-imputa
 
 ### H1
 
-The preregistered analyses in the Stage 1 protocol [@ballou2024psychological] specified four multilevel models in which late-night gaming minutes, averaged over 28 days (monthly) or 14 days (biweekly), predicted sleep quality (H1a), sleep duration (H1b), daytime sleepiness (H1c), and wellbeing (H1d), with random intercepts and random slopes for the late-night gaming exposure by participant and an additional random intercept for gender in the linear models. When applying this specification to the Open Play data, the preregistered random-slope structures led to convergence problems and boundary estimates (near-zero variance components), particularly for the cumulative link mixed model. To obtain stable and interpretable estimates we simplified the random-effects structure to random intercepts for participants (and for gender where supported) and used the multiply imputed outcomes as our primary analytic dataset rather than the incomplete original outcomes. Each model was fit separately to each of the `r n_imputations_panel` imputed datasets, and parameter estimates were pooled using Rubin's rules [@rubin1987multiple].
-
-```{r}
-#| label: panel-h1-spline-bic-inline
-#| echo: false
-#| message: false
-#| warning: false
-
-panel_h1_spline_aic_inline <- tryCatch(
-  readRDS("output/models/panel_h1_spline_aic.rds"),
-  error = function(e) NULL
-)
-panel_h1_spline_dfs_inline <- tryCatch(
-  readRDS("output/models/panel_h1_spline_dfs.rds"),
-  error = function(e) NULL
-)
-
-h1_spline_bic <- function(outcome_label) {
-  if (is.null(panel_h1_spline_aic_inline)) return("NA")
-  row <- panel_h1_spline_aic_inline[
-    panel_h1_spline_aic_inline$Outcome == outcome_label, , drop = FALSE
-  ]
-  if (nrow(row) == 0) return("NA")
-  v <- if ("2|ΔBIC|" %in% names(row)) row[["2|ΔBIC|"]] else 2 * abs(row[["ΔBIC"]])
-  if (is.na(v)) "NA" else sprintf("%.1f", v)
-}
-
-panel_h1_spline_df_range <- fmt_df_grid(panel_h1_spline_dfs_inline)
-```
-
-More concretely, H1a replaces the preregistered by-participant random intercept and slope on late-night gaming with a random intercept for participants only. For H1b, attempts to retain the preregistered random intercept for gender led to non-convergence and boundary estimates, so we used a participant random intercept only while keeping the same 28-day late-night average exposure. H1c and H1d follow the same logic of dropping the preregistered by-participant random slopes while preserving a random intercept for gender and the same fixed-effect adjustment set (excluding gender as a fixed effect). As a sensitivity check, we also fit models using the PSQI global score (sum of all seven components, range 0–21) as a continuous alternative to the ordinal item-6 outcome; results are reported in @tbl-appendix-psqi-global. 
-A further, natural cubic spline sensitivity analysis (@tbl-appendix-panel-h1-spline-bic; @fig-appendix-panel-h1-spline-bic), evaluated by BIC under the rule of @jones2001nagin (|2ΔBIC| < 2 = indifferent, 2–6 = positive evidence), returned outcome-specific verdicts rather than a blanket endorsement of linearity: evidence was indifferent between the linear and spline parameterizations for H1a (sleep quality, |2ΔBIC| = `r h1_spline_bic("H1a: Sleep Quality")`) and H1d (wellbeing, |2ΔBIC| = `r h1_spline_bic("H1d: Wellbeing")`); positive but weak evidence favored the linear specification for H1b (sleep duration, |2ΔBIC| = `r h1_spline_bic("H1b: Sleep Duration")`); and positive but weak evidence favored a non-linear (spline) specification for H1c (daytime sleepiness, |2ΔBIC| = `r h1_spline_bic("H1c: Daytime Sleepiness")`). We retained the linear parameterization in the pre-registered models for all four outcomes; for H1c on the basis of parsimony and direct comparability with the other H1 models.
-
 ```{r}
 #| label: h1-main-effects
 #| echo: false
@@ -1282,7 +1289,39 @@ cc_h1a_marginal <- tryCatch({
 }, error = function(e) NULL)
 ```
 
-Across these models, the late-night gaming term in the sleep-quality model (H1a) is estimated as `r h1a_ln_minutes` (probit coefficient per 10 min/day). On the probability scale, each additional 10 minutes of average daily late-night gaming is associated with an approximate `r fmt_pp(h1a_marginal)` percentage-point increase in the marginal probability of reporting fairly bad or very bad sleep quality. @fig-latenight-sleepquality-exceedance translates this coefficient to the probability scale: marginal predicted probabilities of poor sleep quality (Fairly bad or Very bad) were computed for each of the `r n_imputations_panel` imputed datasets and pooled via Rubin's rules, with 95% confidence intervals derived from the combined within- and between-imputation variance on the probability scale using the delta method. The corresponding effects are `r h1b_ln_minutes` (hours of sleep per 10 min/day) for sleep duration (H1b), suggesting little systematic association between late-night gaming and self-reported sleep hours, `r h1c_ln_minutes` (Epworth points per 10 min/day) for daytime sleepiness (H1c), suggesting negligible variation in Epworth scores as a function of late-night gaming, and `r h1d_ln_minutes` (SWEMWBS points per 10 min/day) for wellbeing (H1d), again indicating minimal change in SWEMWBS scores with greater late-night play. All imputed-data estimates are pooled across `r n_imputations_panel` multiply imputed datasets using Rubin's rules [@rubin1987multiple]. These models additionally adjust for age, BMI, SES index, region, and weekend versus weekday timing (with gender modelled as a random intercept in H1c and H1d), and they use rolling 14- and 28-day windows of late-night play anchored to each survey date. Full coefficient estimates, confidence intervals, and variance components are reported in the H1 regression summary table, to which we refer for all remaining parameters.
+For sleep quality (H1a), each additional 10 minutes of average daily late-night gaming was associated with a probit-scale change of `r h1a_ln_minutes`, corresponding to an approximate `r fmt_pp(h1a_marginal)` percentage-point increase in the marginal probability of reporting fairly bad or very bad sleep quality (@fig-latenight-sleepquality-exceedance translates this coefficient to the probability scale, with marginal predicted probabilities computed in each of the `r n_imputations_panel` imputed datasets, pooled via Rubin's rules, and 95% confidence intervals derived from the combined within- and between-imputation variance using the delta method). The corresponding pooled effects were `r h1b_ln_minutes` (hours per 10 min/day) for sleep duration (H1b), `r h1c_ln_minutes` (Epworth points per 10 min/day) for daytime sleepiness (H1c), and `r h1d_ln_minutes` (SWEMWBS points per 10 min/day) for wellbeing (H1d) — each indicating negligible variation in the outcome as a function of late-night play. Full coefficient estimates, confidence intervals, and variance components are reported in the H1 regression summary table.
+
+These estimates depart from the Stage 1 protocol [@ballou2024psychological] in two respects. First, the preregistered by-participant random slopes on late-night minutes were dropped after they produced convergence problems and boundary estimates (near-zero variance components) in the Open Play data — most acutely in the H1a cumulative link mixed model — so all four H1 models retain only random intercepts for participants, and for gender in H1c and H1d where it remained supported. Second, the multiply imputed outcomes (`r n_imputations_panel` datasets pooled via Rubin's rules [@rubin1987multiple]) are used as the primary analytic dataset rather than the incomplete original outcomes. All models additionally adjust for age, BMI, SES index, region, and weekend versus weekday timing, and use rolling 14- and 28-day windows of late-night play anchored to each survey date.
+
+```{r}
+#| label: panel-h1-spline-bic-inline
+#| echo: false
+#| message: false
+#| warning: false
+
+panel_h1_spline_aic_inline <- tryCatch(
+  readRDS("output/models/panel_h1_spline_aic.rds"),
+  error = function(e) NULL
+)
+panel_h1_spline_dfs_inline <- tryCatch(
+  readRDS("output/models/panel_h1_spline_dfs.rds"),
+  error = function(e) NULL
+)
+
+h1_spline_bic <- function(outcome_label) {
+  if (is.null(panel_h1_spline_aic_inline)) return("NA")
+  row <- panel_h1_spline_aic_inline[
+    panel_h1_spline_aic_inline$Outcome == outcome_label, , drop = FALSE
+  ]
+  if (nrow(row) == 0) return("NA")
+  v <- if ("2|ΔBIC|" %in% names(row)) row[["2|ΔBIC|"]] else 2 * abs(row[["ΔBIC"]])
+  if (is.na(v)) "NA" else sprintf("%.1f", v)
+}
+
+panel_h1_spline_df_range <- fmt_df_grid(panel_h1_spline_dfs_inline)
+```
+
+Two further sensitivity checks support the linear parameterization used in the preregistered models. The H1a model was refit using the PSQI global score (sum of all seven components, range 0–21) as a continuous alternative to the ordinal item-6 outcome; results are reported in @tbl-appendix-psqi-global. A natural cubic spline sensitivity analysis (@tbl-appendix-panel-h1-spline-bic; @fig-appendix-panel-h1-spline-bic), evaluated by BIC under the rule of @jones2001nagin (|2ΔBIC| < 2 = indifferent, 2–6 = positive evidence), returned outcome-specific verdicts rather than a blanket endorsement of linearity: evidence was indifferent between the linear and spline parameterizations for H1a (sleep quality, |2ΔBIC| = `r h1_spline_bic("H1a: Sleep Quality")`) and H1d (wellbeing, |2ΔBIC| = `r h1_spline_bic("H1d: Wellbeing")`); positive but weak evidence favored the linear specification for H1b (sleep duration, |2ΔBIC| = `r h1_spline_bic("H1b: Sleep Duration")`); and positive but weak evidence favored a non-linear (spline) specification for H1c (daytime sleepiness, |2ΔBIC| = `r h1_spline_bic("H1c: Daytime Sleepiness")`). We retained the linear parameterization in the preregistered models for all four outcomes; for H1c on the basis of parsimony and direct comparability with the other H1 models.
 
 ```{r}
 #| label: fit-h1-models
@@ -1902,7 +1941,7 @@ We also conducted frequentist equivalence tests (TOST; @lakens2017equivalence) o
 
 ### H2
 
-The Stage 1 protocol [@ballou2024psychological] further specified four moderation models that added a late-night gaming × chronotype (MSF~sc~) interaction to the H1 specifications, predicting the same four outcomes (H2a–H2d); chronotype had a median of `r sprintf("%.1f", stats::median(master_data$msf_sc, na.rm = TRUE))` hours (IQR `r sprintf("%.1f", stats::IQR(master_data$msf_sc, na.rm = TRUE))`) in the analytical sample. In Open Play this structure proved even more demanding than H1, so we mean-centred chronotype and applied the same random-effects simplification used in H1 (random intercepts for participants, and for gender where supported, dropping the by-participant random slopes on late-night minutes) while retaining the gaming × chronotype interaction for all four outcomes. With these adjustments, the ordinal H2a CLMM converged cleanly alongside the H2b–H2d linear mixed-effects models, with finite standard errors for all fixed effects (including the interaction term) in both the complete-case and imputed fits. Full main, interaction, and random-effect estimates are reported in the H2 regression summary table.
+Having established a small but consistent late-night gaming → poor-sleep-quality association in H1, we next asked whether this association is moderated by chronotype, on the prior expectation that evening types (higher MSF~sc~) may pay a larger sleep cost for the same late-night play.
 
 ```{r}
 #| label: h2-main-effects
@@ -1960,7 +1999,9 @@ h2a_marginal <- tryCatch({
 }, error = function(e) NULL)
 ```
 
-From these models, the main effect of late-night gaming on sleep quality in H2a is `r h2a_main_ln` (probit coefficient per 10 min/day), corresponding to an approximate `r fmt_pp(h2a_marginal)` percentage-point increase in the probability of reporting fairly bad or worse sleep per additional 10 minutes of daily late-night gaming, closely mirroring the H1a estimate. None of the preregistered chronotype × late-night gaming interactions reached conventional significance after pooling across imputations, so H2 was not supported for any outcome (H2a sleep quality: `r h2a_ln_minutes_msf` probit per 10 min/day per hour of MSFsc; H2b sleep duration: `r h2b_ln_minutes_msf` hours per 10 min/day per hour of MSFsc; H2c daytime sleepiness: `r h2c_ln_minutes_msf` Epworth points per 10 min/day per hour of MSFsc; H2d wellbeing: `r h2d_ln_minutes_msf` SWEMWBS points per 10 min/day per hour of MSFsc). The equivalence tests reported in @tbl-appendix-equivalence go further and provide positive evidence that these interactions are practically negligible: applying the same earlier TOST procedure now to the chronotype × late-night gaming coefficients against their interaction-scale ROPEs the pooled 90% CIs for H2b, H2c, and H2d all lie entirely within the ROPE, while the H2a interaction is undecided under the stricter ordinal-probit ROPE. Full model summaries are reported in @tbl-h2-combined.
+None of the preregistered chronotype × late-night gaming interactions reached conventional significance after pooling across imputations, so H2 was not supported for any outcome (H2a sleep quality: `r h2a_ln_minutes_msf` probit per 10 min/day per hour of MSFsc; H2b sleep duration: `r h2b_ln_minutes_msf` hours per 10 min/day per hour of MSFsc; H2c daytime sleepiness: `r h2c_ln_minutes_msf` Epworth points per 10 min/day per hour of MSFsc; H2d wellbeing: `r h2d_ln_minutes_msf` SWEMWBS points per 10 min/day per hour of MSFsc). Equivalence tests (@tbl-appendix-equivalence) go further and provide positive evidence that the three linear interactions are practically negligible: applying the TOST procedure to the chronotype × late-night gaming coefficients against their interaction-scale ROPEs, the pooled 90% CIs for H2b, H2c, and H2d all lie entirely within the ROPE; the H2a interaction is undecided under the stricter ordinal-probit ROPE. The H2a main effect of late-night gaming was `r h2a_main_ln` (probit per 10 min/day, ≈ `r fmt_pp(h2a_marginal)` percentage-point increase in the probability of reporting fairly bad or worse sleep), closely mirroring the H1a estimate and indicating that the small late-night-gaming → sleep-quality association is not concentrated in chronotype-specific subgroups. Full model summaries are reported in @tbl-h2-combined.
+
+The H2 models added a late-night gaming × chronotype (MSF~sc~) interaction to each H1 specification; chronotype had a median of `r sprintf("%.1f", stats::median(master_data$msf_sc, na.rm = TRUE))` hours (IQR `r sprintf("%.1f", stats::IQR(master_data$msf_sc, na.rm = TRUE))`) in the analytical sample and was mean-centred before entering the interaction. The Open Play data made the moderation structure more demanding than H1, so we applied the same random-effects simplification (random intercepts for participants, and for gender where supported, dropping the by-participant random slopes on late-night minutes) while retaining the gaming × chronotype interaction for all four outcomes. With these adjustments the ordinal H2a CLMM converged cleanly alongside the H2b–H2d linear mixed-effects models, with finite standard errors for all fixed effects (including the interaction term) in both the complete-case and imputed fits.
 
 ```{r}
 #| label: fit-h2-models
@@ -3479,7 +3520,7 @@ The telemetry–survey linkage protocol piloted in Open Play is, in principle, p
 
 # Data, Code, and Materials Availability
 
-The parent Open Play dataset [@ballou2025openplay], including the Nintendo, Xbox, and Steam telemetry and the intake, biweekly, and daily survey tables used here, is openly released at https://github.com/digital-wellbeing/open-play. All analytical code for this study is openly released under MIT (code) and CC BY 4.0 (text) at https://github.com/digital-wellbeing/platform-study-rr-sleep.
+The parent Open Play dataset [@ballou2025openplay], including the Nintendo, Xbox, and Steam telemetry and the intake, biweekly, and daily survey tables used here, is openly released at <https://github.com/digital-wellbeing/open-play>. All analytical code for this study is openly released under MIT (code) and CC BY 4.0 (text) at <https://github.com/digital-wellbeing/platform-study-rr-sleep>.
 
 # References
 
