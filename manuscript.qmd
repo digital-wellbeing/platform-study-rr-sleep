@@ -3771,21 +3771,21 @@ coef_map_psqi_global <- c(
 coef_map_psqi_global <- coef_map_psqi_global[!is.na(coef_map_psqi_global)]
 
 psqi_models_list <- list(
-  "Playtime (Imputed)" = model_psqi_global_imputed,
-  "Chronotype × Playtime (Imputed)" = model_psqi_global_imputed_chrono,
-  "Playtime (Complete-Case)" = model_psqi_global_completecase,
-  "Chronotype × Playtime (Complete-Case)" = model_psqi_global_completecase_chrono
+  "Play (Imp.)" = model_psqi_global_imputed,
+  "Chrono × Play (Imp.)" = model_psqi_global_imputed_chrono,
+  "Play (CC)" = model_psqi_global_completecase,
+  "Chrono × Play (CC)" = model_psqi_global_completecase_chrono
 )
 
 # Build custom rows: use Rubin bundles for imputed, single fits for complete-case
 psqi_custom_rows <- {
   pooled_bundles <- list(
-    "Playtime (Imputed)" = panel_psqi_rubin_base,
-    "Chronotype × Playtime (Imputed)" = panel_psqi_rubin_chrono
+    "Play (Imp.)" = panel_psqi_rubin_base,
+    "Chrono × Play (Imp.)" = panel_psqi_rubin_chrono
   )
   cc_models <- list(
-    "Playtime (Complete-Case)" = model_psqi_global_completecase,
-    "Chronotype × Playtime (Complete-Case)" = model_psqi_global_completecase_chrono
+    "Play (CC)" = model_psqi_global_completecase,
+    "Chrono × Play (CC)" = model_psqi_global_completecase_chrono
   )
   pooled_rows <- get_custom_rows_pooled(
     pooled_bundles,
@@ -3813,6 +3813,7 @@ tt_psqi <- modelsummary(
   notes = c(
     "+ p < 0.10, * p < 0.05, ** p < 0.01, *** p < 0.001",
     "PSQI global score range: 0-21 (higher = worse sleep quality)",
+    "Play = late-night playtime; Chrono = chronotype; Imp. = imputed; CC = complete-case.",
     "Confidence intervals shown in brackets.",
     "ICC = Intraclass Correlation Coefficient (adjusted)."
   ),
